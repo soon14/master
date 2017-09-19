@@ -1,0 +1,11 @@
+com\jy\from\system\request\OrderInfoForm.class
+com\jy\from\system\request\VoucherInfoForm.class
+com\jy\from\system\request\RequestParamInfoForm.class
+com\jy\from\system\request\UserInfoForm.class
+com\jy\from\system\request\RequestPageInfoForm.class
+com\jy\from\system\request\UserTransDetailForm.class
+com\jy\from\system\finance\reconciliation\lottery\BaseForm.class
+com\jy\from\system\finance\reconciliation\lottery\SalesDifferencesDetailForm.class
+com\jy\from\system\request\UserBalanceForm.class
+com\jy\from\system\finance\statistics\QrCodeSoldDailyReportForm.class
+com\jy\from\system\finance\reconciliation\lottery\PlatformFundsForm.class

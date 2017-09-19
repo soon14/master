@@ -1,0 +1,11 @@
+package com.jy.process.system.request;
+
+import com.jy.from.system.request.RequestParamInfoForm;
+
+/**
+ * Created by Matthew on 2017/4/26.
+ */
+public interface OrderInfoRequestProcess {
+
+    void synchronizeOrderData(RequestParamInfoForm infoForm,int pageC) throws Exception;
+}

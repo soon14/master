@@ -1,0 +1,862 @@
+$(function () {
+	//下拉框
+	JY.Dict.setSelect("selectisValid","isValid",2,"全部");
+	getbaseList();
+    //增加回车事件
+	$("#baseForm").keydown(function(e){
+		 keycode = e.which || e.keyCode;
+		 if (keycode==13) {
+			 search();
+		 }
+	});
+
+	$(".icon-plus-sign").on("click", function() {
+		var index = jeBox.open({
+			cell:"jbx",
+			padding:"0",
+			title:"新增渠道",
+			maxBtn:true,
+			area:["600px","55%"],
+			type:2,
+			maskClose:true,
+			content: 'addMerchant',
+			success:function(data){
+			}
+		})
+	});
+
+	//批量删除
+	$('#delMerchant').on('click', function(e) {
+		//通知浏览器不要执行与事件关联的默认动作
+		e.preventDefault();
+		var chks =[];
+		$('#baseTable input[name="ids"]:checked').each(function(){
+			chks.push($(this).val());
+		});
+		if(chks.length==0) {
+			JY.Model.info("您没有选择任何内容!");
+		}else{
+			JY.Model.confirm("确认要删除选中的数据吗?",function(){
+				JY.Ajax.doRequest(null,jypath +'/channels/delMerchant',{chks:chks.toString()},function(data){
+					getbaseList();
+					JY.Model.info(data.resMsg,function(){search();});
+				});
+			});
+		}
+	});
+});
+
+function closeJeBox(){
+	JY.Ajax.doRequest("form1",jypath +'/channels/add',null,function(data){
+		if(data.resMsg=="1"){
+			window.parent.location.reload();
+			window.parent.jeBox.close("jbx");
+		}else if(data.resMsg=="2"){
+			JY.Model.info("请填写必输项!");
+		}else if(data.resMsg=="3"){
+			JY.Model.info("您是二级代理商或个人无法新增用户!");
+		}else if(data.resMsg=="4"){
+            JY.Model.info("电话号码不合法!");
+        }else if(data.resMsg=="0"){
+			JY.Model.info("保存失败!");
+		}else if(data.resMsg=="5"){
+            JY.Model.info("彩票接口异常!");
+        }else if(data.resMsg=="6"){
+            JY.Model.info("该用户已经存在!");
+        }else if(data.resMsg=="7"){
+            JY.Model.info("该手机号不是正确手机号，请输入正确手机号!");
+        }else if(data.resMsg=="8"){
+            JY.Model.info("彩票帐号创建失败,彩票接口异常!");
+        }else if(data.resMsg=="9"){
+            JY.Model.info("平台帐号创建失败!");
+        }else if(data.resMsg=="10"){
+            window.parent.location.reload();
+            window.parent.jeBox.close("jbx");
+        }else if(data.resMsg=="11"){
+            JY.Model.info("审核失败!");
+        }else if(data.resMsg=="12"){
+            JY.Model.info("电话号已存在!");
+        }else if(data.resMsg=="13"){
+            JY.Model.info("请选择上级渠道!");
+        }else if(data.resMsg=="14"){
+            JY.Model.info("该用户已经关联销售，不可创建!");
+        }else if(data.resMsg=="15"){
+            JY.Model.info("请选择渠道来源!");
+        }else if(data.resMsg=="16"){
+            JY.Model.info("该渠道名已存在!");
+        }
+	});
+}
+
+function search(){
+	$("#searchBtn").trigger("click");
+}
+
+function loadRoleTree(){
+	JY.Ajax.doRequest(null,jypath +'/backstage/account/roleTree',null,function(data){
+		$.fn.zTree.init($("#roleTree"),{view:{dblClickExpand:false,selectedMulti:false,nameIsHTML:true},data:{simpleData:{enable: true}},callback:{onClick:clickRole}},data.obj);
+	});
+}
+
+function emptyRole(){
+	$("#roleName").prop("value","");
+	$("#auForm input[name$='roleId']").prop("value","0");
+}
+
+var preisShow=false;//窗口是否显示
+
+function showRole() {
+	if(preisShow){
+		hideRole();
+	}else{
+		var obj = $("#roleName");
+		var offpos = $("#roleName").position();
+		$("#roleContent").css({left:offpos.left+"px",top:offpos.top+obj.heith+"px"}).slideDown("fast");
+		preisShow=true;
+	}
+}
+
+function clickRole(e, treeId, treeNode) {
+	var check = (treeNode && !treeNode.isParent);
+	if(check){
+		var zTree = $.fn.zTree.getZTreeObj("roleTree"),
+		nodes = zTree.getSelectedNodes(),v ="",n ="",o="",p="";
+		for (var i=0, l=nodes.length; i<l; i++) {
+			v += nodes[i].name + ",";//获取name值
+			n += nodes[i].id + ",";//获取id值
+			o += nodes[i].other + ",";//获取自定义值
+			var pathNodes=nodes[i].getPath();
+			for(var y=0;y<pathNodes.length;y++){
+				p+=pathNodes[y].name+"/";//获取path/name值
+			}
+		}
+		if (v.length > 0 ) v = v.substring(0, v.length-1);
+		if (n.length > 0 ) n = n.substring(0, n.length-1);
+		if (o.length > 0 ) o = o.substring(0, o.length-1);
+		if (p.length > 0 ) p = p.substring(0, p.length-1);
+		if(o=='r'){//判断是否角色
+			$("#roleName").val(p);
+			n=n.replace("role","");
+			$("#auForm input[name$='roleId']").prop("value",n);
+			//因为单选选择后直接关闭，如果多选请另外写关闭方法
+			hideRole();
+		}
+	}
+}
+
+function hideRole(){
+	$("#roleContent").fadeOut("fast");
+	preisShow=false;
+}
+
+function getbaseList(init){
+	if(init==1){
+		$("#baseForm .pageNum").val(1);
+		if(null != $.fn.zTree.getZTreeObj("treeDemo")){
+			var treeObj=$.fn.zTree.getZTreeObj("treeDemo"),
+				nodes=treeObj.getCheckedNodes(true),
+				v="";
+				findList="";
+			for(var i=0;i<nodes.length;i++){
+				var a = nodes[i].isParent;
+				if(!a){
+					v+=nodes[i].name + ",";
+					findList+=nodes[i].id+",";
+				}
+			}
+			$("#baseForm .findDepId").val(findList);
+		}
+	}
+	JY.Model.loading();
+	JY.Ajax.doRequest("baseForm",jypath +'/channels/findByPage',null,function(data){
+		$("#baseTable tbody").empty();
+		$("#baseHtml ul").empty();
+		var obj=data.obj;
+		var list=obj.list;
+		if(list==null){
+			var lists=obj.lists;
+			var results=lists.results;
+			var pageNum=lists.pageNum,pageSize=lists.pageSize,totalRecord=lists.totalRecord;
+		}else{
+			var results=list.results;
+			var pageNum=list.pageNum,pageSize=list.pageSize,totalRecord=list.totalRecord;
+		}
+		var permitBtn=obj.permitBtn;
+        var mName = obj.mName;
+		var html="";
+		if(results!=null&&results.length>0){
+			var leng=(pageNum-1)*pageSize;//计算序号
+			if(obj.level=='2' || obj.level=='3'){
+                $("#parentName").html("上级渠道");
+			}else{
+                $("#parentName").html("上级客户经理");
+			}
+
+			for(var i = 0;i<results.length;i++){
+				var l=results[i];
+				html+="<tr>";
+                if('1'==l.isValid) {
+                    html+="<td class='center'><label> <input type='checkbox' name='ids' value='"+l.mId+"' class='ace' /> <span class='lbl'></span></label></td>";
+                }else{
+                    html += "<td class='center'> </td>";
+                }
+				html+="<td class='center'>"+JY.Object.notEmpty(l.mName)+"</td>";
+				if(l.mType==1) html+="<td class='center hidden-480' >个人</td>";
+				else 			html+="<td class='center hidden-480' >企业</td>";
+                var mLevel="";
+                if(l.mLevel==2){
+                    mLevel="一级渠道";
+                }else if(l.mLevel==3){
+                    mLevel="二级渠道";
+                }
+                html+="<td class='center hidden-480'>"+JY.Object.notEmpty(mLevel)+"</td>";
+				if(l.mStatus==0)  html+="<td class='center '>未审核</td>";
+				else if (l.mStatus==1) html+="<td class='center '>一审通过</td>";
+				else if(l.mStatus==2) html+="<td class='center '>有效</td>";
+				else if(l.mStatus==3) html+="<td class='center '>拒绝</td>";
+				else  html+="<td class='center '>未知</td>";
+				html+="<td class='center hidden-480'>"+JY.Object.notEmpty(l.mMobile)+"</td>";
+                html+="<td class='center hidden-480'><a style='cursor:pointer' onclick='findChildCustomer(\""+l.mId+"\")'>"+JY.Object.notEmpty(l.childCustomerNum)+"</a></td>";
+                html+="<td class='center hidden-480'><a style='cursor:pointer' onclick='findChildMerchant(\""+l.mId+"\")'>"+JY.Object.notEmpty(l.childMerchantNum)+"</a></td>";
+                var isValid="";
+                if(l.isValid==1){
+                    isValid="有效";
+                }else if(l.isValid==2){
+                    isValid="无效";
+                }
+                html+="<td class='center hidden-480'>"+JY.Object.notEmpty(l.mParentName)+"</td>";
+                var v="";
+                if(l.line==0){
+                    v="线上+线下";
+                }else if(l.line==1){
+                    v="线上";
+                }else if(l.line==2){
+                    v="线下";
+                }
+                html+="<td class='center hidden-480'>"+JY.Object.notEmpty(v)+"</td>";
+
+                html+=JY.Tags.setFunction(l.mId,permitBtn);
+				html+="</tr>";
+			}
+			$("#baseTable tbody").append(html);
+			JY.Page.setPage("baseForm","pageing",pageSize,pageNum,totalRecord,"getbaseList");
+		}else{
+			html+="<tr><td colspan='11' class='center'>没有相关数据</td></tr>";
+			$("#baseTable tbody").append(html);
+			$("#pageing ul").empty();//清空分页
+		}
+		JY.Model.loadingClose();
+	});
+}
+
+function findChildCustomer(id){
+		var index = jeBox.open({
+			cell:"jbx",
+			padding:"0",
+			title:"查看发展客户",
+			maxBtn:true,
+			area:["700px","90%"],
+			type:2,
+			maskClose:true,
+			content: 'findChildCustomer?mId='+id,
+			button: [ {name: '取消'},
+			],
+			success:function(data){
+			}
+		})
+}
+
+function findChildMerchant(id){
+    var index = jeBox.open({
+        cell:"jbx",
+        padding:"0",
+        title:"查看发展渠道",
+        maxBtn:true,
+        area:["700px","90%"],
+        type:2,
+        maskClose:true,
+        content: 'findChildMerchant?mId='+id,
+        button: [ {name: '取消'},
+        ],
+        success:function(data){
+        }
+    })
+}
+
+
+
+//上传三证
+function uploadMLicense(id){
+	JY.Ajax.doRequest("baseForm",jypath +'/channels/findUserLevel',{mId:id},function(data) {
+        var obj=data.obj;
+        var list=obj.list;
+        var lists=obj.lists;
+        if(list!=null&&list.length>0){
+        	if(list[0].mLevel==2 || list[0].mLevel==3){
+                JY.Model.info("当前角色没有权限!");
+                return;
+			}else{
+                if(lists[0].mLevel!=2){
+                    JY.Model.info("选中角色无需上传三证!");
+                }else{
+                    opeMLicense(id);
+                }
+        	}
+		}else{
+			if(lists[0].mLevel!=2){
+				JY.Model.info("选中角色无需上传三证!");
+			}else{
+                opeMLicense(id);
+            }
+		}
+
+	});
+}
+
+function opeMLicense(id){
+    var index = jeBox.open({
+        cell:"jbx",
+        padding:"0",
+        title:"上传三证",
+        maxBtn:true,
+        area:["600px","37%"],
+        type:2,
+        maskClose:true,
+        content: 'uploadMLicense?mId='+id,
+        success:function(data){
+
+        }
+    })
+}
+
+//修改
+function updateMerchant(id){
+	niw="";
+	niwLine="";
+	cleanForm();
+	$('#fileList').html('');
+		JY.Ajax.doRequest(null,jypath +'/channels/findParticulars',{mId:id},function(data){
+			setForm(data,"2");//1查看详情 2修改
+		    JY.Model.edit("avDiv","修改",function(){
+		    	if(JY.Validate.form("avForm")){
+					var that =$(this);
+					JY.Ajax.doRequest("avForm",jypath +'/channels/updateMerchant',null,function(data){
+                        if(data.resMsg=="1"){
+                            that.dialog("close");
+                            getbaseList();
+                            JY.Model.info("修改成功!");
+                        }else if(data.resMsg=="2"){
+                            JY.Model.info("渠道电话号不合法!");
+                        }else if(data.resMsg=="3"){
+                            JY.Model.info("修改失败，请确认该商户是否可修改!");
+                        }else if(data.resMsg=="12"){
+                            JY.Model.info("电话号已存在!");
+                        }else if(data.resMsg=="13"){
+                            JY.Model.info("请选择上级渠道!");
+                        }else if(data.resMsg=="0"){
+                            JY.Model.info("保存失败!");
+                        }else if(data.resMsg=="5"){
+                            JY.Model.info("彩票接口异常!");
+                        }else if(data.resMsg=="6"){
+                            JY.Model.info("该用户已经存在!");
+                        }else if(data.resMsg=="7"){
+                            JY.Model.info("该手机号不是正确手机号，请输入正确手机号!");
+                        }else if(data.resMsg=="8"){
+                            JY.Model.info("彩票帐号创建失败,彩票接口异常!");
+                        }else if(data.resMsg=="9"){
+                            JY.Model.info("平台帐号创建失败!");
+                        }else if(data.resMsg=="10"){
+                            that.dialog("close");
+                            getbaseList();
+                            JY.Model.info("修改成功!");
+                        }
+					});
+				}
+		    });
+		});
+}
+
+//查看详情
+function findParticulars(id){
+	niw="";
+	niwLine="";
+	cleanForm();
+		JY.Ajax.doRequest(null,jypath +'/channels/findParticulars',{mId:id},function(data){
+			setForm(data,"1");//1查看详情 2修改
+			JY.Model.check("avDiv");
+		});
+}
+
+function cleanForm(){
+	JY.Tags.isValid("avForm","1");
+	JY.Tags.cleanForm("avForm");
+	$("#avForm input[name$='roleId']").val('0');//上级资源
+	$("#avForm input[name$='loginName']").prop("disabled",false);
+	hideRole();
+}
+
+var niw="";
+var niwLine="";
+function findLadder(s){
+	 var ladderOne="阶梯一："+s.oneRankMin+"万~"+s.oneRankMax+"万&nbsp分润比例"+s.onePercent+"%";
+	 var ladderTwo="";
+	 var ladderThree="";
+	 if(null!=s.twoRankMin){
+		 ladderTwo="阶梯二："+s.twoRankMin+"万~"+s.twoRankMax+"万&nbsp分润比例"+s.twoPercent+"%";
+	 }
+	 if(null!=s.threeRankMin){
+		 ladderThree="阶梯三："+s.threeRankMin+"万~"+s.threeRankMax+"万&nbsp分润比例"+s.threePercent+"%";
+	 }
+
+	 if(s.type=="1"){
+		 niw+='<option value='+s.id+' title='+ladderOne+'&nbsp&nbsp'+ladderTwo+'&nbsp&nbsp'+ladderThree+'>'+s.name+'</option>';
+	 }else if(s.type=="2"){
+		 niwLine+='<option value='+s.id+' title='+ladderOne+'&nbsp&nbsp'+ladderTwo+'&nbsp&nbsp'+ladderThree+'>'+s.name+'</option>';
+	 }
+}
+
+function setForm(data,type){
+	var l=data.obj;
+    var pictures =""
+	if(l.mLicense!=null){
+    	if(l.mLicense.length>0){
+            var mLicense = l.mLicense.split(",");
+            for (var j = 0; j < mLicense.length; j++) {
+                pictures+="<li id='li_"+j+"'><a href='/merchant"+mLicense[j]+"' data-rel='colorbox' class='cboxElement list-inline'>"+
+                    "<img onload='if(this.width > 50 && this.height >50) this.width = 50 ,this.height =50'  src=/merchant"+mLicense[j]+"></a></li>";
+            }
+		}
+	}
+    document.getElementById("pic").innerHTML=pictures;
+    $("#avForm input[name$='mLicense']").val(JY.Object.notEmpty(l.mLicense));
+    var editParentMerchant=document.getElementById("editParentMerchant");
+    var v="";
+    JY.Ajax.doRequest(null,jypath +'/channels/findParentMerchant',null,function(data){
+        var obj=data.obj;
+        var list=obj.list;
+        var is=0;
+        if(list!=null&&list.length>0){
+            for(var i = 0;i<list.length;i++){
+                var s=list[i];
+                if(l.mParentMerchant==s.mId){
+                	is++;
+                    v+='<option value='+s.mId+'>'+s.mName+'</option>';
+                    $("#avForm input[name$='mLevel']").val(JY.Object.notEmpty(s.mLevel));
+                }
+            };
+            if(is==0){
+                v+='<option value=0>请选择</option>';
+			}
+
+            for(var i = 0;i<list.length;i++){
+                var s=list[i];
+                if(l.mParentMerchant!=s.mId){
+                    v+='<option value='+s.mId+'>'+s.mName+'</option>';
+                }
+            };
+            if(l.mLevel=='3'){
+                editParentMerchant.innerHTML=v;
+			}else{
+                editParentMerchant.innerHTML="";
+            }
+        };
+    });
+
+    JY.Ajax.doRequest(null,jypath +'/channels/findOwn',null,function(data){
+        var obj=data.obj;
+        var list=obj.list;
+
+		var editMerchantLevel=document.getElementById("editMerchantLevel");
+		var mlevel="";
+        $("#mParentMerchant").attr("value",l.mParentMerchant);
+        if(l.mLevel=='2'){
+			$("#mLevels").attr("value","1");
+            mlevel='<option value="1">一级渠道</option>';
+
+		}else{
+            $("#mLevels").attr("value","2");
+            mlevel='<option value="2">二级渠道</option>';
+		}
+		editMerchantLevel.innerHTML=mlevel;
+
+    });
+	var commissionName=document.getElementById("edCommissionName");
+	var commissionNameLine=document.getElementById("edCommissionNameLine");
+    commissionName.innerHTML=niw;
+    commissionNameLine.innerHTML=niwLine;
+	var id=JY.Object.notEmpty(l.bcId)
+	var idLine=JY.Object.notEmpty(l.bcIdLine)
+	JY.Ajax.doRequest(null,jypath +'/backstage/commission/findByPageAll',{bcId:id,bcIdLine:idLine},function(data){
+     	 var obj=data.obj;
+	   	 var list=obj.list;
+	   	 var results=list.results;
+		 if(results!=null&&results.length>0){
+		if(type=="1"){
+			if(id==""){
+				niw+='<option value=0>请选择</option>';
+			}else{
+				 for(var i = 0;i<results.length;i++){
+		    		 var s=results[i];
+		    		 if(s.id==id){
+		    			 if(s.type=="1"){
+		    				 findLadder(s);
+		    			 }
+		    		 }
+				 };
+			}
+			if(idLine==""){
+				niwLine+='<option value=0>请选择</option>';
+			}else{
+				 for(var i = 0;i<results.length;i++){
+		    		 var s=results[i];
+		    		 if(s.id==idLine){
+		    			 if(s.type=="2"){
+		    				 findLadder(s);
+		    			 }
+		    		 }
+				 };
+			}
+		}else if(type=="2"){
+			if(id==""){
+				niw+='<option value=0>请选择</option>';
+				 for(var i = 0;i<results.length;i++){
+		    		 var s=results[i];
+		    		 if(s.type=="1"){
+		    			 findLadder(s);
+		    		 }
+				 };
+			}else{
+				 for(var i = 0;i<results.length;i++){
+		    		 var s=results[i];
+		    		 if(s.id==id){
+		    			 if(s.type=="1"){
+		    				 findLadder(s);
+		    			 }
+		    		 }
+				 };
+				 for(var i = 0;i<results.length;i++){
+		    		 var s=results[i];
+		    		 if(s.id!=id){
+		    			 if(s.type=="1"){
+		    				 findLadder(s);
+		    			 }
+		    		 }
+				 };
+				 niw+='<option value=1>删除佣金</option>';
+			}
+			if(idLine==""){
+				niwLine+='<option value=0>请选择</option>';
+				 for(var i = 0;i<results.length;i++){
+		    		 var s=results[i];
+		    		 if(s.type=="2"){
+		    			 findLadder(s);
+		    		 }
+				 };
+			}else{
+				 for(var i = 0;i<results.length;i++){
+		    		 var s=results[i];
+		    		 if(s.id==idLine){
+		    			 if(s.type=="2"){
+		    				 findLadder(s);
+		    			 }
+		    		 }
+				 };
+				 for(var i = 0;i<results.length;i++){
+		    		 var s=results[i];
+		    		 if(s.id!=idLine){
+		    			 if(s.type=="2"){
+		    				 findLadder(s);
+		    			 }
+		    		 }
+				 };
+				 niwLine+='<option value=1>删除佣金</option>';
+			}
+		}
+		commissionName.innerHTML=niw;
+		commissionNameLine.innerHTML=niwLine;
+	};
+	});
+
+	var mCommionType=document.getElementById("mCommionType");
+	var mc=JY.Object.notEmpty(l.mCommionType);
+	var s="";
+	if(type=="1"){
+		if(mc=="1"){
+			s='<option value="1">日返</option>';
+		}else if(mc=="2"){
+			s='<option value="2">周返</option>';
+		}else if(mc=="3"){
+			s='<option value="3">月返</option>';
+		}else if(mc=="4"){
+			s='<option value="4">季度返</option>';
+		}else{
+			s='<option value="1">日返</option>';
+		}
+	}else if(type=="2"){
+		if(mc=="1"){
+			s='<option value="1">日返</option><option value="2">周返</option><option value="3">月返</option><option value="4">季度返</option>';
+		}else if(mc=="2"){
+			s='<option value="2">周返</option><option value="1">日返</option><option value="3">月返</option><option value="4">季度返</option>';
+		}else if(mc=="3"){
+			s='<option value="3">月返</option><option value="1">日返</option><option value="2">周返</option><option value="4">季度返</option>';
+		}else if(mc=="4"){
+			s='<option value="4">季度返</option><option value="1">日返</option><option value="2">周返</option><option value="3">月返</option>';
+		}else{
+			s='<option value="1">日返</option><option value="2">周返</option><option value="3">月返</option><option value="4">季度返</option>';
+		}
+	}
+
+	mCommionType.innerHTML=s;
+
+	$("#avForm input[name$='bcId']").val(JY.Object.notEmpty(l.bcId));
+	$("#avForm input[name$='mId']").val(JY.Object.notEmpty(l.mId));							//商户ID
+	$("#avForm input[name$='mCpUserId']").val(JY.Object.notEmpty(l.mCpUserId));				//彩票系统账户ID
+//	$("#avForm input[name$='mParentMerchant']").val(JY.Object.notEmpty(l.mParentMerchant));	//上级渠道ID
+	$("#avForm input[name$='mName']").val(JY.Object.notEmpty(l.mName));						//商户名称
+	var merType="";
+	if(l.mType=='1'){
+        merType='<option value="1">个人</option><option value="2">企业</option>';
+	}else{
+        merType='<option value="2">企业</option><option value="1">个人</option>';
+    }
+    var mType=document.getElementById("mType");
+    mType.innerHTML=merType;
+//	$("#avForm input[name$='mType']").val(JY.Object.notEmpty(l.mType));						//商户类型1=个人，2=企业
+//	$("#avForm input[name$='mLevel']").val(JY.Object.notEmpty(l.mLevel));					//商户等级1=1级代理，2=2级代理；3=3级代理，以此类推
+    var mStatus = JY.Object.notEmpty(l.mStatus);
+    var status ="";
+    if(mStatus==0){
+        status='<option value="0">未审核</option>';
+	}else if(mStatus==1){
+        status='<option value="1">一审通过</option>';
+	}else if(mStatus==2){
+        status='<option value="2">有效</option>';
+    }else if(mStatus==3){
+        if(type=="1"){
+            status='<option value="3">拒绝</option>';
+		}else if(type=="2"){
+            status='<option value="3">拒绝</option><option value="0">未审核</option>';
+        }
+    }
+    var mStatus=document.getElementById("mStatus");
+    mStatus.innerHTML=status;
+
+    var isValid="";
+    if(l.isValid=='1'){
+        isValid='<option value="1">有效</option>';
+    }else{
+        isValid='<option value="2">无效</option>';
+    }
+    var merIsValid=document.getElementById("merIsValid");
+    merIsValid.innerHTML=isValid;
+
+//	$("#avForm input[name$='mStatus']").val(JY.Object.notEmpty(status));					//0=未审核;1=一审;2=有效;3=拒绝,4,待定
+	$("#avForm input[name$='mMobile']").val(JY.Object.notEmpty(l.mMobile));					//商户手机号
+	$("#avForm textarea[name$='mAddress']").val(JY.Object.notEmpty(l.mAddress));			//商户地址
+	$("#avForm input[name$='mContactUser']").val(JY.Object.notEmpty(l.mContactUser));		//联系人
+	$("#avForm input[name$='mContactMobile']").val(JY.Object.notEmpty(l.mContactMobile));	//联系人手机号
+	$("#avForm input[name$='mIdCard']").val(JY.Object.notEmpty(l.mIdCard));					//身份证
+	$("#avForm textarea[name$='mIntroduce']").val(JY.Object.notEmpty(l.mIntroduce));		//商户简介
+	$("#avForm input[name$='mAccountId']").val(JY.Object.notEmpty(l.mAccountId));			//平台用户绑定ID
+	$("#avForm").find(".mBarcode").attr("src",JY.Object.notEmpty(l.mBarcode));
+//    $('#qrCodeDiv').qrcode(JY.Object.notEmpty(l.mBarcode));
+//     $("#qrCodeDiv").qrcode({
+//         render: "canvas", // 渲染方式有table方式（IE兼容）和canvas方式
+//         width: 150, //宽度
+//         height: 150, //高度
+//         text: JY.Object.notEmpty(l.mBarcode), //内容
+//         typeNumber: -1,//计算模式
+//         correctLevel: 2,//二维码纠错级别
+//         background: "#ffffff",//背景颜色
+//         foreground: "#000000"  //二维码颜色
+//     });
+	$("#avForm").find(".mLicense").attr("src",JY.Object.notEmpty(l.mLicense));
+    $("#avForm input[name$='line']").val(JY.Object.notEmpty(l.line));
+}
+
+$("#edCommissionName").change(function(){
+	var id = document.getElementById("edCommissionName").options[document.getElementById("edCommissionName").selectedIndex].value
+	$("#avForm input[name$='bcId']").val(id);
+});
+
+$("#edCommissionNameLine").change(function(){
+	var id = document.getElementById("edCommissionNameLine").options[document.getElementById("edCommissionNameLine").selectedIndex].value
+	$("#avForm input[name$='bcIdLine']").val(id);
+});
+
+$('#commissionName').one('change',function(){
+	$(this).children().eq(0).remove();
+});
+
+$('#commissionNameLine').one('change',function(){
+	$(this).children().eq(0).remove();
+});
+
+$("#commissionName").change(function(){
+	var id = document.getElementById("commissionName").options[document.getElementById("commissionName").selectedIndex].value
+	$("#bcId").attr("value",id);
+});
+
+$("#commissionNameLine").change(function(){
+	var id = document.getElementById("commissionNameLine").options[document.getElementById("commissionNameLine").selectedIndex].value
+	$("#bcIdLine").attr("value",id);
+});
+
+$("#merchantLevel").change(function(){
+    var id = document.getElementById("merchantLevel").options[document.getElementById("merchantLevel").selectedIndex].value
+    var parentMerchant=document.getElementById("parentMerchant");
+    var v="";
+    if(id==1){
+        parentMerchant.innerHTML=v;
+        $("#mParentMerchant").attr("value","");
+        $("#mLevel").attr("value","1");
+	}else{
+        $("#mLevel").attr("value","2");
+        v+='<option value=0>请选择</option>';
+        JY.Ajax.doRequest(null,jypath +'/channels/findParentMerchant',null,function(data){
+            var obj=data.obj;
+            var list=obj.list;
+            // var results=list.results;
+            if(list!=null&&list.length>0){
+                for(var i = 0;i<list.length;i++){
+                    var s=list[i];
+                    v+='<option value='+s.mId+'>'+s.mName+'</option>';
+                };
+            };
+            parentMerchant.innerHTML=v;
+        });
+	}
+});
+
+// $("#editMerchantLevel").change(function(){
+//     var id = document.getElementById("editMerchantLevel").options[document.getElementById("editMerchantLevel").selectedIndex].value
+//     var editParentMerchant=document.getElementById("editParentMerchant");
+//     var v="";
+//     if(id==1){
+//         editParentMerchant.innerHTML=v;
+//         $("#mParentMerchant").attr("value","");
+//         $("#mLevels").attr("value","1");
+//     }else{
+//         $("#mParentMerchant").attr("value","");
+//         $("#mLevels").attr("value","2");
+//         v+='<option value=0>请选择</option>';
+//         JY.Ajax.doRequest(null,jypath +'/channels/findParentMerchant',null,function(data){
+//             var obj=data.obj;
+//             var list=obj.list;
+//             // var results=list.results;
+//             if(list!=null&&list.length>0){
+//                 for(var i = 0;i<list.length;i++){
+//                     var s=list[i];
+//                     v+='<option value='+s.mId+'>'+s.mName+'</option>';
+//                 };
+//             };
+//             editParentMerchant.innerHTML=v;
+//         });
+//     }
+// });
+
+$("#parentMerchant").change(function(){
+    var id = document.getElementById("parentMerchant").options[document.getElementById("parentMerchant").selectedIndex].value
+    $("#mParentMerchant").attr("value",id);
+    JY.Ajax.doRequest(null,jypath +'/channels/findParentMerchant',{mId:id},function(data){
+        var obj=data.obj;
+        var list=obj.list;
+        $("#mLevel").attr("value",list[0].mLevel);
+    });
+});
+
+$("#editParentMerchant").change(function(){
+    var id = document.getElementById("editParentMerchant").options[document.getElementById("editParentMerchant").selectedIndex].value
+    $("#mParentMerchant").attr("value",id);
+    // JY.Ajax.doRequest(null,jypath +'/channels/findParentMerchant',{mId:id},function(data){
+    //     var obj=data.obj;
+    //     var list=obj.list;
+    //     $("#mLevels").attr("value",list[0].mLevel);
+    // });
+});
+
+/** 新增佣金配置*/
+function setCommissionForm(mId,mName){
+	$("#commissionForm input[name$='merchantName']").val(mName);
+	$("#commissionForm input[name$='merchantId']").val(mId);
+}
+
+/** 预收款配置*/
+function prepayment(mID,mName){
+	setPrepayment(mID,mName);
+	JY.Model.edit("prepaymentId","预收款配置",function(){
+		if(JY.Validate.form("prepaymentForm")){
+			var that =$(this);
+			JY.Ajax.doRequest("prepaymentForm",jypath +'/backstage/prepayment/create',null,function(data){
+				that.dialog("close");
+				JY.Model.info(data.resMsg,function(){search();});
+				getbaseList(1);
+			});
+		}
+	});
+}
+/** 新增预收款配置*/
+function setPrepayment(mId,mName){
+	$("#prepaymentForm input[name$='merchantName']").val(mName);
+	$("#prepaymentForm input[name$='merchantId']").val(mId);
+}
+
+function selectInformation(){
+    $("#mLevel").attr("value","1");
+    var commissionName=document.getElementById("commissionName");
+	var commissionNameLine=document.getElementById("commissionNameLine");
+	niw+='<option>请选择</option>';
+	niwLine+='<option>请选择</option>';
+	JY.Ajax.doRequest(null,jypath +'/backstage/commission/findByPage',null,function(data){
+     	 var obj=data.obj;
+	   	 var list=obj.list;
+	   	 var results=list.results;
+		 if(results!=null&&results.length>0){
+			 for(var i = 0;i<results.length;i++){
+	    		 var s=results[i];
+	    		 	findLadder(s);
+	    		 };
+		commissionName.innerHTML=niw;
+		commissionNameLine.innerHTML=niwLine;
+	};
+	});
+    JY.Ajax.doRequest(null,jypath +'/channels/findOwn',null,function(data){
+        var obj=data.obj;
+        var list=obj.list;
+        var merchantLevel=document.getElementById("merchantLevel");
+        var parentMerchant=document.getElementById("parentMerchant");
+        var s="";
+        if(list.length!=0){
+            if(list[0].mLevel==2 || list[0].mLevel==3){
+                s+='<option value=2>二级渠道</option>';
+                var v="";
+                $("#mParentMerchant").attr("value",list[0].mId);
+                $("#mLevel").attr("value","2");
+                v+='<option value='+list[0].mId+'>'+list[0].mName+'</option>';
+                parentMerchant.innerHTML=v;
+            }else{
+                s+='<option value=1>一级渠道</option>';
+                s+='<option value=2>二级渠道</option>';
+            }
+		}else{
+            s+='<option value=2>二级渠道</option>';
+            $("#mLevel").attr("value","2");
+            var v="";
+            v+='<option value=0>请选择</option>';
+            JY.Ajax.doRequest(null,jypath +'/channels/findParentMerchant',null,function(data){
+                var obj=data.obj;
+                var list=obj.list;
+                if(list!=null&&list.length>0){
+                    for(var i = 0;i<list.length;i++){
+                        var s=list[i];
+                        v+='<option value='+s.mId+'>'+s.mName+'</option>';
+                    };
+                };
+                parentMerchant.innerHTML=v;
+            });
+		}
+
+		merchantLevel.innerHTML=s;
+    });
+}
+

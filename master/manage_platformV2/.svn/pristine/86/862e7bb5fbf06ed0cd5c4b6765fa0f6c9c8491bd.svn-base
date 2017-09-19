@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.CpOrderInfoDao">
+    <resultMap id="CpOrderInfo" type="CpOrderInfo">
+		<id column="id"  property="id"/>
+		<result column="sycDate" property="sycDate"/>
+		<result column="userId" property="userId"/>
+		<result column="lotteryId" property="lotteryId"/>
+		<result column="lotteryName" property="lotteryName"/>
+		<result column="playType" property="playType"/>
+		<result column="issue" property="issue"/>
+		<result column="schemeId" property="schemeId"/>
+		<result column="schemeExtendId" property="schemeExtendId"/>
+		<result column="money" property="money"/>
+		<result column="buyTime" property="buyTime"/>
+		<result column="buyWay" property="buyWay"/>
+		<result column="online" property="online"/>
+		<result column="status" property="status"/>
+		<result column="orderNo" property="orderNo"/>
+		<result column="transNo" property="transNo"/>
+		<result column="createTime" property="createTimeD"/>
+		<result column="userName" property="userName"/>
+		<result column="isValid" property="isValid"/>
+		<result column="schemeType" property="schemeType"/>
+		<result column="schemeExtendType" property="schemeExtendType"/>
+    </resultMap>
+
+	<!--用户购彩信息导入 -->
+	<insert id="orderSave" parameterType="String">
+     LOAD DATA LOCAL INFILE #{fileName}
+	 into table DC_CP_OrderInfo  character set gbk lines terminated by "\r\n" IGNORE 3 LINES
+    (userId,lotteryName,lotteryId,issue,schemeId,schemeExtendId,money,buyWay,buyTime,online,status,ticketTime,refundTime,schemeType,orderType)
+	 SET sycDate=#{sycTime}
+	</insert>
+
+	<!--清空用户购彩表-->
+	<delete id="orderDelete" >
+		DELETE FROM DC_CP_OrderInfo WHERE  DATE_FORMAT(sycDate,'%Y%m%d')=#{deleteTime}
+	</delete>
+
+	<!--购彩追期信息导入 -->
+	<insert id="tranceSave" parameterType="String">
+     LOAD DATA LOCAL INFILE #{fileName}
+	 into table DC_CP_TranceOrderInfo  character set gbk lines terminated by "\r\n" IGNORE 3 LINES
+	(userId,lotteryName,lotteryId,issue,schemeId,schemeExtendId,money,buyWay,buyTime,online,ticketTime,dtype,sycDate)
+	</insert>
+
+	<!--清空购彩追期表-->
+	<delete id="tranceDelete" >
+		DELETE FROM DC_CP_TranceOrderInfo WHERE
+		(DATE_FORMAT(sycDate,'%Y%m%d') = #{firstTime} AND dtype=1)
+		OR 	(DATE_FORMAT(sycDate,'%Y%m%d') = #{secondTime}AND dtype!=1)
+	</delete>
+
+    <!--查询购彩追期-->
+    <select id="findByTypeAndTime" resultType="java.lang.Integer">
+    SELECT count(1) FROM DC_CP_TranceOrderInfo
+       <where> 1=1
+           <if test="date!=null and date!=''">
+             AND  DATE_FORMAT(sycDate,'%Y%m%d') = #{date}
+           </if>
+           <if test="type!=null and type!=''">
+               AND  dtype = #{type}
+           </if>
+       </where>
+    </select>
+
+</mapper>

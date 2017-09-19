@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.LotteryBuyAndTicketDao">
+	<resultMap id="list" type="LotteryBuyAndTicket">
+		<id column="id" jdbcType="BIGINT" property="id"/>
+		<result column="date" property="date" />
+		<result column="sales" property="sales" />
+		<result column="commonSales" property="commonSales" />
+		<result column="merchantSales" property="merchantSales" />
+		<result column="ticketMoney" property="ticketMoney" />
+		<result column="commonTicketMoney" property="commonTicketMoney" />
+		<result column="merchantTicketMoney" property="merchantTicketMoney" />
+		<result column="refundMoney" property="refundMoney" />
+		<result column="commonRefundMoney" property="commonRefundMoney" />
+		<result column="merchantRefundMoney" property="merchantRefundMoney" />
+		<result column="notTicket" property="notTicket" />
+		<result column="commonNotTicket" property="commonNotTicket" />
+		<result column="merchantNotTicket" property="merchantNotTicket" />
+		<result column="diff" property="diff" />
+	</resultMap>
+
+	<resultMap id="money" type="Double">
+	<result column="money" property="money" />
+	</resultMap>
+
+	<resultMap id="LotteryBuyAndTicketDiffReport" type="LotteryBuyAndTicketDiffReport">
+		<id column="id" jdbcType="BIGINT" property="id"/>
+		<result column="date" property="date" />
+		<result column="schemeExtendId" property="schemeExtendId" />
+		<result column="diffMoney" property="diffMoney" />
+		<result column="diffType" property="diffType" />
+		<result column="diffReason" property="diffReason" />
+		<result column="status" property="status" />
+		<result column="handler" property="handler" />
+		<result column="handleTime" property="handleTime" />
+	</resultMap>
+
+<!--分页多参数查询数据-->
+	<select id="findByPage"  resultMap="list" parameterType="LotteryBuyAndTicket">
+		SELECT t.* FROM RP_CP_LotteryBuyAndTicket t
+		<where>
+			<if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')">
+				t.date BETWEEN #{param.beginTime} and #{param.endTime}
+			</if>
+		</where>
+		ORDER BY t.date desc
+	</select>
+
+	<!--购彩金额， type=1，普通，2：商户-->
+	<select id="findSalesMoney" resultMap="money" parameterType="String">
+		SELECT sum(money) as money  from DC_CP_OrderInfo
+       where 1=1
+		and status in (2,3,4)
+		<if test="type==1">
+			 and buyway=1
+			 and schemeType=1
+			 and orderType=1
+		 </if>
+		<if test="type==2">
+			and buyway=1
+			and schemeType!=1
+			and orderType=1
+		</if>
+		and buyTime BETWEEN #{0} and #{1}
+
+	</select>
+
+
+	<!--出票金额-->
+	<select id="findTicketMoneyBetweenDate" resultMap="money" resultType="Double">
+		SELECT sum(money) as money  from DC_CP_OrderInfo
+		where 1=1
+		and status =3
+		<if test="type==1">
+			and buyway=1
+			and schemeType=1
+			and orderType=1
+		</if>
+		<if test="type==2">
+			and buyway=1
+			and schemeType!=1
+			and orderType=1
+		</if>
+		and ticketTime BETWEEN #{0} and #{1}
+	</select>
+
+
+	<!--退款金额,-->
+	<select id="findRefundMoney" resultMap="money"  resultType="Double">
+		SELECT sum(money) as money  from DC_CP_OrderInfo
+		where  1=1
+		and status =4
+		and buyway=1
+		<if test="type==1">
+			and schemeType=1
+			and orderType=1
+		</if>
+		<if test="type==2">
+			and schemeType!=1
+			and orderType=1
+		</if>
+		and refundTime BETWEEN #{0} and #{1}
+	</select>
+	<!--未出票金额 -->
+	<select id="findNotTicket"  resultMap="money">
+		SELECT sum(money) as money  from DC_CP_OrderInfo
+		where  1=1
+		and status =2
+		and buyway=1
+		<if test="type==1">
+			and schemeType=1
+			and orderType=1
+		</if>
+		<if test="type==2">
+			and schemeType!=1
+			and orderType=1
+		</if>
+		and buyTime BETWEEN #{0} and #{1}
+	</select>
+
+	<!--查询某日数据-->
+	<select id="findReportByDate"  resultMap="list" parameterType="LotteryBuyAndTicket">
+		SELECT t.* FROM RP_CP_LotteryBuyAndTicket t
+		<where>
+				t.date = #{0}
+		</where>
+		ORDER BY t.date desc
+	</select>
+
+<!--插入数据-->
+	<insert id="insert"  parameterType="LotteryBuyAndTicket">
+		<![CDATA[
+	INSERT INTO RP_CP_LotteryBuyAndTicket(
+	    id,
+		date,
+		sales,
+		commonSales,
+		merchantSales,
+		ticketMoney,
+		commonTicketMoney,
+		merchantTicketMoney,
+		refundMoney,
+		commonRefundMoney,
+		merchantRefundMoney,
+		notTicket,
+		commonNotTicket,
+		merchantNotTicket,
+		diff
+	) VALUES (#{id},#{date},#{sales},#{commonSales},#{merchantSales},
+							#{ticketMoney},#{commonTicketMoney},#{merchantTicketMoney},
+							#{refundMoney},#{commonRefundMoney},#{merchantRefundMoney},
+							#{notTicket},#{commonNotTicket},#{merchantNotTicket},
+							#{diff}
+	)
+	]]>
+	</insert>
+	<insert id="insertDiffReport"  parameterType="java.util.List">
+		INSERT INTO RP_LotteryBuyAndTicketDiffReport(
+		id,date,schemeExtendId,diffMoney,diffType,diffReason,status
+		,handler,handleTime
+		) VALUES (
+		<foreach collection="list" item="item" index="index" separator="," >
+			#{item.id},#{item.date},#{item.schemeExtendId},#{item.diffMoney},#{item.diffType},#{item.diffReason},
+			#{item.status},
+			#{item.handler},#{item.handleTime}
+			)
+		</foreach>
+	</insert>
+	<delete id="deleteList" parameterType="LotteryBuyAndTicket">
+		delete from RP_CP_LotteryBuyAndTicket
+		WHERE id in
+		<foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+			#{item.id}
+		</foreach>
+	</delete>
+	<delete id="deleteDiffList" parameterType="LotteryBuyAndTicketDiffReport">
+		delete from RP_LotteryBuyAndTicketDiffReport
+		WHERE id  in
+		<foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+			#{item.id}
+		</foreach>
+	</delete>
+
+	<select id="find"  resultMap="list" parameterType="LotteryBuyAndTicket">
+		SELECT t.* FROM RP_CP_LotteryBuyAndTicket t
+		<where>
+			<if test="date!=null and date!=''">
+				t.date = #{date}
+			</if>
+		</where>
+		ORDER BY t.date desc
+	</select>
+
+	<!--查询某日数据-->
+	<select id="findDiffReportByDate"  resultMap="list" parameterType="LotteryBuyAndTicketDiffReport">
+		SELECT t.* FROM RP_LotteryBuyAndTicketDiffReport t
+		<where>
+			t.date = #{0}
+		</where>
+		ORDER BY t.date desc
+	</select>
+
+
+	<select id="findMonth"  resultMap="list" parameterType="LotteryBuyAndTicket">
+		SELECT t.*  FROM RP_CP_LotteryBuyAndTicket t
+		<where>
+			<if test="param.date!=null and param.date!=''">
+				t.date LIKE '%${param.date}%'
+			</if>
+		</where>
+		ORDER BY t.date ASC
+	</select>
+	<select id="findDiffMonth"  resultMap="LotteryBuyAndTicketDiffReport" >
+		SELECT t.*   FROM RP_LotteryBuyAndTicketDiffReport t
+		<where>
+			t.date LIKE '%${month}%'
+		</where>
+		ORDER by t.date ASC
+	</select>
+	<select id="findDiffByPage"  resultMap="LotteryBuyAndTicketDiffReport" parameterType="LotteryBuyAndTicketDiffReport">
+		SELECT * FROM RP_LotteryBuyAndTicketDiffReport
+		WHERE 1=1
+		<if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')" >
+			and   date  BETWEEN #{param.beginTime} and #{param.endTime}
+		</if>
+		ORDER BY date desc
+	</select>
+
+
+	<select id="findDiffByDate"  resultMap="LotteryBuyAndTicketDiffReport" parameterType="LotteryBuyAndTicketDiffReport">
+		SELECT t.* FROM RP_LotteryBuyAndTicketDiffReport t
+		<where>
+			t.date = #{0}
+		</where>
+		ORDER BY t.date desc
+	</select>
+	<select id="findAndInstallDiff"  resultMap="LotteryBuyAndTicketDiffReport" >
+		<![CDATA[
+	-- '当日订单跨日退款'
+	select  schemeExtendId as schemeExtendId ,money as diffMoney,1 as diffType
+		from  DC_CP_OrderInfo
+		where
+		buyWay=1
+		and orderType=1
+		and buyTime BETWEEN #{0} and #{1}
+		and  status =4 and refundTime > #{1}
+
+		-- 往日订单今日退款
+		UNION
+		select  schemeExtendId as schemeExtendId ,money as diffMoney,2 as diffType
+		from DC_CP_OrderInfo
+		where
+		buyWay=1
+		and orderType=1
+		and buyTime < #{0}
+		and status  =4 and refundTime  BETWEEN #{0} and #{1}
+		UNION
+
+		-- '当日订单跨日出票成功'
+		SELECT  schemeExtendId as schemeExtendId ,money as diffMoney,3 as diffType
+		from DC_CP_OrderInfo
+		where
+		buyWay=1
+		and orderType=1
+		and buyTime BETWEEN#{0} and #{1}
+		and ticketTime >= #{1}
+		and status  =3
+		UNION
+		-- '往日票今日出票成功'
+		SELECT  schemeExtendId as schemeExtendId ,money as diffMoney,4 as diffType
+		from  DC_CP_OrderInfo
+		where
+		buyWay=1
+		and orderType=1
+		and ticketTime BETWEEN #{0} and #{1}
+		and  buyTime< #{0}
+		and status =3
+]]>
+
+
+
+	</select>
+
+</mapper>

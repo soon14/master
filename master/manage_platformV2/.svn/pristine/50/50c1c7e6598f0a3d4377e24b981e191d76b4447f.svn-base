@@ -1,0 +1,113 @@
+package com.jy.process.impl.system.channels;
+
+import com.jy.common.ajax.AjaxRes;
+import com.jy.common.utils.security.AccountShiroUtil;
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.channels.OutLineDataInfo;
+import com.jy.entity.system.channels.Prepayment;
+import com.jy.from.system.request.OutLineDataForm;
+import com.jy.mybatis.Page;
+import com.jy.process.system.channels.OutLineDataProcess;
+import com.jy.service.system.channels.OutLineDataService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/5/17.
+ */
+@Service
+public class OutLineDataProcessImpl implements OutLineDataProcess {
+    @Autowired
+    private OutLineDataService outLineDataService;
+
+    /**
+     * ¼���������
+     * @param outLineDataForm
+     * @throws Exception
+     */
+    @Transactional
+    @Override
+    public void addOutLineData(OutLineDataForm outLineDataForm) throws Exception {
+        Map map = new HashMap();
+        map.put("mId", outLineDataForm.getMerchantId());
+        Prepayment prepayment = outLineDataService.findPrePaymentInfo(map);//��ѯԭ���
+        outLineDataForm.setOldPreDeposit(prepayment.getBalance());
+        map.put("sale", outLineDataForm.getSaleMoney());
+        outLineDataService.updatePreDepositBalance(map);//������������Ϊ��ȥ��ǰ�����۶�֮������
+        outLineDataForm.setNowPreDeposit(prepayment.getBalance()-outLineDataForm.getSaleMoney());
+        outLineDataService.addOutLineData(outLineDataForm);
+    }
+
+    @Override
+    public void addDeposit(Merchant merchant) throws Exception {
+        outLineDataService.addDeposit(merchant);
+    }
+
+    /**
+     * ��ѯ������Ϣ
+     * @param map
+     * @return
+     * @throws Exception
+     */
+    @Override
+    public List<OutLineDataInfo> findOutLineData(Map map) throws Exception {
+        List<OutLineDataInfo> list = outLineDataService.findOutLineData(map);
+        return list;
+    }
+
+    @Override
+    public List<Merchant> findDeposit(Map map) throws Exception {
+        List<Merchant> list = outLineDataService.findDeposit(map);
+        return list;
+    }
+    @Override
+    public List<Merchant> findDeposit(Map map, int a) throws Exception {
+        List<Merchant> list = outLineDataService.findDeposit(map, a);
+        return list;
+    }
+    @Override
+    public List<Merchant> findMerchant() throws Exception {
+        return outLineDataService.findMerchant();
+    }
+
+    /**
+     * ��ѯ������Ϣ
+     * @param map
+     * @param a
+     * @return
+     * @throws Exception
+     */
+    @Override
+    public List<OutLineDataInfo> findOutLineData(Map map, int a) throws Exception {
+        List<OutLineDataInfo> list = outLineDataService.findOutLineData(map,a);
+        return list;
+    }
+
+
+
+    /**
+     * �޸�Ԥ������
+     * @param map
+     * @throws Exception
+     */
+    @Override
+    public void updatePreDepositBalance(Map map) throws Exception {
+        outLineDataService.updatePreDepositBalance(map);
+    }
+
+    /**
+     * ��ѯԤ���������
+     * @param map
+     * @return
+     * @throws Exception
+     */
+    @Override
+    public Prepayment findPrePaymentInfo(Map map) throws Exception {
+        return outLineDataService.findPrePaymentInfo(map);
+    }
+}

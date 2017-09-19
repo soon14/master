@@ -1,0 +1,387 @@
+package com.jy.service.impl.system.channels;
+
+
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import com.jy.common.utils.ChannelsUtils;
+import com.jy.entity.system.channels.Prepayment;
+import com.jy.entity.system.finance.CpOrderInfo;
+import com.jy.entity.system.finance.UserVo;
+import com.jy.repository.system.channels.PrepaymentDao;
+import com.jy.repository.system.finance.reconciliation.lottery.SalesSumDao;
+import com.jy.repository.system.finance.statistics.lottery.SalesCommissionReportDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import org.apache.ibatis.annotations.Param;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.jy.mybatis.Page;
+import com.jy.entity.system.channels.Merchant;
+import com.jy.repository.system.channels.MerchantDao;
+import com.jy.service.system.channels.MerchantService;
+
+/**
+ * 渠道商户
+ */
+@Service("MerchantService")
+public class  MerchantServiceImpl extends BaseServiceImp<Merchant> implements MerchantService {
+    @Autowired
+    private MerchantDao merchantDao;
+//    @Autowired
+//    private PrepaymentDao prepaymentDao;
+    @Autowired
+    private SalesCommissionReportDao salesCommissionReportDao;
+    @Autowired
+    private SalesSumDao salesSumDao;
+
+    protected Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    public Integer createMerchant(Merchant merchant){
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        merchant.setmCreateTime(sdf.format(new Date()));
+        return merchantDao.createMerchant(merchant);
+    }
+
+
+    /**
+     * 通过渠道ID批量查询渠道
+     *
+     * @param id
+     * @return
+     */
+    public List<Merchant> findMerchantId(List id){
+        return  merchantDao.findMerchantId(id);
+    }
+
+    /**
+     * 批量删除
+     *
+     * @param id
+     * @return
+     */
+    public Integer deleteMerchant(List id){
+        return merchantDao.deleteMerchant(id);
+    }
+
+    public Integer deleteMerchantByMId(String mId){
+        return merchantDao.deleteMerchantByMId(mId);
+    }
+
+
+
+    public Merchant findId(String userId,String mobile){
+        return merchantDao.findId(userId,mobile);
+    }
+
+    @Override
+    public List<Merchant> findChildCustomerByMId(Merchant merchant){
+        return merchantDao.findChildCustomerByMId(merchant);
+    }
+
+    @Override
+    public List<Merchant> findChildMerchantByMId(Merchant merchant){
+        return merchantDao.findChildMerchantByMId(merchant);
+    }
+
+
+    @Override
+    public List<Merchant> findMerchantByPreId(Map map) {
+        return merchantDao.findMerchantByPreId(map);
+    }
+    @Override
+    public List<Merchant> findMerchantByPreIdEj(Map map) {
+        return merchantDao.findMerchantByPreIdEj(map);
+    }
+
+    @Override
+    public List<Merchant> findMerchantByPreIdorg(Map map) {
+        return merchantDao.findMerchantByPreIdorg(map);
+    }
+
+    @Override
+    public List<Merchant> findChildMerchantId(Map map) {
+        return merchantDao.findChildMerchantId(map);
+    }
+
+    /**
+     * 获得对象列表
+     *
+     * @param o 集合对象
+     * @param page 分页对象
+     * @return List
+     */
+    public Page findByPageId(Map o, Page page) {
+        List list = null;
+        if ((null != o) && (o.size() != 0)) {
+            list = this.merchantDao.findByPageId(o);
+        }
+        page.setResults(list);
+        return page;
+    }
+    
+    public Page findLabelMerchant(Map o, Page page) {
+        List<Merchant> list = this.merchantDao.findLabelMerchant(o);
+        page.setResults(list);
+        return page;
+    }
+
+    /**
+     * 统计个人和企业数
+     *
+     * @param merchant
+     * @return
+     */
+    public Merchant findPersonAndEnterprise(Merchant merchant){
+        return merchantDao.findPersonAndEnterprise(merchant);
+    }
+    public Merchant countPersonAndEnterprise(Map map){
+        return merchantDao.countPersonAndEnterprise(map);
+    }
+
+    /**
+     * 查询自己渠道的次级渠道
+     *
+     * @param merchant
+     * @return
+     */
+    public List<Merchant> findChannel(Merchant merchant){
+        return merchantDao.findChannel(merchant);
+    }
+
+    /**
+     * 查询自己渠道的次级渠道数
+     *
+     * @param merchant
+     * @return
+     */
+    public Integer findCount(Merchant merchant){
+        return merchantDao.findCount(merchant);
+    }
+
+    public Integer updateMerchant(Merchant merchant){
+        return merchantDao.updateMerchant(merchant);
+    }
+
+    public Integer updateMLicense(Merchant merchant){
+        return merchantDao.updateMLicense(merchant);
+    }
+
+    @Override
+    public List<Merchant> findByParentMerchantId(Integer parentMerchantId){
+        return merchantDao.findByParentMerchantId(parentMerchantId);
+    }
+    @Override
+    public Merchant findMerchant(String accountId){
+        return merchantDao.findMerchant(accountId);
+    }
+
+    /**
+     * 查询商户ID
+     *
+     * @param merchant
+     * @return
+     */
+    public List<Merchant> findByPage(@Param("param") Merchant merchant){
+        return merchantDao.findByPage(merchant);
+    }
+    @Override
+    public Merchant findMerchantById(Integer merchantId){
+        return merchantDao.findMerchantById(merchantId);
+    }
+
+    @Override
+    public List<Merchant> findMerchantByIdAndName(Integer merchantId, String merchantName){
+        return merchantDao.findMerchantByIdAndName(merchantId, merchantName);
+    }
+
+    @Override
+    public List<Merchant> findBaseCommission(Merchant merchant) {
+        return merchantDao.findBaseCommission(merchant);
+    }
+
+    /**
+     * 查询子渠道id列表
+     * @param map
+     * @return
+     * @throws Exception
+     */
+    public List findChildMerchantIdList(Map map) throws Exception{
+        return salesCommissionReportDao.findChildQdIdList(map);
+    }
+
+    /**
+     * 查询商户标签用户idList
+     * @param map
+     * @return
+     * @throws Exception
+     */
+    public List findMarketerUserIdList(Map map) throws Exception{
+        return salesCommissionReportDao.findMarketIdList(map);
+    }
+    /**
+     * 查询商户信息
+     * @param merchantId
+     * @return
+     * @throws Exception
+     */
+    public Merchant findMerchantPO(String merchantId) throws Exception{
+        return merchantDao.findMerchantPO(merchantId);
+    }
+
+    /**
+     * 获取子级渠道IdList
+     * @param merchantId
+     * @return
+     * @throws Exception
+     */
+    public List findZjMerchantIdList(Integer merchantId,String beginTime,String endTime) throws Exception{
+        List pareIdList = new ArrayList();
+        pareIdList.add(merchantId);
+        Map map = new HashMap();
+        map.put("list", pareIdList);
+        map.put("beginTime",beginTime);
+        map.put("endTime",endTime);
+        return salesCommissionReportDao.findQdIdList(map);
+    }
+    /**
+     * 获取孙级渠道IdList
+     * @param merchantIdList
+     * @return
+     * @throws Exception
+     */
+    public List findSjMerchantIdList(List merchantIdList) throws Exception{
+        Map map = new HashMap();
+        map.put("list",merchantIdList);
+        List idList = salesCommissionReportDao.findChildQdIdList(map);
+        return idList;
+    }
+
+    /**
+     * 获取渠道标签用户IdList
+     * @param userIdList
+     * @return
+     * @throws Exception
+     */
+    public List findXjMarketerIdList(List userIdList,String beginTime,String endTime) throws Exception{
+        Map map = new HashMap();
+        map.put("list",userIdList);
+        map.put("beginTime", beginTime);
+        map.put("endTime", endTime);
+        List idList = salesCommissionReportDao.findMarketIdListCommission(map);
+        return idList;
+    }
+    /**
+     * 获取渠道标签用户IdList
+     * @param userIdList
+     * @return
+     * @throws Exception
+     */
+    public List findMarketIdListCount(List userIdList,String beginTime,String endTime) throws Exception{
+        Map map = new HashMap();
+        map.put("list",userIdList);
+        map.put("beginTime", beginTime);
+        map.put("endTime", endTime);
+        List idList = salesCommissionReportDao.findMarketIdListCount(map);
+        return idList;
+    }
+    public List<CpOrderInfo> ticketInfoList(Integer preMerchantId,String beginTime,String endTime,String userName,String phone,int pageNum,int pageSize) throws Exception{
+        Map map = new HashMap();
+        map.put("preMerchantId",preMerchantId);
+        map.put("beginTime",beginTime);
+        map.put("userName",userName);
+        map.put("phone", phone);
+        map.put("endTime", endTime);
+        map.put("pageNum", pageNum);
+        map.put("pageSize", pageSize);
+        return  salesSumDao.findTicketInfoList(map);
+    }
+    public Double sumSalesTicketInfo(Integer preMerchantId,String beginTime,String endTime,String userName,String phone) throws Exception{
+        Map map = new HashMap();
+        map.put("preMerchantId",preMerchantId);
+        map.put("userName",userName);
+        map.put("phone", phone);
+        map.put("beginTime",beginTime);
+        map.put("endTime", endTime);
+        return  salesSumDao.sumSalesTicketInfo(map);
+    }
+    public Integer sumFindTicketInfoList(Integer preMerchantId,String beginTime,String endTime,String userName,String phone) throws Exception{
+        Map map = new HashMap();
+        map.put("preMerchantId",preMerchantId);
+        map.put("beginTime",beginTime);
+        map.put("endTime", endTime);
+        map.put("userName", userName);
+        map.put("phone", phone);
+        return  salesSumDao.sumFindTicketInfoList(map);
+    }
+    public List<UserVo> salesUserList(List idList,String userName,String phone,int pageNum,int pageSize) throws Exception{
+        Map map = new HashMap();
+        map.put("list",idList);
+        map.put("userName",userName);
+        map.put("phone",phone);
+        map.put("pageNum",pageNum);
+        map.put("pageSize",pageSize);
+        return salesCommissionReportDao.salesUserList(map);
+    }
+    public Integer sumUserList(List idList,String userName,String phone) throws Exception{
+        Map map = new HashMap();
+        map.put("list",idList);
+        map.put("userName",userName);
+        map.put("phone",phone);
+
+        return  salesCommissionReportDao.sumUserList(map);
+    }
+
+    @Override
+    public String findChildMerchant(int mId) {
+        return merchantDao.findChildMerchant(mId);
+    }
+
+    @Override
+    public String findChildCustomer(int mId) {
+        return merchantDao.findChildCustomer(mId);
+    }
+
+    @Override
+    public String findRoleName(int mId) {
+        return merchantDao.findRoleName(mId);
+    }
+
+    @Override
+    public List<Merchant> findDataAuthorityMerchant(Map o) {
+        return merchantDao.findDataAuthorityMerchant(o);
+    }
+
+    @Override
+    public List<Merchant> findDataAuthoritySalesManager(Map o) {
+        return merchantDao.findDataAuthoritySalesManager(o);
+    }
+
+    @Override
+    public List<Merchant> findParentMerchant(Map o) {
+        return merchantDao.findParentMerchant(o);
+    }
+
+    @Override
+    public List<Merchant> findOwn(Map o) {
+        return merchantDao.findOwn(o);
+    }
+
+    @Override
+    public List<Merchant> findUserLevel(Map o) {
+        return merchantDao.findUserLevel(o);
+    }
+
+    @Override
+    public Integer findmName(String mName) {
+        return merchantDao.findmName(mName);
+    }
+
+    @Override
+    public Integer findmMobile(String mMobile,String mId) {
+        return merchantDao.findmMobile(mMobile,mId);
+    }
+}
+
+

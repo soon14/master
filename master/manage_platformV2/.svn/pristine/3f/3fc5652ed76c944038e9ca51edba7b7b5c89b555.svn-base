@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.SalesSumDao">
+    <resultMap id="SalesSum" type="SalesSum">
+      	<id column="m_id"  property="mId"/>
+		<result column="m_date" property="mDate"/>
+		<result column="m_oneself" property="mOneself"/>
+		<result column="m_syxw" property="mSyxw"/>
+		<result column="m_dlt" property="mDlt"/>
+		<result column="m_jclq" property="mJclq"/>
+		<result column="m_jczq" property="mJczq"/>
+		<result column="m_plsw" property="mPlsw"/>
+		<result column="m_qxc" property="mQxc"/>
+		<result column="m_rxjq" property="mRxjq"/>
+		<result column="m_sfc" property="mSfc"/>
+		<result column="m_sum" property="mSum"/>
+    </resultMap>
+	<resultMap id="TicketInfoDetailPO" type="TicketInfoDetailPO">
+		<id column="id"  property="id"/>
+		<result column="sycDate" property="sycDate"/>
+		<result column="userId" property="userId"/>
+		<result column="userName" property="userName"/>
+		<result column="schemeId" property="schemeId"/>
+		<result column="schemeExtendId" property="schemeExtendId"/>
+		<result column="batchId" property="batchId"/>
+		<result column="lotteryName" property="lotteryName"/>
+		<result column="money" property="money"/>
+		<result column="sendTime" property="sendTime"/>
+		<result column="ticketTime" property="ticketTime"/>
+		<result column="status" property="status"/>
+		<result column="createTime" property="createTime"/>
+		<result column="isValid" property="isValid"/>
+	</resultMap>
+	<resultMap id="findTicketInfoList" type="com.jy.entity.system.finance.CpOrderInfo">
+		<id column="id"  property="id"/>
+		<result column="sycDate" property="sycDate"/>
+		<result column="userId" property="userId"/>
+		<result column="lotteryName" property="lotteryName"/>
+		<result column="playType" property="playType"/>
+		<result column="issue" property="issue"/>
+		<result column="schemeId" property="schemeId"/>
+		<result column="schemeExtendId" property="schemeExtendId"/>
+		<result column="money" property="money"/>
+		<result column="buyTime" property="buyTime"/>
+		<result column="buyWay" property="buyWay"/>
+		<result column="online" property="online"/>
+		<result column="status" property="status"/>
+		<result column="orderNo" property="orderNo"/>
+		<result column="transNo" property="transNo"/>
+		<result column="createTime" property="createTime"/>
+		<result column="isValid" property="isValid"/>
+	</resultMap>
+	<resultMap id="findTicketInfoDetailList" type="com.jy.entity.system.channels.OrderDetail">
+		<id column="id"  property="id"/>
+		<id column="userId"  property="userId"/>
+		<result column="userName" property="userName"/>
+		<result column="phone" property="phone"/>
+		<result column="orderNum" property="orderNum"/>
+		<result column="money" property="money"/>
+		<result column="buyTime" property="buyTime"/>
+		<result column="preMerchantId" property="preMerchantId"/>
+	</resultMap>
+	<resultMap id="sumSales" type="Double">
+		<result column="money" property="sales" />
+	</resultMap>
+	<resultMap id="countTicketInfoList" type="Integer">
+		<result column="userId" property="userId" />
+	</resultMap>
+	<!--查询投注系统销售总报表数据-->
+	<select id="findMarket"  parameterType="String"   resultMap="SalesSum">
+		SELECT * from RP_TotalSaleInfo
+		 <where>
+			 m_date=#{date}
+		 </where>
+	</select>
+
+	<!--整合投注系统销售总报表,总金额明细-->
+	<select id="findTicketInfoDetail"  parameterType="String"   resultMap="TicketInfoDetailPO">
+		SELECT	lotteryName,SUM(money) money FROM DC_TicketInfo
+		<where>
+			sycDate BETWEEN #{ticketTime} and #{ticketDate}
+			GROUP BY lotteryName
+		</where>
+	</select>
+	<select id="findTicketInfoList"  parameterType="java.util.Map"   resultMap="findTicketInfoDetailList">
+		select
+		t.userId,
+		t.userName,
+		t.money AS money,
+		date_format(t.buyTime,'%Y-%m-%d %H:%i:%s') AS buyTime,
+		t.orderNum,
+		t.phone
+		FROM MP_OrderDetail t WHERE t.preMerchantId = #{preMerchantId}
+		<if test="beginTime !=null">
+			AND t.buyTime BETWEEN DATE_FORMAT(#{beginTime},'%Y-%m-%d %H:%i:%s') AND DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i:%s')
+		</if>
+		<if test="userName!=null and userName!=''" >
+			AND t.userName LIKE  CONCAT('%',#{userName},'%')
+		</if>
+		<if test="phone!=null and phone!=''" >
+			AND t.phone LIKE CONCAT('%',#{phone},'%')
+		</if>
+		ORDER BY t.buyTime DESC
+		 LIMIT #{pageNum},#{pageSize}
+
+
+
+	</select>
+	<select id="findTicketInfoDetailList"  parameterType="java.util.Map"   resultMap="findTicketInfoDetailList">
+<!--		select
+		t.userId,
+		t.userName,
+		t.money AS money,
+		date_format(t.buyTime,'%Y-%m-%d %H:%i:%s') AS buyTime,
+		t.schemeId AS orderNum,
+		#{preMerchantId}  AS preMerchantId,
+		t.phone
+		FROM (SELECT
+		d.userId,
+		u.userName,
+		d.money,
+		d.buyTime,
+		d.schemeId,
+		u.phone
+		FROM DC_CP_OrderInfo d LEFT JOIN DC_UserInfo u ON d.userId=u.userId where
+		(d.userId in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+
+		AND d.schemeType =1)
+		OR
+		(d.schemeType in (select b.schemeType from MP_MerchantExtend b where b.cpUserId in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		))
+		AND  d.buyTime>u.marketTime
+		<if test="beginTime !=null">
+			AND d.buyTime BETWEEN DATE_FORMAT(#{beginTime},'%Y-%m-%d %H:%i:%s') AND DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i:%s')
+		</if>
+		) t-->
+		select
+		b.userId,
+		u.userName,
+		b.money AS money,
+		date_format(b.buyTime,'%Y-%m-%d %H:%i:%s') AS buyTime,
+		b.schemeId AS orderNum,
+		#{preMerchantId}  AS preMerchantId,
+		u.phone
+		from DC_CP_OrderInfo b LEFT JOIN DC_UserInfo u ON b.userId=u.userId
+		where ((b.userId in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		AND b.schemeType =1
+		)
+		OR
+		(b.schemeType in (select d.schemeType from  MP_MerchantExtend d where d.cpUserId in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		)))
+		AND b.buyTime>u.marketTime
+		AND b.status in(17,19,20,21,22,3)
+		<if test="beginTime !=null">
+			AND b.buyTime
+			BETWEEN DATE_FORMAT(#{beginTime},'%Y-%m-%d %H:%i:%s')
+			and DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i:%s')
+		</if>
+	</select>
+	<select id="findTicketInfoDetailListMerchant"  parameterType="java.util.Map"   resultMap="findTicketInfoDetailList">
+		select
+		b.userId,
+		u.userName,
+		b.money AS money,
+		date_format(b.buyTime,'%Y-%m-%d %H:%i:%s') AS buyTime,
+		b.schemeId AS orderNum,
+		#{preMerchantId}  AS preMerchantId,
+		u.phone
+		from DC_CP_OrderInfo b LEFT JOIN
+		(select m.M_CPUserid as userId,j.createTime,m.M_ID from MP_MerchantInfo m LEFT JOIN JY_BASE_ACCOUNT j ON m.M_AccountId=j.id) u
+
+		ON b.userId=u.userId
+		where ((b.userId in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		AND b.schemeType =1
+		)
+		OR
+		(b.schemeType in (select d.schemeType from  MP_MerchantExtend d where d.cpUserId in
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		)))
+		AND b.buyTime>u.createTime
+		AND b.status in(17,19,20,21,22,3)
+		<if test="beginTime !=null">
+			AND b.buyTime
+			BETWEEN DATE_FORMAT(#{beginTime},'%Y-%m-%d %H:%i:%s')
+			and DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i:%s')
+		</if>
+	</select>
+	<select id="sumSalesTicketInfo"  parameterType="java.util.Map"   resultMap="sumSales">
+		select
+		SUM(t.money) as money
+		FROM MP_OrderDetail t WHERE t.preMerchantId = #{preMerchantId}
+		<if test="beginTime !=null">
+			AND t.buyTime BETWEEN DATE_FORMAT(#{beginTime},'%Y-%m-%d %H:%i:%s') AND DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i:%s')
+		</if>
+		<if test="userName!=null and userName!=''" >
+			AND t.userName LIKE CONCAT('%',#{userName},'%')
+		</if>
+		<if test="phone!=null and phone!=''" >
+			AND t.phone LIKE CONCAT('%',#{phone},'%')
+		</if>
+	</select>
+	<select id="sumFindTicketInfoList"  parameterType="java.util.Map"   resultMap="countTicketInfoList">
+		select
+		count(t.userId) AS userId
+		FROM MP_OrderDetail t WHERE t.preMerchantId = #{preMerchantId}
+		<if test="beginTime !=null">
+			AND t.buyTime BETWEEN DATE_FORMAT(#{beginTime},'%Y-%m-%d %H:%i:%s') AND DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i:%s')
+
+		</if>
+		<if test="userName!=null and userName!=''" >
+			AND t.userName LIKE CONCAT('%',#{userName},'%')
+		</if>
+		<if test="phone!=null and phone!=''" >
+			AND t.phone LIKE CONCAT('%',#{phone},'%')
+		</if>
+		</select>
+
+	<!--统计总金额-->
+	<select id="findSumMoney"  parameterType="String"   resultMap="SalesSum">
+		SELECT	SUM(money) mSum ,COUNT(id) mCount FROM DC_TicketInfo
+		<where>
+			sycDate BETWEEN #{ticketTime} and #{ticketDate}
+		</where>
+	</select>
+	<insert id="insertOrderList" parameterType="java.util.List">
+		INSERT INTO MP_OrderDetail(
+		userName,orderNum,money,buyTime,preMerchantId,userId,phone
+		) VALUES
+		<foreach collection="list" item="item" index="index" separator="," >
+			(#{item.userName},#{item.orderNum},#{item.money},#{item.buyTime},#{item.preMerchantId},#{item.userId},#{item.phone})
+		</foreach>
+	</insert>
+	<delete id="deleteDetailListIfExist" parameterType="java.util.Map">
+		delete from MP_OrderDetail
+		WHERE buyTime BETWEEN DATE_FORMAT(#{beginTime},'%Y-%m-%d %H:%i:%s') AND DATE_FORMAT(#{endTime},'%Y-%m-%d %H:%i:%s')
+	</delete>
+</mapper>

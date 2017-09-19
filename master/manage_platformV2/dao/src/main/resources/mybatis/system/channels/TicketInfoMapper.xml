@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.TicketInfoDao">
+	<resultMap type="com.jy.entity.system.channels.TicketInfoPO"
+		id="ticketResult">
+		<result property="batchNo" column="batchNo" />
+		<result property="ticketNo" column="ticketNo" />
+		<result property="ticketMoney" column="ticketMoney" />
+		<result property="machionNo" column="machionNo" />
+		<result property="playWay" column="playWay" />
+		<result property="lotteryName" column="lotteryName" />
+		<result property="ticketDate" column="ticketDate" />
+
+	</resultMap>
+	<!--导入投注机出票明细 -->
+	<insert id="ticketImport" parameterType="java.util.List">
+		INSERT INTO TS_TicketInfo(
+		batchNo,
+		issueNo,
+		ticketNo,
+		isValid,
+		isOnline,
+		ticketMoney,
+		lotteryName,
+		machionNo,
+		playWay,
+		flowCode,
+		ticketDate,
+		importDateTime,
+		importDate,
+		importUser,
+		ticketType
+		) VALUES
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{item.batchNo},#{item.issueNo},#{item.ticketNo},1,#{item.isOnline},
+			#{item.ticketMoney},#{item.lotteryName},#{item.machionNo},
+			#{item.playWay},#{item.flowCode},#{item.ticketDate},
+			#{item.importDateTime},#{item.importDate},#{item.importUser},#{item.ticketType})
+		</foreach>
+	</insert>
+	<!--导入兑奖数据明细 -->
+	<insert id="cashInfoImport" parameterType="java.util.List">
+		INSERT INTO TS_CashPrize(
+		batch_no,
+		pay_way,
+		machine_number,
+		ticket_number,
+		system_serial_number,
+		machine_after_tax_bonus,
+		net_befor_tax_bonus,
+		net_after_tax_bonus,
+		prize_type,
+		prize_date,
+		issue_number,
+		betting_amount,
+		tick_date,
+		create_date,
+		create_user,
+		ticketType
+		) VALUES
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{item.batchNo},#{item.payWay},#{item.machineNumber},#{item.ticketNumber},
+			#{item.systemSerialNumber},#{item.machineAfterTaxBonus},#{item.netBeforTaxBonus},
+			#{item.netAfterTaxBonus},#{item.prizeType},#{item.prizeDate},
+			#{item.issueNumber},#{item.bettingAmount},#{item.tickDate},#{item.createDate},#{item.createUser},#{item.ticketType})
+		</foreach>
+	</insert>
+	<!--第三方出票明细 -->
+	<insert id="thirdImport" parameterType="java.util.List">
+		INSERT INTO TS_PaymentInfo(
+		BatchNo,
+		PayNo,
+		PayFlowNo,
+		TransMoney,
+		PayWay,
+		TradeTime,
+		OpenId
+		) VALUES
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{item.batchNo},#{item.payNo},#{item.payFlowNo},#{item.transMoney},
+			#{item.payWay},#{item.tradeTime},#{item.openId})
+		</foreach>
+	</insert>
+	<!--清除导入数据 -->
+	<update id="update" parameterType="BaseTickInfo">
+		UPDATE TS_TicketInfo t
+		SET
+		isValid =0
+		WHERE t.importDate=#{importDate}
+	</update>
+	<!--清除出票明细数据.物理删除 -->
+	<delete id="delete" parameterType="BaseTickInfo">
+		DELETE FROM TS_TicketInfo
+		WHERE batchNo=#{batchNo}
+	</delete>
+	<!--清除第三方数据.物理删除 -->
+	<delete id="deleteThird" parameterType="ThirdPayInfo">
+		DELETE FROM
+		TS_PaymentInfo
+		WHERE BatchNo=#{batchNo}
+	</delete>
+	<!-- 删除该批次导入的兑奖数据 -->
+	<delete id="deleteCash" parameterType="CashInfo">
+		DELETE FROM TS_CashPrize
+		WHERE batch_no=#{batchNo}
+	</delete>
+	<delete id="deleteVoucher" parameterType="VoucherInfo">
+		DELETE FROM
+		TS_VoucherInfo
+		WHERE batchNo=#{batchNo}
+	</delete>
+	<select id="findSumTicketInfo" resultMap="ticketResult"
+		resultType="BaseTickInfo">
+		SELECT SUM(ticketMoney) ticketMoney,COUNT(id) summCount from
+		TS_TicketInfo
+		<where>
+			ticketDate BETWEEN #{ticketTime} and #{ticketDate}
+		</where>
+	</select>
+
+
+	<resultMap type="com.jy.entity.system.channels.ThirdPayInfo"
+		id="thirdPayInfo">
+		<result property="batchNo" column="batchNo" />
+		<result property="payNo" column="payNo" />
+		<result property="payWay" column="payWay" />
+		<result property="payFlowNo" column="payFlowNo" />
+		<result property="transMoney" column="transMoney" />
+		<result property="tradeTime" column="tradeTime" />
+		<result property="flowCode" column="flowCode" />
+		<result property="openId" column="openId" />
+	</resultMap>
+
+
+	<select id="findThirdListByParam" resultMap="thirdPayInfo"
+		parameterType="com.jy.entity.system.finance.reconciliation.lottery.PlatformFundsRunning">
+		SELECT * from TS_PaymentInfo
+		<where>
+			PayWay in
+			<foreach item="item" index="index" collection="channelList"
+				open="(" separator="," close=")">
+				#{item}
+			</foreach>
+			and
+			TradeTime BETWEEN #{beginTime} and #{endTime}
+		</where>
+	</select>
+
+
+
+	<select id="findObjByPayFlowNo" resultMap="thirdPayInfo"
+		parameterType="com.jy.entity.system.finance.reconciliation.lottery.PlatformFundsRunning">
+		SELECT * from TS_PaymentInfo
+		<where>
+			PayFlowNo=#{0}
+			and
+			PayWay = #{1}
+		</where>
+	</select>
+
+	<select id="queryTotal" resultMap="ticketResult">
+		select sum(c.aumone) as
+		totalAumone, count(0) as summCount from (
+		select
+		id,SUM(q.ticketMoney) AS aumone from TS_TicketInfo q where q.isOnline
+		= 1
+		AND date_format(q.ticketDate,'%Y-%m-%d') =
+		date_format(#{date},'%Y-%m-%d') GROUP BY q.ticketNo) c;
+	</select>
+
+	<select id="queryByNo" resultMap="ticketResult">
+		select q.ticketNo as ticketNo,
+		sum(q.ticketMoney) as
+		ticketMoney,q.ticketDate as ticketDate from
+		TS_TicketInfo q
+		where
+		q.isOnline = 1 and q.ticketNo = #{ticketNo}
+		GROUP BY q.ticketNo
+	</select>
+
+	<select id="findAll" resultMap="ticketResult">
+		select q.ticketNo as ticketNo,
+		sum(q.ticketMoney) as ticketMoney,q.ticketDate as ticketDate from
+		TS_TicketInfo q
+		where q.isOnline = 1 and 
+		date_format(q.ticketDate,'%Y-%m-%d') =date_format(#{date},'%Y-%m-%d')
+		GROUP BY q.ticketNo
+	</select>
+
+
+	<select id="queryByDate" resultType="com.jy.entity.system.channels.TicketInfoPO"
+		parameterType="java.util.Map">
+		SELECT tdate as ticketDate,count(0) as summCount,sum(c.aumone)AS totalAumone from (
+		select q.id, SUM(q.ticketMoney) AS aumone, q.ticketDate as tdate from
+		TS_TicketInfo q where q.isOnline = 1
+		
+			AND date_format(q.ticketDate,'%Y-%m-%d') &gt;=
+			date_format(#{startTime},'%Y-%m-%d')
+		
+			AND date_format(q.ticketDate,'%Y-%m-%d') &lt;=
+			date_format(#{endTime},'%Y-%m-%d')
+		
+		GROUP BY q.ticketNo,date_format(q.ticketDate,'%Y-%m-%d')) c GROUP BY date_format(c.tdate,'%Y-%m-%d')
+		ORDER BY date_format(c.tdate,'%Y-%m-%d') DESC
+	</select>
+
+	<!--导入体彩券数据明细 -->
+	<insert id="voucherInfoImport" parameterType="java.util.List">
+		INSERT INTO TS_VoucherInfo(
+		batchNo,
+		vNo,
+		vMoney,
+		vStatus,
+		usedDate,
+		usedMachine,
+		vStart,
+		vEnd,
+		vRecordDate,
+		vRecordUser,
+		schemeNo
+		) VALUES
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{item.batchNo},#{item.vNo},#{item.vMoney},#{item.vStatus},
+			#{item.usedDate},#{item.usedMachine},#{item.vStart},
+			#{item.vEnd},#{item.vRecordDate},#{item.vRecordUser},#{item.schemeNo})
+		</foreach>
+	</insert>
+</mapper>

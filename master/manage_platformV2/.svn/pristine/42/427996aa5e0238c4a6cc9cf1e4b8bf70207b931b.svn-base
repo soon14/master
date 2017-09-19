@@ -1,0 +1,67 @@
+package com.jy.test;
+
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.inter.system.task.withdraw.TaskWithdrawProcess;
+
+import org.junit.Test;
+
+import javax.annotation.Resource;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+public class TaskWithdrawProcessTest extends BaseJunit4Test{
+    @Resource
+    private TaskWithdrawProcess taskWithdrawProcess;
+    @Test
+    public void taskWithdrawProcessTest(){
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        try {
+            Date dBegin = sdf.parse("20170501");
+            Date dEnd = sdf.parse("20170501");
+            List<Date> sectionDate = findDates(dBegin, dEnd);
+            for (Date date : sectionDate) {
+                System.out.println(sdf.format(date));
+                String thisDate= sdf.format(date);
+                RequestParamInfoForm infoForm = new RequestParamInfoForm();
+                infoForm.setPage("true");
+                infoForm.setQueryAll("true");
+                //infoForm.setQueryTime(thisDate);
+                infoForm.setPageSize(1000);
+                //taskWithdrawProcess.saveTaskWithdrawInfoList(infoForm);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * ��ȡ����ʱ���б�
+     *
+     * @param dBegin
+     * @param dEnd
+     * @return
+     */
+    public static List<Date> findDates(Date dBegin, Date dEnd) {
+        List<Date> lDate = new ArrayList<Date>();
+        //lDate.add(dBegin);
+        Calendar calBegin = Calendar.getInstance();
+        // ʹ�ø����� Date ���ô� Calendar ��ʱ��
+        calBegin.setTime(dBegin);
+        Calendar calEnd = Calendar.getInstance();
+        // ʹ�ø����� Date ���ô� Calendar ��ʱ��
+        calEnd.setTime(dEnd);
+        // ���Դ������Ƿ���ָ������֮��
+        while (dEnd.after(calBegin.getTime()) || dEnd.equals(calBegin.getTime())) {
+            lDate.add(calBegin.getTime());// ���������Ĺ���Ϊ�����������ֶ���ӻ��ȥָ����ʱ����
+            calBegin.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        return lDate;
+    }
+}

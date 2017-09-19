@@ -1,0 +1,307 @@
+package com.jy.controller.system.finance.statistics.lottery;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.swing.JOptionPane;
+
+import org.apache.commons.io.FileUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.jy.common.ajax.AjaxRes;
+import com.jy.mybatis.Page;
+import com.jy.common.utils.base.Const;
+import com.jy.controller.base.BaseController;
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.dict.SysDict;
+import com.jy.entity.system.finance.statistics.SalesCommissionReport;
+import com.jy.entity.system.finance.vo.SalesDetailVo;
+import com.jy.service.system.dict.SysDictService;
+import com.jy.service.system.finance.statistics.lottery.SalesCommissionReportService;
+
+/**
+ * Created by Administrator on 2017/1/9.
+ */
+
+@Controller
+@RequestMapping("/statistics/salesCommissionReport/")
+public class SalesCommissionReportController extends BaseController<SalesCommissionReportController> {
+
+    @Autowired
+    private SalesCommissionReportService service;
+	
+	@Autowired
+	public SysDictService dictService;
+
+	//////////////////////////// 页面跳转start/////////////////////////////
+    @RequestMapping("index")
+    public String index(Model model){
+        if(doSecurityIntercept(Const.RESOURCES_TYPE_MENU)){
+            model.addAttribute("permitBtn", getPermitBtn(Const.RESOURCES_TYPE_FUNCTION));
+            return "/system/finance/statistics/salesCommissionReport/SalesCommissionReport";
+        }
+        return Const.NO_AUTHORIZED_URL;
+    }
+
+    /**
+	 * 渠道商户发展的所有商户的页面
+	 * 
+	 * @param model
+	 * @return
+	 */
+    @RequestMapping("childMerchantList")
+    public String childMerchantList(Model model,String parentMerchant){
+        if(doSecurityIntercept(Const.RESOURCES_TYPE_BUTTON)){
+            model.addAttribute("permitBtn", getPermitBtn(Const.RESOURCES_TYPE_FUNCTION));
+            model.addAttribute("parentMerchant", parentMerchant);
+            return "/system/finance/statistics/salesCommissionReport/childMerchantList";
+        }
+        return Const.NO_AUTHORIZED_URL;
+    }
+
+    @RequestMapping("resetData")
+    public String resetData(Model model){
+        if(doSecurityIntercept(Const.RESOURCES_TYPE_BUTTON)){
+            model.addAttribute("permitBtn", getPermitBtn(Const.RESOURCES_TYPE_FUNCTION));
+            return "/system/finance/statistics/salesCommissionReport/resetData";
+        }
+        return Const.NO_AUTHORIZED_URL;
+    }
+
+    /**
+	 * 销量详情页面
+	 * 
+	 * @param model
+	 * @return
+	 */
+    @RequestMapping("salesDetailPage")
+    public String salesDetailPage(Model model,String parentMerchant,String date){
+        if(doSecurityIntercept(Const.RESOURCES_TYPE_BUTTON)){
+            model.addAttribute("permitBtn", getPermitBtn(Const.RESOURCES_TYPE_FUNCTION));
+            model.addAttribute("parentMerchant", parentMerchant);
+            model.addAttribute("date", date);
+            return "/system/finance/statistics/salesCommissionReport/salesDetail";
+        }
+        return Const.NO_AUTHORIZED_URL;
+    }
+
+	///////////////////////// 页面跳转end//////////////////////////////////
+
+    /**
+	 * 多参数分页查询销售佣金报表
+	 * 
+	 * @param page
+	 * @param o
+	 * @return
+	 */
+    @RequestMapping(value="findByPage", method= RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes findByPage(Page<SalesCommissionReport> page, SalesCommissionReport o){
+        AjaxRes ar=getAjaxRes();
+        if(ar.setNoAuth(doSecurityIntercept(Const.RESOURCES_TYPE_MENU,"/statistics/salesCommissionReport/index"))){
+            try {
+                String date=getRequest().getParameter("beginTime");
+                if(date!=""){
+                    o.setDate(date);
+                }else{
+/*                    String yestoday= DateUtils.getAfterDayDate("-1").substring(0, 10);
+                    o.setDate(yestoday);*/
+                }
+                Page<SalesCommissionReport> reports=service.findByPageList(o, page);
+                Map<String, Object> p=new HashMap<String, Object>();
+                p.put("permitBtn",getPermitBtn(Const.RESOURCES_TYPE_BUTTON));
+                p.put("list",reports);
+                ar.setSucceed(p);
+            } catch (Exception e) {
+                logger.error(e.toString(),e);
+                ar.setFailMsg(Const.DATA_FAIL);
+            }
+        }
+        return ar;
+    }
+
+    /**
+	 * 手动重置某日销售报表数据
+	 * 
+	 * @return
+	 */
+    @RequestMapping(value="manual", method= RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes manual(){
+        AjaxRes ar=getAjaxRes();
+        if(ar.setNoAuth(doSecurityIntercept(Const.RESOURCES_TYPE_BUTTON,"/statistics/salesCommissionReport/resetData"))){
+        try {
+            String startDate = getRequest().getParameter("beginTime");
+            String endDate = getRequest().getParameter("endTime");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+				SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");// 设置日期格式
+				System.out.println(df.format(new Date()));// new Date()为获取当前系统时间
+            Date dBegin = sdf.parse(startDate);
+            Date dEnd = sdf.parse(endDate);
+            List<Date> sectionDate = findDates(dBegin, dEnd);
+            for (Date date : sectionDate) {
+                System.out.println(sdf.format(date));
+                String thisDate= sdf.format(date);
+					Date stime = df.parse(df.format(new Date()));// new Date()为获取当前系统时间
+                service.insertReport("manual", thisDate);
+            }
+           // service.insertReport("manual", date);
+            Map<String, Object> p=new HashMap<String, Object>();
+				p.put("msg", "数据重置成功!");
+            ar.setSucceed(p);
+        }catch (Exception e){
+            logger.error(e.toString(),e);
+            Map<String, Object> p=new HashMap<String, Object>();
+				p.put("msg", "数据重置失败!");
+            ar.setSucceed(p);
+        }}
+        return ar;
+    }
+
+    /**
+	 * 该商户的子渠道商户list
+	 * 
+	 * @param page
+	 * @param merchant
+	 * @return
+	 */
+    @RequestMapping(value="findChildListByMerchantId", method= RequestMethod.POST)
+    @ResponseBody
+   AjaxRes findChildListByMerchantId(Page<Merchant> page, String  merchant){
+        AjaxRes ar=getAjaxRes();
+        if(ar.setNoAuth(doSecurityIntercept(Const.RESOURCES_TYPE_BUTTON,"/statistics/salesCommissionReport/childMerchantList"))){
+            try {
+                Page<Merchant> reports=new Page<Merchant>();
+                String parentMerchant=getRequest().getParameter("parentMerchant");
+                if(parentMerchant!=""&&parentMerchant!=null){
+                    Merchant o=new Merchant();
+                    o.setmParentMerchant(parentMerchant);
+                    reports=service.findChildListByMerchantId(o, page);
+                }
+                Map<String, Object> p=new HashMap<String, Object>();
+                p.put("permitBtn",getPermitBtn(Const.RESOURCES_TYPE_BUTTON));
+                p.put("list",reports);
+                ar.setSucceed(p);
+            } catch (Exception e) {
+                logger.error(e.toString(), e);
+                ar.setFailMsg(Const.DATA_FAIL);
+            }
+        }
+        return ar;
+    }
+
+
+    @RequestMapping(value="SalesDetail", method= RequestMethod.POST)
+    @ResponseBody
+    AjaxRes SalesDetail(Page<SalesDetailVo> page){
+        AjaxRes ar=getAjaxRes();
+        if(ar.setNoAuth(doSecurityIntercept(Const.RESOURCES_TYPE_BUTTON,"/statistics/salesCommissionReport/SalesDetailPage"))){
+            try {
+                Page<SalesDetailVo> reports=new Page<SalesDetailVo>();
+                String parentMerchant=getRequest().getParameter("parentMerchant");
+                String date=getRequest().getParameter("date");
+                if(parentMerchant!=""&&parentMerchant!=null&&date!=""&&date!=null){
+                    SalesDetailVo o=new SalesDetailVo();
+                    o.setmParentMerchant(parentMerchant);
+                    o.setDate(date);
+                    reports=service.findSalesDetail(o, page);
+                }
+                Map<String, Object> p=new HashMap<String, Object>();
+                p.put("permitBtn",getPermitBtn(Const.RESOURCES_TYPE_BUTTON));
+                p.put("list",reports);
+                ar.setSucceed(p);
+            } catch (Exception e) {
+                logger.error(e.toString(),e);
+                ar.setFailMsg(Const.DATA_FAIL);
+            }
+        }
+        return ar;
+    }
+
+    /**
+	 * 获取区间时间列表
+	 * 
+	 * @param dBegin
+	 * @param dEnd
+	 * @return
+	 */
+    public static List<Date> findDates(Date dBegin, Date dEnd) {
+        List<Date> lDate = new ArrayList<Date>();
+        //lDate.add(dBegin);
+        Calendar calBegin = Calendar.getInstance();
+		// 使用给定的 Date 设置此 Calendar 的时间
+        calBegin.setTime(dBegin);
+        Calendar calEnd = Calendar.getInstance();
+		// 使用给定的 Date 设置此 Calendar 的时间
+        calEnd.setTime(dEnd);
+		// 测试此日期是否在指定日期之后
+        while (dEnd.after(calBegin.getTime()) || dEnd.equals(calBegin.getTime())) {
+			lDate.add(calBegin.getTime());// 根据日历的规则，为给定的日历字段添加或减去指定的时间量
+            calBegin.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        return lDate;
+    }
+	
+	/**
+	 * 渠道商销量日报
+	 * 
+	 * @param page
+	 * @param o
+	 * @return
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value = "exportReport", method = {
+	        RequestMethod.GET, RequestMethod.POST }, produces = "application/MIME")
+	public Object exportReport() {
+		String date = getRequest().getParameter("date");
+		if (null == date || date.equals("")) {
+			Calendar cal = Calendar.getInstance();
+			cal.add(Calendar.DATE, -1);
+			Date d = cal.getTime();
+			date = new SimpleDateFormat("yyyy-MM-dd").format(d);
+		}
+		String fileName = "渠道商销量日报" + date + ".xls";
+		byte[] bytes = null;
+		HttpHeaders headers = new HttpHeaders();
+		try {
+			String localFileName = new String(fileName.getBytes("utf-8"), "ISO8859-1");
+			SysDict o = new SysDict();
+			o.setParamKey("filePath");
+			List<SysDict> dictList = dictService.find(o);
+			SysDict obj = dictList.get(0);
+			String day = date.replace("-", "");
+			String filePath = obj.getParamValue() + day + "/";
+			File dirFile = new File(filePath + fileName);
+			headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+			headers.setContentDispositionFormData("attachment", localFileName);
+			bytes = FileUtils.readFileToByteArray(dirFile);
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			JOptionPane.showMessageDialog(null, "该日期对账文件尚未生成", null, JOptionPane.ERROR_MESSAGE);
+			return "/system/finance/statistics/salesCommissionReport/SalesCommissionReport";
+			
+		}
+			return new ResponseEntity<byte[]>(bytes, headers, HttpStatus.OK);
+		
+	}
+}
+
+
+

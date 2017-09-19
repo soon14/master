@@ -1,0 +1,34 @@
+package com.jy.task.job.request;
+
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.SpringWebContextUtil;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.system.request.NewTicketInfoProcess;
+import org.springframework.context.ApplicationContext;
+
+/**
+ * Created by lijunke on 2017/6/5.
+ */
+public class NewTicketTask  extends BaseTask{
+
+
+    @Override
+    public void saveData() {
+        log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " ——出票新接口开始运行");
+        ApplicationContext ac = SpringWebContextUtil.getApplicationContext();
+        NewTicketInfoProcess process = (NewTicketInfoProcess) ac.getBean("newTicketInfoProcess");
+        RequestParamInfoForm req = new RequestParamInfoForm();
+        req.setPage("true");//是否开启分页，默认开启
+        req.setQueryAll(super.getParam()[0]);//是否查询全部，默认是全部
+        req.setCurrentPage(1);//默认为第一页
+        req.setQueryTime(super.getParam()[2].equals("default")?DateUtils.getDate("yyyyMMdd"):super.getParam()[2]);//默认当天
+        req.setPageSize(Integer.parseInt(super.getParam()[1]));//默认5000
+        try {
+            process.synchronizeNewTicketData(req);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " ——出票新接口任务结束");
+    }
+
+}

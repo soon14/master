@@ -1,0 +1,209 @@
+package com.jy.process.impl.system.reconciliation.lottery;
+
+import com.jy.common.CpSystem.DifferenceConst;
+import com.jy.common.utils.DateUtils;
+import com.jy.entity.system.finance.reconciliation.lottery.PlatformFunds;
+import com.jy.entity.system.finance.reconciliation.lottery.PlatformFundsRunning;
+import com.jy.entity.system.finance.reconciliation.lottery.SalesDifferencesDetail;
+import com.jy.from.system.finance.reconciliation.lottery.PlatformFundsForm;
+import com.jy.from.system.finance.reconciliation.lottery.SalesDifferencesDetailForm;
+import com.jy.mybatis.Page;
+import com.jy.process.system.common.DownLoadProcess;
+import com.jy.process.system.reconciliation.lottery.LotteryFundsProcess;
+import com.jy.service.system.finance.reconciliation.lottery.PlatformFundsService;
+import com.jy.service.system.finance.statistics.lottery.SalesDifferenceDetailService;
+import com.jy.vo.system.reconciliation.lottery.FundsActivityReportVo;
+import com.jy.vo.system.reconciliation.lottery.PlatFormFundsRunningVo;
+import com.jy.vo.system.reconciliation.lottery.PlatFormFundsVo;
+import com.jy.vo.system.reconciliation.lottery.SalesDifferencesDetailVo;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Created by Administrator on 2017/4/5.
+ */
+@Service("LotteryFundsProcess")
+public class LotteryFundsProcessImpl implements LotteryFundsProcess {
+
+    @Autowired
+    private PlatformFundsService service;
+    @Autowired
+    private SalesDifferenceDetailService diffService;
+    @Autowired
+    private DownLoadProcess downLoadProcess;
+    @Value("${download.platFormFunds.filename}")
+    private String platFormFundsFileName;
+
+    @Value("${download.platFormFundsRunning.filename}")
+    private String platFormFundsRunningFileName;
+
+    @Value("${download.platFormFundsDiff.filename}")
+    private String platFormFundsDiffFileName;
+
+    @Value("${download.platFormFundsRunningDiff.filename}")
+    private String platFormFundsRunningDiffFileName;
+    @Value("${download.platFormFundsCMCC.filename}")
+    private String platFormFundsCMCCFileName;
+
+    /**
+     * 平臺资金统计查询参数检查
+     *
+     * @param form
+     * @return
+     */
+    @Override
+    public   boolean findFundsListCheck(PlatformFundsForm form) {
+        //处理状态重置
+        form.setDealResultStatus(form.getDealResultStatus() == null ? -1 : form.getDealResultStatus());
+        if (form.getBeginTime() == null || form.getBeginTime().equals("")) {
+            form.setBeginTime(DateUtils.getPreDate(-7));
+        }
+        if (form.getEndTime() == null || form.getEndTime().equals("")) {
+            form.setEndTime(DateUtils.getDate("yyyy-MM-dd"));
+        }
+        if (!DateUtils.isValidFormatDate(form.getBeginTime()) || !DateUtils.isValidFormatDate(form.getEndTime())) {
+            return false;
+        }
+        if (form.getDealResultStatus() != -1&&form.getDealResultStatus() != 0 && form.getDealResultStatus() != 1 && form.getDealResultStatus() != 2 && form.getDealResultStatus() != 3) {
+            return false;
+        }
+        return true;
+    }
+
+
+    @Override
+    public Page<FundsActivityReportVo> findActivityFundsList(PlatformFundsForm form, Page<FundsActivityReportVo> page) {
+        Page<FundsActivityReportVo> funds = service.findActivityFundsListByPage(form.getBeginTime(),form.getEndTime(),form.getDealResultStatus(),form.getFundsType(), page);
+        return funds == null ? new Page<FundsActivityReportVo>() : funds;
+    }
+
+    @Override
+    public Page<PlatFormFundsVo> findFundsList(PlatformFundsForm form, Page<PlatFormFundsVo> page) {
+        Page<PlatFormFundsVo> funds = service.findFundsListByPage(form.getBeginTime(),form.getEndTime(),form.getDealResultStatus(),form.getFundsType(), page);
+        return funds == null ? new Page<PlatFormFundsVo>() : funds;
+    }
+
+    @Override
+    public Page<PlatFormFundsRunningVo> findRunningList(PlatformFundsForm form, Page<PlatFormFundsRunningVo> page) {
+        Page<PlatFormFundsRunningVo> funds = service.findFundsRunningListByPage(form.getBeginTime(),form.getEndTime(),form.getDealResultStatus(), page);
+        return funds == null ? new Page<PlatFormFundsRunningVo>() : funds;
+    }
+
+    /**
+     * 页面保存平台资金差异
+     * @param form
+     */
+    @Override
+    public void saveFundsDive(SalesDifferencesDetailForm form) {
+        //1、保存差异原因等处理信息
+        form.setdType(DifferenceConst.TYPE_1);
+        _saveDiveDifference(form);
+        //2、将date日平台资金数据修改状态
+        _updatePlatformFunds(form.getdDate(),form.getdCondition());
+    }
+
+    /**
+     * //1、保存差异原因等处理信息
+     * @param form
+     */
+    private void _saveDiveDifference(SalesDifferencesDetailForm form) {
+        form.setdCreator("0");
+        form.setdCreateTime(DateUtils.getAfterDayDate("0"));
+        SalesDifferencesDetail detail=new SalesDifferencesDetail();
+        BeanUtils.copyProperties(form,detail);
+        service.saveDiveDifference(detail);
+    }
+
+    /**
+     *  将date日平台资金数据修改状态
+     * @param date
+     * @param status
+     */
+    private void _updatePlatformFunds(String date, Integer status) {
+        PlatformFunds o=new PlatformFunds();
+        Date dzDate= DateUtils.parseDate(date);
+        o.setDzDate(dzDate);
+        o.setDealStatus(-1);
+        List<PlatformFunds> list=service.find(o);
+        if(list!=null&&!list.isEmpty()&&list.size()!=0){
+            PlatformFunds funds=list.get(0);
+            funds.setDealStatus(status);
+            service.update(funds);
+        }
+    }
+
+    /**
+     * 页面保存第三方对账差异
+     * @param form
+     */
+    @Override
+    public void saveRunningDive(SalesDifferencesDetailForm form) {
+        //1、保存差异原因等处理信息
+        form.setdType(DifferenceConst.TYPE_2);
+        _saveDiveDifference(form);
+        _updateRunningFunds(form.getdDate(),form.getdCondition());
+    }
+
+
+    private void _updateRunningFunds(String date, Integer status) {
+        PlatformFundsRunning o=new PlatformFundsRunning();
+        Date dzDate= DateUtils.parseDate(date);
+        o.setDzDate(dzDate);
+        o.setDealStatus(-1);
+        List<PlatformFundsRunning> list=service.findRunning(o);
+        if(list!=null&&!list.isEmpty()&&list.size()!=0){
+            PlatformFundsRunning funds=list.get(0);
+            funds.setDealStatus(status);
+            service.updateRunning(funds);
+        }
+    }
+
+    @Override
+    public Page<SalesDifferencesDetailVo> findDiffList(SalesDifferencesDetailForm form, Page<SalesDifferencesDetailVo> page) {
+        SalesDifferencesDetail detail=new SalesDifferencesDetail();
+        BeanUtils.copyProperties(form,detail);
+        Page<SalesDifferencesDetailVo> diffList =diffService.findSalesDifferencesDetailByPage(detail, page);
+            return diffList == null ? new Page<SalesDifferencesDetailVo>() : diffList;
+    }
+
+
+    @Override
+    public Object dowload(String date, String type) {
+        String name=getName(type);
+        String url=_getUrl(type);
+        Object obj=downLoadProcess.downLoad(date,name,url);
+        return obj;
+    }
+
+    private String _getUrl(String type) {
+        String url="";
+        if(type.equals("1")||type.equals("3")||type.equals("5")){
+            url="/system/finance/reconciliation/platformFundsIndex";
+        }else  if(type.equals("2")||type.equals("4")){
+            url="/system/finance/reconciliation/platformFundsRunning";
+        }
+        return url;
+    }
+
+    private String getName(String type){
+        String name=platFormFundsRunningFileName;
+        if(type.equals("1")){
+            name=platFormFundsFileName;
+        }else  if(type.equals("2")){
+            name=platFormFundsRunningFileName;
+        }else  if(type.equals("3")){
+            name=platFormFundsDiffFileName;
+        }else  if(type.equals("4")){
+            name=platFormFundsRunningDiffFileName;
+        }
+        else  if(type.equals("5")){
+            name=platFormFundsCMCCFileName;
+        }
+        return name;
+    }
+}

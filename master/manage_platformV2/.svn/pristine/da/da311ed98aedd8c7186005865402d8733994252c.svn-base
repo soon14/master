@@ -1,0 +1,14 @@
+package com.jy.service.system.channels;
+
+import com.jy.entity.system.channels.vo.MerchantExtend;
+import com.jy.from.system.request.MerchantExtendForm;
+import com.jy.service.base.BaseService;
+
+import java.util.List;
+
+/**
+ * Created by Matthew on 2017/5/22.
+ */
+public interface MerchantExtendService extends BaseService<MerchantExtend> {
+    void transforPojoSave(List<MerchantExtendForm> listAll);
+}

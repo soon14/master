@@ -1,0 +1,81 @@
+package com.jy.process.impl.system.request;
+
+import com.alibaba.fastjson.JSONArray;
+import com.jy.common.utils.DateUtils;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.from.system.request.RequestPageInfoForm;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.from.system.request.UserBalanceForm;
+import com.jy.process.system.request.UserBalanceRequestProcess;
+import com.jy.service.system.finance.common.UserBalanceService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * Created by shixi on 2017/4/27.
+ */
+@Service("userBalanceRequestProcess")
+public class UserBalanceRequestProcessImpl extends ApiRequestProcessImpl<UserBalanceForm> implements UserBalanceRequestProcess
+{
+
+    @Autowired
+    protected UserBalanceService service;
+
+    @Autowired
+    protected JobTaskStatisticsService jobTaskServiice;
+
+    @Value("${user.capital.info}")
+    private String userInfoPath;
+    //同步数据错误次数
+    private static int errorCount=0;
+
+    @Override
+    public void synchronizationUserBalanceData(RequestParamInfoForm infoForm) throws Exception {
+        try {
+            List<JSONArray> list = super.sendRequest(new RequestPageInfoForm<UserBalanceForm>(), infoForm,this.userInfoPath);
+            if(list.size() < 0) {
+                super.LOGGER.info("用户资金余额接口未返回任何数据！");
+                return;
+            }
+            //先删除要查询的数据
+            service.deleteByAll(infoForm.getQueryTime()==null? DateUtils.getDate("YYYYMMdd"):infoForm.getQueryTime());
+            // List<UserBalanceForm> listAll = new ArrayList<>();
+            int saveNum=0;//入库数量
+            int interfaceNum=0;//接口数量
+            for (JSONArray jsonArray : list) {
+                if (jsonArray.size()>0){
+                List<UserBalanceForm> userList = JSONArray.parseArray(jsonArray.toString(), UserBalanceForm.class);
+                interfaceNum+=userList.size();
+                int num= this.forPojoSave(userList);
+                saveNum+=num;
+                }
+            }
+            //保存job日志
+            JobTaskStatistics jobTaskStatistics=new JobTaskStatistics();
+            jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));
+            jobTaskStatistics.setJobName("synchronizationUserBalance");
+            jobTaskStatistics.setInterfaceNumber(interfaceNum);
+            jobTaskStatistics.setStorageNumber(saveNum);
+            jobTaskServiice.insertJobTaskStatistics(jobTaskStatistics);
+        } catch (Exception e) {
+            errorCount++;
+            if(errorCount<4){//小于4重新跑批
+                super.LOGGER.info("用户资金余额接口同步数据失败,重试次数:"+errorCount);
+                e.printStackTrace();
+                Thread.sleep(2000L);
+               this.synchronizationUserBalanceData(infoForm);
+            }else {
+                super.LOGGER.info("用户资金余额接口同步数据"+errorCount+"次都失败，请查明原因，手动同步");
+                e.printStackTrace();
+            }
+        }
+
+    }
+    public int forPojoSave(List<UserBalanceForm> listAll) throws Exception {
+       return this.service.userBalanceforPojoSave(listAll);
+    }
+}

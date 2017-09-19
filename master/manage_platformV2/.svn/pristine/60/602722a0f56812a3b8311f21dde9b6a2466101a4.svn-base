@@ -1,0 +1,113 @@
+package com.jy.process.impl.system.request;
+
+
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.process.system.request.OrderInfoRequestProcess;
+import com.jy.service.system.channels.CpOrderInfoService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+/**
+ * Created by Matthew on 2017/4/26.
+ */
+@Service("orderInfoRequestProcess")
+public class OrderInfoRequestProcessImpl extends ApiRequestTxtProcessImpl implements OrderInfoRequestProcess {
+    @Value("${userOrder.info}")
+    private String ftpFileName;//下载文件的名称
+    @Autowired
+    private CpOrderInfoService cpOrderInfoService;
+    @Autowired
+    private JobTaskStatisticsService jobTaskStatisticsService;
+
+    private static final Logger LOG = LoggerFactory.getLogger(OrderInfoRequestProcessImpl.class);
+
+    @Override
+    public String byJobName() {
+        return "用户购彩接口";
+    }
+
+    @Override
+    public void saveJobLog(JobTaskStatistics jobTaskStatistics) {
+        try {
+            this.jobTaskStatisticsService.insertJobTaskStatistics(jobTaskStatistics);
+        } catch (Exception e) {
+            LOG.info("用户购彩接口保存LOG数据失败！");
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public int saveFTPData(String filePath, String date) {
+        int count = 0;
+        try {
+            count = this.cpOrderInfoService.orderSave(filePath, date);
+            LOG.info("入库行数：{}", count);
+        } catch (Exception e) {
+            LOG.info("用户购彩接口保存数据失败！");
+            e.printStackTrace();
+        }
+        return count;
+    }
+
+    @Override
+    public void synchronizeOrderData(String date) throws Exception {
+        super.ftpCommonsFunction(ftpFileName, date);
+    }
+
+    /*@Override
+    public void synchronizeOrderData(String date) throws Exception {
+        String[] ftpAddr = ftpAddress.split("/");   //ip,端口、账户、密码
+        String ftpPath = super.stringBuffer(ftpDownLoad, date, "/");
+        String ftpFileNames = super.stringBuffer(ftpFileName, date, "_");
+        int status = super.byFTPData(ftpAddr[0], ftpAddr[1], ftpAddr[2], ftpAddr[3], ftpPath, ftpFileNames, localhostAdd, date);
+        if (status != 0) {
+            if (status == TxtDataEnum.LOGIN_FAIL.getValue()) {
+                this.saveLog(TxtDataEnum.getName(status));
+            } else {
+                this.saveLog(TxtDataEnum.getName(status));
+            }
+        } else {
+            LOG.info("数据解析成功，文件生成成功，用户购彩数据保存入库成功！");
+        }
+    }
+
+    @Override
+    public void saveFTPData(String lineCount, String filePath, String date) {
+        try {
+            LOG.info("获取到的文本数据:{}", lineCount);
+            int count = cpOrderInfoService.orderSave(filePath, date);
+            this.saveLog(String.valueOf(count), lineCount);
+            LOG.info("入库成功，受影响行数：{}", count);
+        } catch (Exception e) {
+            LOG.info("用户购彩接口保存数据失败！");
+            e.printStackTrace();
+        }
+    }
+
+    //保存log日志
+    public void saveLog(String... logs) {
+        try {
+            JobTaskStatistics jobTaskStatistics = new JobTaskStatistics();
+            jobTaskStatistics.setJobName("用户购彩信息");//日志名称
+            jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));
+            if (logs.length == 1) {
+                jobTaskStatistics.setDescription(logs[0]);
+            } else {
+                jobTaskStatistics.setStorageNumber(Integer.valueOf(logs[0]));
+                jobTaskStatistics.setInterfaceNumber(Integer.valueOf(logs[1]));
+            }
+            jobTaskStatisticsService.insertJobTaskStatistics(jobTaskStatistics);
+        } catch (NumberFormatException e) {
+            LOG.info("用户购彩接口类型装换错误！");
+            e.printStackTrace();
+        } catch (Exception e) {
+            LOG.info("用户购彩接口保存LOG数据失败！");
+            e.printStackTrace();
+        }
+    }*/
+
+}

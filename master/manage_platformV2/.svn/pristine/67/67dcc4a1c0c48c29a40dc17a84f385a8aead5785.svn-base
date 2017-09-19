@@ -1,0 +1,16 @@
+package com.jy.repository.task.ticket;
+
+import com.jy.entity.task.ticket.TaskTicketInfo;
+import com.jy.repository.base.JYBatis;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/26.
+ */
+@JYBatis
+public interface TaskTicketDao {
+    public void saveTaskTicketInfoList(Map map);
+    public void deleteTicketInfo(Map map);
+}

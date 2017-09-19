@@ -1,0 +1,5 @@
+$(function () {
+	//下拉框
+	JY.Dict.setSelect("selectDealStatus","dealResultStatus",2,"--全部--");
+
+});

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.CpOrderInfoDao">
+    <resultMap id="CpOrderInfo" type="CpOrderInfo">
+		<id column="id"  property="id"/>
+		<result column="sycDate" property="sycDate"/>
+		<result column="userId" property="userId"/>
+		<result column="lotteryId" property="lotteryId"/>
+		<result column="lotteryName" property="lotteryName"/>
+		<result column="playType" property="playType"/>
+		<result column="issue" property="issue"/>
+		<result column="schemeId" property="schemeId"/>
+		<result column="schemeExtendId" property="schemeExtendId"/>
+		<result column="money" property="money"/>
+		<result column="buyTime" property="buyTime"/>
+		<result column="buyWay" property="buyWay"/>
+		<result column="online" property="online"/>
+		<result column="status" property="status"/>
+		<result column="orderNo" property="orderNo"/>
+		<result column="transNo" property="transNo"/>
+		<result column="createTime" property="createTimeD"/>
+		<result column="userName" property="userName"/>
+		<result column="isValid" property="isValid"/>
+		<result column="schemeType" property="schemeType"/>
+		<result column="schemeExtendType" property="schemeExtendType"/>
+    </resultMap>
+
+	<!--用户购彩信息导入 -->
+	<insert id="orderSave" parameterType="java.util.List">
+		REPLACE INTO DC_CP_OrderInfo(
+		sycDate,
+		userId,
+		lotteryId,
+		lotteryName,
+		playType,
+		issue,
+		schemeId,
+		schemeExtendId,
+		money,
+		buyTime,
+		buyWay,
+		online,
+		status,
+		orderNo,
+		transNo,
+		createTime,
+		isValid,
+		schemeType,
+		orderType,
+		schemeExtendType,
+		ticketTime
+		) VALUES
+		<foreach collection="list" item="item" index="index"
+				 separator=",">
+			(#{item.sycDate},#{item.userId},#{item.lotteryId},#{item.lotteryName},#{item.playType},
+			#{item.issue},#{item.schemeId},#{item.schemeExtendId},
+			#{item.money},#{item.buyTime},#{item.buyWay},
+			#{item.online},#{item.status},#{item.orderNo},
+			#{item.transNo},#{item.createTimeD},
+			#{item.isValid},#{item.schemeType},#{item.orderType},#{item.schemeExtendType},#{item.ticketTime})
+		</foreach>
+	</insert>
+
+	<!--购彩追期信息导入 -->
+	<insert id="tranceSave" parameterType="java.util.List">
+		REPLACE INTO DC_CP_TranceOrderInfo(
+		sycDate,
+		userId,
+		lotteryName,
+		lotteryId,
+		playType,
+		issue,
+		schemeId,
+		schemeExtendId,
+		money,
+		buyTime,
+		buyWay,
+		online,
+		status,
+		orderNo,
+		transNo,
+		ticketTime,
+		createTime,
+		isValid,
+		dtype,
+		refundTime,
+		qcDate,
+		schemeExtendType
+		) VALUES
+		<foreach collection="list" item="item" index="index"
+				 separator=",">
+			(#{item.sycDate},
+			#{item.userId},
+			#{item.lotteryName},
+			#{item.lotteryId},
+			#{item.playType},
+			#{item.issue},
+			#{item.schemeId},
+			#{item.schemeExtendId},
+			#{item.money},
+			#{item.buyTime},
+			#{item.buyWay},
+			#{item.online},
+			#{item.status},
+			#{item.orderNo},
+			#{item.transNo},
+			#{item.ticketTime},
+			#{item.createTimeD},
+			#{item.isValid},
+			#{item.type},
+			#{item.refundTime},
+			#{item.qcDate},
+			#{item.schemeExtendType})
+		</foreach>
+	</insert>
+
+	<!--清空用户购彩表-->
+	<delete id="orderClean" >
+		DELETE FROM DC_CP_OrderInfo
+		<where>
+			<if test="date!=null and date!=''">
+				DATE_FORMAT(buyTime,'%Y%m%d') = #{date}
+			</if>
+		</where>
+	</delete>
+    <!--查询购彩追期-->
+    <select id="findByTypeAndTime" resultType="java.lang.Integer">
+    SELECT count(1) FROM DC_CP_TranceOrderInfo
+       <where> 1=1
+           <if test="date!=null and date!=''">
+             AND  DATE_FORMAT(sycDate,'%Y%m%d') = #{date}
+           </if>
+           <if test="type!=null and type!=''">
+               AND  dtype = #{type}
+           </if>
+       </where>
+    </select>
+	<!--清空购彩追期表-->
+	<delete id="tranceClean" >
+		DELETE FROM DC_CP_TranceOrderInfo
+		<where>1=1
+			<if test="date!=null and date!=''">
+				AND	DATE_FORMAT(sycDate,'%Y%m%d') = #{date}
+			</if>
+			<if test="type!=null and type!=''">
+				AND  dtype = #{type}
+			</if>
+		</where>
+	</delete>
+</mapper>

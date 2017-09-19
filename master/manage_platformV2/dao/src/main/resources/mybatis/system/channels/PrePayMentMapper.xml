@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.PrepaymentDao">
+    <resultMap id="prepayment" type="Prepayment">
+		<id column="Pp_ID"  property="id"/>
+		<result column="M_Id" property="merchantId" />
+		<result column="merchantName" property="merchantName" />
+		<result column="Pp_PayMoney" property="payMoney" />
+		<result column="Pp_PayType" property="payType" />
+		<result column="Pp_Balance" property="balance" />
+		<result column="Pp_WaringMoney" property="warningMoney" />
+		<result column="Pp_UserId" property="userId" />
+		<result column="Pp_UserName" property="userName" />
+		<result column="Pp_ChangeTime" property="changeTime" />
+		<result column="Pp_CreateTime" property="createTime" />
+		<result column="pp_Status" property="ppStatus" />
+		<result column="salesVolume" property="salesVolume" />
+		<result column="dataType" property="dataType" />
+		<result column="PP_RealBalance" property="realBalance" />
+    </resultMap>
+	<!--预存款配置记录-->
+	<select id="findByPage" parameterType="Map"   resultMap="prepayment">
+		SELECT t.*,t.PP_Balance-t.PP_WaringMoney AS d_Value,t2.m_NAME AS merchantName FROM MP_PrePaymentInfo t,MP_MerchantInfo t2
+		WHERE t.M_ID=t2.M_ID AND t2.M_Status!=3 AND t2.M_Level=2
+		<if test="mid != null and mid!=''">
+			and t.M_ID in
+			<foreach collection="mid" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test="beginTimes != null and beginTimes!='' ">
+			and t.Pp_ChangeTime>=#{beginTimes}
+		</if>
+		<if test="endTimes != null and endTimes!=''">
+			<![CDATA[
+        	and t.Pp_ChangeTime<=#{endTimes}
+        	]]>
+		</if>
+		<if test="merchantName != null and merchantName!=''">
+			and t2.M_NAME LIKE CONCAT('%', #{merchantName}, '%')
+		</if>
+		ORDER BY t.M_ID,d_Value
+
+		LIMIT #{rn},#{pageSize}
+	</select>
+	<!--数据统计-->
+	<select id="counts" parameterType="Map"   resultType="Integer">
+		SELECT count(*) FROM MP_PrePaymentInfo t,MP_MerchantInfo t2
+		WHERE t.M_ID=t2.M_ID AND t2.M_Status!=3 AND t2.M_Level=2
+		<if test="mid != null and mid!=''">
+			and t.M_ID in
+			<foreach collection="mid" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test="beginTimes != null and beginTimes!='' ">
+			and t.Pp_ChangeTime>=#{beginTimes}
+		</if>
+		<if test="endTimes != null and endTimes!=''">
+			<![CDATA[
+        	and t.Pp_ChangeTime<=#{endTimes}
+        	]]>
+		</if>
+		<if test="merchantName != null and merchantName!=''">
+			and t2.M_NAME LIKE CONCAT('%', #{merchantName}, '%')
+		</if>
+	</select>
+	<!--查询预存款商户-->
+	<select id="findMerchantPre"  resultMap="prepayment">
+		SELECT t.M_ID,t1.balance AS Pp_Balance from MP_MerchantInfo t,(
+        SELECT m.cpUserId,m.balance,MAX(m.tranTime) AS tradetime from MP_TradeOnlineDetail m GROUP BY m.cpUserId)t1
+        WHERE t1.cpUserId=t.M_cpUserId
+	</select>
+	<!--查询一级商户信息-->
+	<select id="findMerchants"  resultMap="prepayment">
+		select t.M_ID from MP_MerchantInfo t
+		WHERE t.M_Level=2
+		AND t.M_ID not in(SELECT M_ID from MP_PrePaymentInfo)
+	</select>
+	<!--同步预存款信息.线上-->
+	<update id="synchroOnline" parameterType="java.util.List">
+		<foreach collection="list" item="item" index="index" separator=";">
+			update MP_PrePaymentInfo
+			<set>
+				<if test="item.payMoney != null and item.payMoney != '' ">
+					Pp_PayMoney =#{item.payMoney},
+				</if>
+				<if test="item.payType != null and item.payType != '' ">
+					Pp_PayType =#{item.payType},
+				</if>
+				<if test="item.balance != null and item.balance != '' ">
+					Pp_Balance =#{item.balance},
+				</if>
+				<if test="item.warningMoney != null and item.warningMoney != '' ">
+					Pp_WaringMoney =#{item.warningMoney},
+				</if>
+				<if test="item.userName != null">
+					Pp_UserName =#{item.userName},
+				</if>
+				<if test="item.changeTime != null">
+					Pp_ChangeTime =#{item.changeTime}
+				</if>
+			</set>
+			where M_Id = ${item.merchantId}
+			AND dataType =1
+		</foreach>
+	</update>
+
+	<!--&lt;!&ndash;预存款配置记录&ndash;&gt;-->
+	<!--<select id="findByPage" parameterType="Map"   resultMap="prepayment">-->
+		<!--SELECT t.*,t.PP_Balance-t.PP_WaringMoney AS d_Value,t2.m_NAME AS merchantName FROM MP_PrePaymentInfo t,MP_MerchantInfo t2-->
+		<!--WHERE t.M_ID=t2.M_ID-->
+		<!--<if test="mid != null and mid!=''">-->
+			<!--and t.M_ID in-->
+			<!--<foreach collection="mid" index="index" item="item" open="(" separator="," close=")">-->
+				<!--#{item}-->
+			<!--</foreach>-->
+		<!--</if>-->
+		<!--<if test="beginTimes != null and beginTimes!='' ">-->
+			<!--and t.Pp_ChangeTime>=#{beginTimes}-->
+		<!--</if>-->
+		<!--<if test="endTimes != null and endTimes!=''">-->
+			<!--<![CDATA[-->
+        	<!--and t.Pp_ChangeTime<=#{endTimes}-->
+        	<!--]]>-->
+		<!--</if>-->
+		<!--<if test="merchantName != null and merchantName!=''">-->
+			<!--and t2.M_NAME LIKE CONCAT('%', #{merchantName}, '%')-->
+		<!--</if>-->
+		<!--ORDER BY d_Value-->
+
+		<!--LIMIT #{rn},#{pageSize}-->
+	<!--</select>-->
+	<!--预存款详情-->
+	<select id="find" parameterType="Prepayment"   resultMap="prepayment">
+		SELECT t.*,t2.m_NAME AS merchantName FROM MP_PrePaymentInfo t,MP_MerchantInfo t2
+		WHERE t.M_ID=t2.M_ID
+		AND t.PP_ID=#{id}
+	</select>
+	<!--清除对应的预存款记录 -->
+	<update id="update" parameterType="Prepayment">
+		UPDATE MP_PrePaymentInfo t
+		<set>
+			<if test="payMoney != null and payMoney != '' ">
+				 Pp_PayMoney =#{payMoney},
+			</if>
+			<if test="payType != null and payType != '' ">
+				 Pp_PayType =#{payType},
+			</if>
+			<if test="balance != null and balance != '' ">
+				 Pp_Balance =#{balance},
+			</if>
+			<if test="realBalance != null and realBalance != '' ">
+				PP_RealBalance =#{realBalance},
+			</if>
+			<if test="warningMoney != null and warningMoney != '' ">
+				 Pp_WaringMoney =#{warningMoney},
+			</if>
+			<if test="userName != null">
+				Pp_UserName =#{userName},
+			</if>
+			<if test="changeTime != null">
+				Pp_ChangeTime =#{changeTime}
+			</if>
+		</set>
+		WHERE t.PP_ID=#{id}
+	</update>
+	<!--新增商户预存款分配方式 -->
+	<insert id="insert"  parameterType="Prepayment">
+		INSERT INTO MP_PrePaymentInfo(
+		M_Id,
+		Pp_PayMoney,
+		Pp_PayType,
+		PP_Balance,
+		PP_WaringMoney,
+		Pp_UserName,
+		Pp_ChangeTime,
+		pp_Status,
+		dataType
+		) VALUES (
+		#{merchantId},
+		#{payMoney},
+		#{payType},
+		#{balance},
+		#{warningMoney},
+		#{userName},
+		#{changeTime},
+		#{ppStatus},
+		#{dataType})
+	</insert>
+	<!--同步预存款信息 -->
+	<insert id="synchroPrepayment" parameterType="java.util.List">
+		INSERT INTO MP_PrePaymentInfo(
+		M_Id,
+		Pp_PayMoney,
+		Pp_PayType,
+		PP_Balance,
+		PP_WaringMoney,
+		Pp_UserName,
+		Pp_ChangeTime,
+		pp_Status,
+		dataType
+		) VALUES
+		<foreach collection="list" item="item" index="index"
+				 separator=",">
+			(#{item.merchantId},
+			#{item.payMoney},
+			#{item.payType},
+			#{item.balance},
+			#{item.warningMoney},
+			#{item.userName},
+			#{item.changeTime},
+			#{item.ppStatus},
+			#{item.dataType})
+		</foreach>
+	</insert>
+</mapper>

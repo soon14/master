@@ -1,0 +1,40 @@
+package com.jy.task.job.withdraw;
+
+import com.jy.common.utils.SpringWebContextUtil;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.impl.system.task.withdraw.TaskWithdrawProcessImpl;
+import com.jy.task.job.request.BaseTask;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.stereotype.Service;
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+@Service
+public class WithdrawInfoJob extends BaseTask implements Job {
+
+    public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+        saveData();
+    }
+
+    @Override
+    public void saveData() {
+        ApplicationContext ac = SpringWebContextUtil.getApplicationContext();
+        TaskWithdrawProcessImpl taskWithdrawProcess  = (TaskWithdrawProcessImpl) ac.getBean("taskWithdrawProcess");
+        try {
+            RequestParamInfoForm infoForm = new RequestParamInfoForm();
+            infoForm.setPage("true");
+            infoForm.setQueryAll(super.getParam()[0]);
+            infoForm.setPageSize(Integer.parseInt(super.getParam()[1]));
+           if (!"default".equals(super.getParam()[2])){
+               infoForm.setQueryTime(super.getParam()[2]);
+           }
+            taskWithdrawProcess.saveTaskWithdrawInfoList(infoForm);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}

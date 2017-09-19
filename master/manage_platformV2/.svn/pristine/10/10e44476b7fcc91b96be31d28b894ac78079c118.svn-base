@@ -1,0 +1,370 @@
+package com.jy.controller.system.channels;
+
+import com.jy.common.ajax.AjaxRes;
+import com.jy.common.mybatis.PageCalculation;
+import com.jy.common.utils.ChannelsUtils;
+import com.jy.common.utils.base.Const;
+import com.jy.common.utils.security.AccountShiroUtil;
+import com.jy.controller.base.BaseController;
+import com.jy.controller.controllerUtils.controllerUtil;
+import com.jy.entity.system.account.Account;
+import com.jy.entity.system.channels.BaseCommission;
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.dict.SysDict;
+import com.jy.entity.system.org.Org;
+import com.jy.mybatis.Page;
+import com.jy.service.system.account.AccountService;
+import com.jy.service.system.channels.AuditService;
+import com.jy.service.system.channels.MerchantService;
+import com.jy.service.system.dict.SysDictService;
+import com.jy.service.system.org.PositionService;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static java.util.regex.Pattern.matches;
+
+
+@Controller
+@RequestMapping("/channels/salesManager/")
+public class SalesManagerController extends BaseController<Object> {
+	@Value("${secondaryAuditUrl}")
+	private String path;
+    @Autowired
+    private AccountService accountService;
+    @Autowired
+    private MerchantService merchantService;
+    @Autowired
+    private AuditService auditService;
+    @Autowired
+    public PositionService positionService;
+	@Autowired
+	public SysDictService sysDictService;
+
+	/**
+	 * 中国电信号码格式验证 手机段： 133,153,180,181,189,177,1700,173
+	 * **/
+	private static final String CHINA_TELECOM_PATTERN = "(^1(33|53|7[37]|8[019])\\d{8}$)|(^1700\\d{7}$)";
+
+	/**
+	 * 中国联通号码格式验证 手机段：130,131,132,155,156,185,186,145,176,1707,1708,1709
+	 * **/
+	private static final String CHINA_UNICOM_PATTERN = "(^1(3[0-2]|4[5]|5[56]|7[6]|8[56])\\d{8}$)|(^170[7-9]\\d{7}$)";
+
+	/**
+	 * 中国移动号码格式验证
+	 * 手机段：134,135,136,137,138,139,150,151,152,157,158,159,182,183,184
+	 * ,187,188,147,178,1705
+	 *
+	 **/
+	private static final String CHINA_MOBILE_PATTERN = "(^1(3[4-9]|4[7]|5[0-27-9]|7[8]|8[2-478])\\d{8}$)|(^1705\\d{7}$)";
+
+	/** 座机电话格式验证 **/
+	private static final String PHONE_CALL_PATTERN = "^(\\(\\d{3,4}\\)|\\d{3,4}-)?\\d{7,8}(-\\d{1,4})?$";
+
+
+	/**
+	 * 仅手机号格式校验
+	 */
+	private static final String PHONE_PATTERN=new StringBuilder(300).append(CHINA_MOBILE_PATTERN)
+			.append("|")
+			.append(CHINA_TELECOM_PATTERN)
+			.append("|")
+			.append(CHINA_UNICOM_PATTERN)
+			.toString();
+
+
+	private static final String PHONE_TEL_PATTERN=new StringBuilder(350).append(PHONE_PATTERN)
+			.append("|")
+			.append("(")
+			.append(PHONE_CALL_PATTERN)
+			.append(")")
+			.toString();
+
+	/**
+	 * 渠道商
+	 * 
+	 * @param model
+	 * @return
+	 */
+    @RequestMapping("salesManagerList")
+    public String salesSumDifferences(Model model){
+        if(doSecurityIntercept(Const.RESOURCES_TYPE_MENU)){
+            model.addAttribute("permitBtn", getPermitBtn(Const.RESOURCES_TYPE_FUNCTION));
+            return "/system/channels/salesManager";
+        }
+        return Const.NO_AUTHORIZED_URL;
+    }
+
+    /**
+	 * 渠道商数据查询
+	 * 
+	 * @param page
+	 * @param o
+	 * @return
+	 */
+	@RequestMapping(value = {"findByPage"}, method = {RequestMethod.POST })
+	@ResponseBody
+	public AjaxRes findByPage(Page<Merchant> page, Merchant o) {
+		String userId = AccountShiroUtil.getCurrentUser().getAccountId();
+		o.setUserId(userId);
+		AjaxRes ar = getAjaxRes();
+		if (ar.setNoAuth(doSecurityIntercept("1", "/channels/salesManager/salesManagerList"))) {
+			List<Org> l = positionService.findDataAuthority(userId);
+			List userIds = new ArrayList();
+			for (int i = 0; i < l.size(); i++) {
+				userIds.add(l.get(i).getAccountId());
+			}
+			Map p = new HashMap();
+			try {
+				String mName = AccountShiroUtil.getCurrentUser().getLoginName();
+				o.setmContactUser(mName);
+
+				Map m = new HashMap();
+				m.put("mName",o.getmName());
+				m.put("bcId",o.getBcId());
+				m.put("mContactUser",o.getmContactUser());
+				m.put("userIds",userIds);
+				m.put("isValid",o.getIsValid());
+				m.put("userId",userId);
+
+				List<Merchant> mer = merchantService.findDataAuthoritySalesManager(m);
+				Page byPage = convertPageSize(mer,page);
+				List<Merchant> list = byPage.getResults();
+				if(null!=list){
+					for (int i = 0; i < list.size(); i++) {
+						int mId = list.get(i).getmId();
+						String childMerchantNum = merchantService.findChildMerchant(mId);
+						String childCustomerNum = merchantService.findChildCustomer(mId);
+						list.get(i).setChildMerchantNum(childMerchantNum);
+						list.get(i).setChildCustomerNum(childCustomerNum);
+						byPage.setResults(list);
+					}
+				}
+				p.put("list", byPage);
+				p.put("mName", mName);
+				p.put("permitBtn", getPermitBtn("3"));
+				ar.setSucceed(p);
+			} catch (Exception e) {
+				this.logger.error(e.toString(), e);
+				ar.setFailMsg("数据获取失败");
+			}
+		}
+		return ar;
+	}
+
+	public Page<Merchant> convertPageSize(List<Merchant> list, Page<Merchant> page) {
+		page.setResults(list);
+		page.setPageSize(page.getPageSize());
+		page.setPageNum(page.getPageNum());
+		page = (Page<Merchant>) PageCalculation.getPageCalculation(page);
+		if (null != page.getResults()) {
+			page.setTotalRecord(list.size());
+		}
+		return page;
+	}
+
+    /**
+	 * 新增商户跳转页面
+	 * 
+	 * @param model
+	 * @return
+	 */
+    @RequestMapping(value="addSalesManager", method= RequestMethod.GET)
+    public String addSalesManager(Model model){
+        return "/system/channels/addSalesManager";
+    }
+
+	@RequestMapping(value="findChildCustomer", method=RequestMethod.GET)
+	public String findChildCustomer(Merchant merchant,Model model,Page<Merchant> page) throws Exception{
+		model.addAttribute("mId",merchant.getmId());
+		return "/system/channels/findChildCustomer";
+	}
+
+	@RequestMapping(value="findChildMerchant", method=RequestMethod.GET)
+	public String findChildMerchant(Merchant merchant,Model model,Page<Merchant> page) throws Exception{
+		model.addAttribute("mId",merchant.getmId());
+		return "/system/channels/findChildMerchant";
+	}
+
+
+	/**
+	 * 新增
+	 * 
+	 * @param
+	 * @return
+	 */
+	@RequestMapping(value = "add", method = RequestMethod.POST)
+	@ResponseBody
+	public AjaxRes add(Merchant merchant, HttpServletResponse response) throws Exception {
+		AjaxRes ar = getAjaxRes();
+		if ((doSecurityIntercept(Const.RESOURCES_TYPE_FUNCTION))) {
+
+			try {
+				if (ChannelsUtils.IsNulls(merchant.getmMobile()) || ChannelsUtils.IsNulls(merchant.getmName()) || ChannelsUtils.IsNulls(merchant.getmMobile())) {
+					ar.setSucceedMsg("2");
+					return ar;
+				}
+
+				if(!isPhoneOrTel(merchant.getmMobile())){
+					ar.setSucceedMsg("4");
+					return ar;
+				}
+
+				if(merchantService.findmMobile(merchant.getmMobile(),"")!=0){
+					ar.setSucceedMsg("12");
+					return ar;
+				}
+
+				String userId = AccountShiroUtil.getCurrentUser().getAccountId();
+				Merchant mid = merchantService.findId(userId,"");
+				if (ChannelsUtils.IsNull(mid)) {
+					merchant.setmParentMerchant(userId);
+				}else{
+					merchant.setmParentMerchant(mid.getmId().toString());
+				}
+
+				merchant.setIsValid("1");
+				merchant.setmLevel(1);
+				merchant.setmType(1);
+				merchant.setmStatus(0);
+				int res = merchantService.createMerchant(merchant);
+				ar.setSucceedMsg("1");
+
+			} catch (Exception e) {
+				logger.error(e.toString(), e);
+				ar.setSucceedMsg("0");
+			}
+		}
+		return ar;
+	}
+
+
+	/**
+	 * 手机号或座机号校验
+	 * @param input
+	 * @return
+	 */
+	public static boolean isPhoneOrTel(String input){
+		return matches(PHONE_TEL_PATTERN, input);
+	}
+
+
+	/**
+	 * 查看详情
+	 * 
+	 * @param merchant
+	 * @return
+	 */
+    @RequestMapping(value="findParticulars", method=RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes findParticulars(Merchant merchant){
+        AjaxRes ar=getAjaxRes();
+        if(ar.setNoAuth(doSecurityIntercept(Const.RESOURCES_TYPE_BUTTON))){
+            try {
+                merchant=auditService.findMerchantId(merchant);
+                if(!ChannelsUtils.IsNull(merchant) && !ChannelsUtils.IsNull(merchant.getmAccountId())){
+                    Account account=accountService.findAccountByIdAndName(merchant.getmAccountId());
+                    merchant.setmAccountId(account.getLoginName());
+                }
+                ar.setSucceed(merchant);
+            } catch (Exception e) {
+                logger.error(e.toString(),e);
+                ar.setFailMsg(Const.DATA_FAIL);
+            }
+        }
+        return ar;
+    }
+
+    /**
+	 * 修改
+	 * 
+	 * @param merchant
+	 * @return
+	 */
+    @RequestMapping(value="updateSalesManager", method=RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes updateSalesManager(Merchant merchant){
+        AjaxRes ar=getAjaxRes();
+        if(ar.setNoAuth(doSecurityIntercept(Const.RESOURCES_TYPE_BUTTON))){
+            try {
+				
+                Merchant merchants=auditService.findMerchantId(merchant);
+				if((merchants.getmStatus()==2 || merchants.getmStatus()==1)){
+					ar.setSucceedMsg("3");
+					return ar;
+				}
+
+				if(!isPhoneOrTel(merchant.getmMobile())){
+					ar.setSucceedMsg("2");
+					return ar;
+				}
+
+				if(merchantService.findmMobile(merchant.getmMobile(),merchant.getmId().toString())!=0){
+					ar.setSucceedMsg("12");
+					return ar;
+				}
+
+				merchant.setmLevel(1);
+				merchant.setmType(1);
+				Integer res=merchantService.updateMerchant(merchant);
+				ar.setSucceedMsg("1");
+
+            } catch (Exception e) {
+                logger.error(e.toString(),e);
+                ar.setFailMsg(Const.UPDATE_FAIL);
+            }
+        }
+        return ar;
+    }
+
+    /**
+	 * 删除
+	 * 
+	 * @param chks
+	 * @return
+	 */
+    @RequestMapping(value = "delSalesManager", method = RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes delSalesManagert(String chks) {
+        AjaxRes ar = getAjaxRes();
+        if (ar.setNoAuth(doSecurityIntercept(Const.RESOURCES_TYPE_FUNCTION))) {
+            try {
+                List<Integer> listId=new ArrayList<>();
+                Integer integer=0;
+                List<Integer> listIds=new ArrayList<>();
+                List<Integer> integers=new ArrayList<>();
+                integers.add(1);
+                integers.add(2);
+                if (StringUtils.isNotBlank(chks)) {
+                    String[] chk = chks.split(",");
+                    List<Integer> list = new ArrayList<Integer>();
+                    for (String s : chk) list.add(Integer.parseInt(s));
+                    List<Merchant> merchant=merchantService.findMerchantId(list);
+                    for(Merchant merchant1:merchant){
+						if (integers.contains(merchant1.getmStatus()))
+							listIds.add(merchant1.getmId()); // 不可删除
+						else listId.add(merchant1.getmId()); // 可以删除
+                    }
+                    integer=merchantService.deleteMerchant(listId);
+                }
+				if (integer > 0) ar.setSucceedMsg("删除成功！ 已删除条数:" + integer + "   未成功删除条数:" + listIds.size());
+            } catch (Exception e) {
+                logger.error(e.toString(), e);
+                ar.setFailMsg(Const.DEL_FAIL);
+            }
+        }
+        return ar;
+    }
+}

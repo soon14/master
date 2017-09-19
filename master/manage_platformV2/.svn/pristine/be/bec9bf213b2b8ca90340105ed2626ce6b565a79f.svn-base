@@ -1,0 +1,16 @@
+package com.jy.service.system.channels;
+
+import com.jy.entity.system.channels.TradeOnlineDetail;
+import com.jy.from.system.request.TradeOnlineDetailForm;
+import com.jy.service.base.BaseService;
+
+import java.util.List;
+
+/**
+ * Created by Matthew on 2017/5/23.
+ */
+public interface TradeOnlineDetailService extends BaseService<TradeOnlineDetail> {
+//    Integer transforPojoSave(List<TradeOnlineDetailForm> listAll, String date);
+    void clean(String date);
+    int save(String filePath, String currentDate);
+}

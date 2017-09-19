@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.reconciliation.games.GamesDao">
+	<insert id="insertUserGamesInfo" parameterType="java.util.Map">
+		INSERT INTO DC_GM_UserInfo (UserID,NickName,UserType,UserAccount,RegistTime) VALUES
+		<foreach index="index" item="item" collection="list"   separator=",">
+			(#{item.UserID},#{item.NickName},#{item.UserType},#{item.UserAccount},#{item.RegistTime})
+		</foreach>
+	</insert>
+	<insert id="insertUserDayBalanceInfo" parameterType="java.util.Map">
+		INSERT INTO DC_GM_UserBalance (UserID,QcDate,DiamondBalance,GoldBalance,ValuelessBalance_db,ValuelessBalance_gd) VALUES
+		<foreach index="index" item="item" collection="list"   separator=",">
+			(#{item.userId},#{item.qcDate},#{item.diamondBalance},#{item.goldBalance},#{item.valuelessBalance_db},#{item.valuelessBalance_gd})
+		</foreach>
+	</insert>
+	<insert id="insertUserDayPropBalanceInfo" parameterType="java.util.Map">
+		INSERT INTO DC_GM_GamePropBalance (QcDate,UserID,Itemid,DiamondValueBalance,GoldValueBalance,DiamondValuelessBalance,GoldValuelessBalance,Counts) VALUES
+		<foreach index="index" item="item" collection="list"   separator=",">
+			(#{item.qcDate},#{item.userId},#{item.itemId},#{item.diamondValueBalance},#{item.goldValueBalance},#{item.diamondValuelessBalance},#{item.goldValuelessBalance},#{item.counts})
+		</foreach>
+	</insert>
+</mapper>

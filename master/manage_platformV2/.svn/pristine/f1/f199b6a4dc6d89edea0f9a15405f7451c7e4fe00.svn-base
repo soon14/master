@@ -1,0 +1,14 @@
+package com.jy.service.inter.task.prize;
+
+import com.jy.entity.task.prize.TaskPrizeInfo;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/26.
+ */
+public interface TaskPrizeService {
+    public void saveTaskPrizeInfoList(Map map);
+    public void deletePrizeInfo(Map map);
+}

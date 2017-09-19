@@ -1,0 +1,11 @@
+package com.jy.process.inter.system.task.withdraw;
+
+
+import com.jy.from.system.request.RequestParamInfoForm;
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+public interface TaskWithdrawProcess {
+    public void saveTaskWithdrawInfoList(RequestParamInfoForm infoForm) throws Exception;
+}

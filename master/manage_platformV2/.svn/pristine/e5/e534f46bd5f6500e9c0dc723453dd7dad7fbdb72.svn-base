@@ -1,0 +1,565 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.MerchantDao">
+    <resultMap id="Merchant" type="Merchant">
+		<id column="M_ID"  property="mId"/>
+		<result column="BC_ID_Line" property="bcIdLine" />
+		<result column="BC_ID" property="bcId" />
+		<result column="M_CPUserid" property="mCpUserId" />
+		<result column="M_Name" property="mName" />
+		<result column="M_ParentMerchant" property="mParentMerchant" />
+		<result column="M_Type" property="mType" />
+		<result column="M_Level" property="mLevel" />
+		<result column="M_Status" property="mStatus" />
+		<result column="M_BarCode" property="mBarcode" />
+		<result column="M_Mobile" property="mMobile" />
+		<result column="M_Address" property="mAddress" />
+		<result column="M_ContactUser" property="mContactUser" />
+		<result column="M_ContactMobile" property="mContactMobile"/>
+		<result column="M_License" property="mLicense" />
+		<result column="M_IdCard" property="mIdCard" />
+		<result column="M_Introduce" property="mIntroduce" />
+		<result column="M_AccountId" property="mAccountId" />
+		<result column="M_Info2" property="mInfo2" />
+		<result column="M_Info3" property="mInfo3" />
+		<result column="createTime" property="mCreateTime"/>
+		<result column="M_CommionType" property="mCommionType"/>
+		<result column="BC_flag" property="bcFlag"/>
+		<result column="recMoney" property="recMoney"/>
+		<result column="purMoney" property="purMoney"/>
+		<result column="balMoney" property="balMoney"/>
+		<result column="commission" property="commission"/>
+    </resultMap>
+	<resultMap id="MerchantVO" type="MerchantVO">
+		<id column="M_ID"  property="mId"/>
+		<result column="M_CPUserid" property="mCpUserId" />
+		<result column="M_Name" property="mName" />
+		<result column="M_ParentMerchant" property="mParentMerchant" />
+		<result column="M_Type" property="mType" />
+		<result column="M_Level" property="mLevel" />
+		<result column="M_Status" property="mStatus" />
+		<result column="M_BarCode" property="mBarcode" />
+		<result column="M_Mobile" property="mMobile" />
+		<result column="M_Address" property="mAddress" />
+		<result column="M_ContactUser" property="mContactUser" />
+		<result column="M_ContactMobile" property="mContactMobile"/>
+		<result column="M_License" property="mLicense" />
+		<result column="M_IdCard" property="mIdCard" />
+		<result column="M_Introduce" property="mIntroduce" />
+		<result column="M_AccountId" property="mAccountId" />
+		<result column="M_Info2" property="mInfo2" />
+		<result column="M_Info3" property="mInfo3" />
+		<result column="createTime" property="mCreateTime"/>
+		<result column="loginName" property="loginName"/>		<!-- 商户平台账户的name-->
+	</resultMap>
+
+	<select id="findMerchantId"  parameterType="java.util.List"  resultMap="Merchant">
+		SELECT t.* FROM MP_MerchantInfo t
+		<where>
+			<!--<if test="mId!=null and mId!=''">-->
+				t.M_ID IN
+				<foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			<!--</if>-->
+		</where>
+	</select>
+	<select id="findMerchantByPreId"  parameterType="java.util.Map"  resultMap="Merchant">
+		SELECT t.* FROM MP_MerchantInfo t
+		<where>
+			<!--<if test="mId!=null and mId!=''">-->
+			t.M_ParentMerchant IN (select p.M_ID FROM MP_MerchantInfo p WHERE  p.M_AccountId IN
+			<foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+				#{item.accountId}
+			</foreach>)
+			<!--</if>-->
+			<if test=" merchantId!=null and merchantId!='' ">
+				and t.M_ID =#{merchantId}
+			</if>
+			<if test=" merchantName!=null and merchantName!='' ">
+				and t.M_Name like '%${merchantName}%'
+			</if>
+		</where>
+	</select>
+	<select id="findMerchantByPreIdEj"  parameterType="java.util.Map"  resultMap="Merchant">
+		SELECT t.* FROM MP_MerchantInfo t
+		<where>
+			<!--<if test="mId!=null and mId!=''">-->
+			t.M_ParentMerchant IN (select p.M_ID FROM MP_MerchantInfo p WHERE  p.M_AccountId IN
+			<foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+				#{item.mAccountId}
+			</foreach>)
+			<!--</if>-->
+			<if test=" merchantId!=null and merchantId!='' ">
+				and t.M_ID =#{merchantId}
+			</if>
+			<if test=" merchantName!=null and merchantName!='' ">
+				and t.M_Name like '%${merchantName}%'
+			</if>
+		</where>
+	</select>
+	<select id="findChildMerchantId"  parameterType="java.util.Map"  resultMap="Merchant">
+		SELECT t.* FROM MP_MerchantInfo t
+		<where>
+			<!--<if test="mId!=null and mId!=''">-->
+			t.M_ParentMerchant = #{preId}
+			<!--</if>-->
+			<if test=" merchantId!=null and merchantId!='' ">
+				and t.M_ID =#{merchantId}
+			</if>
+			<if test=" merchantName!=null and merchantName!='' ">
+				and t.M_Name like '%${merchantName}%'
+			</if>
+		</where>
+	</select>
+	<select id="findMerchantByPreIdorg"  parameterType="java.util.Map"  resultMap="Merchant">
+		SELECT t.* FROM MP_MerchantInfo t
+		<where>
+			<!--<if test="mId!=null and mId!=''">-->
+			t.M_AccountId IN
+			<foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+				#{item.accountId}
+			</foreach>
+			<!--</if>-->
+			<if test=" merchantId!=null and merchantId!='' ">
+				and t.M_ID =#{merchantId}
+			</if>
+			<if test=" merchantName!=null and merchantName!='' ">
+				and t.M_Name like '%${merchantName}%'
+			</if>
+		</where>
+	</select>
+	<!--删除-->
+	<update id="deleteMerchant" parameterType ="java.util.List">
+		update  MP_MerchantInfo set isValid='2' WHERE M_ID IN
+		<foreach collection="list" index="index" item="item"  open="(" separator="," close=")" >
+			#{item}
+		</foreach>
+	</update>
+
+	<delete id="deleteMerchantByMId" parameterType ="String">
+		DELETE from MP_MerchantInfo where m_id=#{mId}
+	</delete>
+
+
+	<select id="findBaseCommission"  resultMap="Merchant" parameterType="Merchant">
+		SELECT * from MP_MerchantInfo WHERE BC_ID=#{bcId} or BC_ID_Line=#{bcId}
+	</select>
+
+
+	<!--查询归属自己商户的信息-->
+	<select id="findDataAuthorityMerchant"  resultMap="Merchant" parameterType="Map">
+		SELECT * from (
+			select t.*,a.M_name as mParentName from MP_MerchantInfo t
+			LEFT JOIN MP_MerchantInfo a on a.M_ID=t.M_ParentMerchant
+			where
+			((case when 'admin'=#{mContactUser} or '05fdf829f596437f993eab1c3e6c8bd8'=#{roleId}
+			then t.M_ParentMerchant in (SELECT M_ParentMerchant from MP_MerchantInfo where m_level='2')
+			ELSE t.M_ParentMerchant in (
+			SELECT M_ID from MP_MerchantInfo where M_AccountId =#{userIds}
+			union
+			select m_id from MP_MerchantInfo a where a.M_ParentMerchant in(
+			SELECT M_ID from MP_MerchantInfo where M_AccountId =#{userIds}
+			)
+			)end)) or t.M_ID in (SELECT M_ID from MP_MerchantInfo where M_AccountId=#{userIds})
+		)s
+		where 1=1
+		<if test=" mName!=null and mName!='' ">
+			and s.M_Name like '%${mName}%' or s.M_Mobile like '%${mName}%'
+		</if>
+		<if test=" mParentName!=null and mParentName!='' ">
+			and s.mParentName like '%${mParentName}%'
+		</if>
+		<if test=" bcId!=null and bcId!='' ">
+			and s.BC_ID=#{bcId}
+		</if>
+		<if test=" mLevel!=null and mLevel!='' ">
+			and s.M_Level=#{mLevel}
+		</if>
+		<if test=" isValid!=null and isValid!='' ">
+			and s.isValid=#{isValid}
+		</if>
+		ORDER BY s.M_ID  desc
+	</select>
+
+	<select id="findOwn"  resultMap="Merchant" parameterType="Map">
+		SELECT a.*,b.m_name as parentMerchant from MP_MerchantInfo a
+		LEFT JOIN MP_MerchantInfo b on a.m_parentMerchant=b.m_id
+		where a.m_accountId=#{userId}
+	</select>
+
+	<select id="findUserLevel"  resultMap="Merchant" parameterType="Map">
+		SELECT * from MP_MerchantInfo a where a.m_id=#{mId}
+	</select>
+
+	<!--查询归属自己商户的信息-->
+	<select id="findParentMerchant"  resultMap="Merchant" parameterType="Map">
+		SELECT * from (
+			select t.*,a.M_name as mParentName from MP_MerchantInfo t
+			LEFT JOIN MP_MerchantInfo a on a.M_ID=t.M_ParentMerchant
+			where
+			((case  when 'admin'=#{mContactUser} then t.M_ParentMerchant in (SELECT M_ParentMerchant from MP_MerchantInfo where m_level='2')
+			ELSE t.M_ParentMerchant in (
+			SELECT M_ID from MP_MerchantInfo where M_AccountId =#{userIds}
+			union
+			select m_id from MP_MerchantInfo a where a.M_ParentMerchant in(
+			SELECT M_ID from MP_MerchantInfo where M_AccountId =#{userIds}
+			)
+			)end)) or t.M_ID in (SELECT M_ID from MP_MerchantInfo where M_AccountId=#{userIds}
+			union
+			SELECT m_id from MP_MerchantInfo where m_id=(
+			SELECT m_parentMerchant from MP_MerchantInfo where m_accountid=#{userIds})
+			))s
+		where s.m_level='2' and s.M_Status='2' and s.isValid='1'
+		<if test=" mId!=null and mId!='' ">
+			and s.M_ID=#{mId}
+		</if>
+		ORDER BY s.M_ID  desc
+	</select>
+
+	<select id="findDataAuthoritySalesManager"  resultMap="Merchant" parameterType="Map">
+		select * from(
+			select t.* from MP_MerchantInfo t
+			where
+			((case  when 'admin'=#{mContactUser} or '05fdf829f596437f993eab1c3e6c8bd8'=#{roleId} then t.M_Id is not null
+			ELSE t.M_AccountId in
+			<foreach collection="userIds" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+			end)) and t.M_Level='1'
+			union all
+			select s.* from MP_MerchantInfo s where s.M_ParentMerchant=(select m_id from MP_MerchantInfo where M_AccountId=#{userId})
+			and s.M_Level='1'
+		)a where 1=1
+		<if test=" mName!=null and mName!='' ">
+			and a.M_Name like '%${mName}%' or a.M_Mobile like '%${mName}%'
+		</if>
+		<if test=" bcId!=null and bcId!='' ">
+			and a.BC_ID=#{bcId}
+		</if>
+		<if test=" isValid!=null and isValid!='' ">
+			and a.isValid=#{isValid}
+		</if>
+		ORDER BY a.M_ID  desc
+	</select>
+
+	<select id="findChildMerchant" resultType="String" parameterType="Integer">
+		select count(1) as childMerchantNum  from MP_MerchantInfo d where d.M_Status='2' and d.M_ParentMerchant=#{mId}
+	</select>
+
+	<select id="findChildCustomer" resultType="String" parameterType="Integer">
+		select count(1) as childCustomerNum from DC_UserInfo u where u.marketer=(SELECT t.M_CPUserid FROM MP_MerchantInfo t where t.M_ID=#{mId})
+		and u.userId not in (SELECT t.M_CPUserid FROM MP_MerchantInfo t where t.M_ID=#{mId})
+	</select>
+
+	<!--通过渠道ID查询归属自己渠道的渠道-->
+	<select id="findChannel"  resultMap="Merchant" parameterType="Merchant">
+		SELECT * from(
+			select a.m_name,a.M_Mobile from MP_MerchantInfo a where a.M_Status='2' and a.M_ParentMerchant=#{mId}
+			UNION
+			select b.userName,b.phone from DC_UserInfo b where b.marketer=(SELECT t.M_CPUserid FROM MP_MerchantInfo t where t.M_ID=#{mId})
+			and b.userId not in (SELECT t.M_CPUserid FROM MP_MerchantInfo t where t.M_ID=#{mId})
+		)s
+		<if test="mName!=null and mName!='' ">
+			where s.M_Name like '%${mName}%'
+		</if>
+	</select>
+
+	<select id="findChildCustomerByMId"  resultMap="Merchant" parameterType="Merchant">
+		SELECT s.userName as mName,s.phone as mMobile,a.buyTime from(
+		select b.userId,b.userName,b.phone from DC_UserInfo b
+		where b.marketer=(SELECT t.M_CPUserid FROM MP_MerchantInfo t where t.M_ID=#{mId})
+		and b.userId not in (SELECT t.M_CPUserid FROM MP_MerchantInfo t where t.M_ID=#{mId})
+		)s LEFT JOIN (SELECT userId ,MAX(buyTime) as buyTime from DC_CP_OrderInfo  GROUP BY userId)a
+		on s.userId=a.userId
+		<if test="mName!=null and mName!='' ">
+			where s.userName like '%${mName}%' or s.phone like '%${mName}%'
+		</if>
+	</select>
+
+	<select id="findChildMerchantByMId"  resultMap="Merchant" parameterType="Merchant">
+		select a.m_id,a.m_name,a.M_Mobile from MP_MerchantInfo a
+		where a.M_Status='2' and a.M_ParentMerchant=#{mId}
+		<if test="mName!=null and mName!='' ">
+			and (a.m_name like '%${mName}%' or a.M_Mobile like '%${mName}%')
+		</if>
+	</select>
+
+	<!--查询次级渠道数-->
+	<select id="findCount"  resultType="int" parameterType="Merchant">
+		SELECT COUNT(M_ID)  from MP_MerchantInfo t
+		<where>
+			t.M_ParentMerchant=
+			<if test="mId!=null ">
+				#{mId}
+			</if>
+		</where>
+	</select>
+
+
+	<!--查询自己渠道ID-->
+	<select id="findId" resultMap="Merchant" parameterType="String">
+		SELECT * from MP_MerchantInfo where 1=1
+		<if test="userId!=null and userId!='' ">
+			and M_AccountId = #{userId}
+		</if>
+		<if test="mobile!=null and mobile!='' ">
+			and M_Mobile = #{mobile}
+		</if>
+	</select>
+
+
+	<!--查询部门渠道-->
+	<select id="findByPageId" resultMap="Merchant" parameterType="Map">
+		SELECT * from MP_MerchantInfo
+		<where>
+				M_AccountId IN
+				<foreach collection="userId" index="index" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			<if test="mName!=null and mName!='' ">
+				and M_Name like '%${mName}%'
+			</if>
+			<if test="mMobile!=null and mMobile!='' ">
+				and M_Mobile like '%${mMobile}%'
+			</if>
+		</where>
+	</select>
+
+
+	<select id="findLabelMerchant" resultMap="Merchant" parameterType="Map">
+		select a.m_id as mId,a.m_parentMerchant as mParentMerchant, a.m_cpuserid as mCpuserid,
+		a.m_name as mName,a.m_mobile as mMobile,a.M_level as mLevel,ifnull(s.recMoney,0) as recMoney,
+		ifnull(d.purMoney,0)as purMoney,ifnull(f.balMoney,0) as balMoney,ifnull(e.commission,0) as commission
+		from MP_MerchantInfo a
+		LEFT JOIN(select a.userID ,sum(a.money) as recMoney from DC_UserTransInfo a where a.tranType='1'  GROUP BY a.userid
+		)s on a.m_cpuserid=s.userid
+		LEFT JOIN(select a.userID ,sum(a.money) as purMoney from DC_TicketInfo a GROUP BY a.userid
+		)d on a.m_cpuserid=d.userid
+		LEFT JOIN(select a.userid,a.funds as balMoney, max(a.createTime) as createTimefrom from  DC_UserBalance a GROUP BY a.userid
+		)f on a.m_cpuserid=f.userid
+		LEFT JOIN(select a.scr_merchantID,sum(a.scr_commission)as commission from TJ_SALESCOMMISSIONREPORT a GROUP BY a.scr_merchantID
+		)e on a.m_id=e.scr_merchantID 
+		JOIN(select a.m_id as mId from MP_MerchantInfo a where a.m_accountid=#{userId}
+		)c on a.m_parentMerchant=c.mId where 1=1
+    	<if test="mName!=null and mName!='' ">
+			and a.M_Name like '%${mName}%'
+		</if>
+		<if test="mMobile!=null and mMobile!='' ">
+			and a.m_mobile like '%${mMobile}%'
+		</if>
+	</select>
+
+	<!--查询是否有重返商户名-->
+	<select id="findmName" resultType="int" parameterType="String">
+		SELECT COUNT(M_Name) from MP_MerchantInfo
+		<where>
+			M_Name=#{mName}
+		</where>
+	</select>
+
+	<select id="findmMobile" resultType="int" parameterType="String">
+		SELECT COUNT(*) from MP_MerchantInfo where M_Mobile=#{mMobile}
+		<if test="mId!=null and mId!='' ">
+			and M_ID != #{mId}
+		</if>
+
+	</select>
+
+	<!--新增商户-->
+	<insert id="createMerchant" parameterType="Merchant">
+	  <![CDATA[
+	INSERT INTO MP_MerchantInfo(
+	M_CPUserid,M_Name,M_ParentMerchant,M_Type,M_Level,M_Status,M_Mobile,M_Address,M_ContactUser,
+	M_ContactMobile,M_License,M_IdCard,M_Introduce,createTime,bc_id,M_CommionType,BC_ID_Line,isValid
+	) VALUES (#{mCpUserId},#{mName},#{mParentMerchant},#{mType},#{mLevel},#{mStatus},#{mMobile},#{mAddress},
+	#{mContactUser},#{mContactMobile},#{mLicense},#{mIdCard},#{mIntroduce},#{mCreateTime},#{bcId},#{mCommionType},#{bcIdLine},#{isValid}
+	)
+	]]>
+	</insert>
+
+	<!--修改商户-->
+	<update id="updateMerchant" parameterType="Merchant">
+		UPDATE MP_MerchantInfo
+		<set>
+				M_CommionType =#{mCommionType},
+				BC_ID =#{bcId},
+				BC_ID_Line =#{bcIdLine},
+				M_Mobile =#{mMobile},
+				BC_flag =#{bcFlag},
+				M_Name =#{mName},
+				M_Type =#{mType},
+				M_Address =#{mAddress},
+				M_ContactUser =#{mContactUser},
+				M_ContactMobile =#{mContactMobile},
+				M_IdCard =#{mIdCard},
+				M_Introduce =#{mIntroduce},
+				M_License =#{mLicense},
+				M_Status =#{mStatus},
+				M_ParentMerchant =#{mParentMerchant},
+				M_Level =#{mLevel}
+			<where>
+				M_ID=#{mId}
+			</where>
+		</set>
+
+	</update>
+
+	<update id="updateMLicense" parameterType="Merchant">
+		UPDATE MP_MerchantInfo
+		<set>
+			M_License =#{mLicense}
+			<where>
+				M_ID=#{mId}
+			</where>
+		</set>
+	</update>
+
+	<select id="s" parameterType="String" resultMap="MerchantVO">
+		SELECT m.M_CPUserid 彩票系统账户ID,m.M_Name 商户名称,m.M_ParentMerchant 上级渠道ID,
+		m.M_Type 商户类型,m.M_Level 商户级别,m.M_Status 审核进度 ,m.M_Mobile 商户手机号,m.M_Address 商户地址,
+		m.M_ContactUser 联系人,m.M_ContactMobile 联系人手机号,m.M_Idcard 身份证 ,a.loginName 平台用户名
+		from MP_MerchantInfo m,JY_BASE_ACCOUNT a
+		<where>
+			m.M_AccountId=a.id
+			<if test="userId!=null and userId!=''">
+				and m.M_AccountId=#{userId}
+			</if>
+		</where>
+	</select>
+
+
+	<select id="findByPageAndParam"  resultMap="Merchant" parameterType="Merchant">
+		SELECT t.*  FROM MP_MerchantInfo t
+		<where>
+			<if test="param.mParentMerchant!=null and param.mParentMerchant!=''">
+				t.M_ParentMerchant = #{param.mParentMerchant}
+			</if>
+			<if test="param.mId!=null and param.mId!=''">
+				and	t.M_ID=#{param.mId}
+			</if>
+			<if test="param.mLevel!=null and param.mLevel!=''">
+				and	t.M_LEVEL=#{param.mLevel}
+			</if>
+			<if test="param.mStatus!=null and param.mStatus!=''">
+				and	t.M_STATUS=#{param.mStatus}
+			</if>
+		</where>
+		and	t.M_STATUS=2
+-- 		ORDER BY t.SCR_DATE desc
+	</select>
+
+
+	<!-- 有效的渠道商户list -->
+    <select id="findValidMerchantList"  resultType="Merchant"  resultMap="Merchant">
+       SELECT t.* FROM MP_MerchantInfo t  WHERE 1=1 and t.M_Status=2
+			<!--and t.status=#{param.parentMerchant}-->
+    </select>
+
+	<!-- 预付款对应的渠道商户 -->
+	<select id="findMerchantListPre"  resultMap="Merchant">
+		SELECT t.* FROM MP_MerchantInfo t,MP_PrePaymentInfo q  WHERE t.M_ID=q.M_ID
+	</select>
+
+	<!-- 渠道商户的有效子渠道list -->
+	<select id="findByParentMerchantId"  resultType="Merchant"  resultMap="Merchant">
+		SELECT t.* FROM MP_MerchantInfo t  WHERE 1=1 and t.M_Status=2
+		and t.M_ParentMerchant=#{parentMerchantId}
+	</select>
+
+	<delete id="delete" parameterType="Merchant">
+	delete from MP_MerchantInfo
+	WHERE id=#{id}
+	</delete>
+
+	<!-- 渠道商户list -->
+	<select id="findMerchant"  resultType="Merchant"  resultMap="Merchant">
+		SELECT m.* FROM MP_MerchantInfo m  where m.M_AccountId=#{accountId}
+	</select>
+	<select id="findMerchantPO"  resultType="Merchant"  resultMap="Merchant">
+		SELECT m.* FROM MP_MerchantInfo m  where m.M_ID=#{mechantId}
+	</select>
+	<select id="findMerchantById"  resultType="Merchant"  resultMap="Merchant">
+		SELECT m.* FROM MP_MerchantInfo m  where m.M_Id=#{0}
+	</select>
+
+	<select id="findMerchantByIdAndName"  resultType="Merchant"  resultMap="Merchant">
+		SELECT t.* FROM MP_MerchantInfo t  where 1=1
+		<if test="merchantId!=null and merchantId!=''">
+			and	t.M_ID=#{merchantId}
+		</if>
+		<if test="merchantName!=null and merchantName!=''">
+			and	t.M_Name like '%${merchantName}%'
+		</if>
+	</select>
+	
+	
+	 <select id="queryMerchantAll"  resultMap="Merchant">
+		SELECT * FROM MP_MerchantInfo 
+	</select>
+	
+	<select id="queryMerchantByDate"  resultMap="Merchant"  parameterType = "String">
+	  SELECT qd.* FROM MP_MerchantInfo qd where qd.createTime =#{createdate}
+	</select>
+	
+	
+		<select id="queryMerchantByIdAndDate" resultType="Merchant"
+		parameterType="String">
+	 <![CDATA[	select qdc.M_ID as mId,qdc.M_Name as mName,qdc.M_ContactUser as mContactUser,qdc.M_Mobile as mMobile,
+	 	qdc.totalCount+cpc.totalCount as developCustomerNumber from 
+		(SELECT qd.M_Name,qd.M_ContactUser,qd.M_Mobile,qd.M_ID,qd.M_CPUserid,count(prm.M_ID)as totalCount FROM MP_MerchantInfo qd
+		left JOIN MP_MerchantInfo prm on prm.M_ParentMerchant=qd.M_ID
+		where qd.createTime < #{createdate}
+		GROUP by qd.M_Name,qd.M_ID,qd.M_CPUserid) qdc
+		join(
+		select qd.M_Name,qd.M_ContactUser,qd.M_Mobile,qd.M_ID,qd.M_CPUserid,count(u.userId) as totalCount from 
+		MP_MerchantInfo qd 
+		left join DC_UserInfo u on u.marketer= qd.M_CPUserid 
+		where  u.marketTime < #{createdate}
+		group by qd.M_Name,qd.M_ID,qd.M_CPUserid) cpc on qdc.M_ID=cpc.M_ID 
+		order by qdc.M_Name asc  ]]>
+	</select>
+	
+	
+		<select id="queryMerchantByIdAndDatenow" resultType="Integer"
+		parameterType="String">
+		 <![CDATA[	select qdc.M_ID as mId,qdc.M_Name as mName,qdc.M_ContactUser as mContactUser,qdc.M_Mobile as mMobile,
+		 	qdc.totalCount+cpc.totalCount as developCustomerToday from 
+			(SELECT qd.M_Name,qd.M_ContactUser,qd.M_Mobile,qd.M_ID,qd.M_CPUserid,count(prm.M_ID)as totalCount FROM MP_MerchantInfo qd
+			left JOIN MP_MerchantInfo prm on prm.M_ParentMerchant=qd.M_ID
+			where qd.createTime = #{createdate}
+			GROUP by qd.M_Name,qd.M_ID,qd.M_CPUserid) qdc
+			join(
+			select qd.M_Name,qd.M_ContactUser,qd.M_Mobile,qd.M_ID,qd.M_CPUserid,count(u.userId) as totalCount from 
+			MP_MerchantInfo qd 
+			left join DC_UserInfo u on u.marketer= qd.M_CPUserid 
+			where  u.marketTime = #{createdate}
+			group by qd.M_Name,qd.M_ID,qd.M_CPUserid) cpc on qdc.M_ID=cpc.M_ID 
+			order by qdc.M_Name asc  ]]>
+	</select>
+
+
+	<!--查询归属自己商户的信息-->
+	<select id="findByPage"  resultMap="Merchant" parameterType="Merchant">
+		select t.*,a.M_name as mParentName from MP_MerchantInfo t
+		LEFT JOIN MP_MerchantInfo a on a.M_ID=t.M_ParentMerchant
+		where
+		((case  when 'admin'=#{param.mContactUser} then t.M_ParentMerchant in (SELECT M_ParentMerchant from MP_MerchantInfo)
+		ELSE t.M_ParentMerchant in (SELECT M_ID from MP_MerchantInfo where M_AccountId=#{param.userId}) end)
+		or t.M_AccountId=#{param.userId}) and t.isValid='1'
+		<if test=" param.mName!=null and param.mName!='' ">
+			and t.M_Name like '%${param.mName}%'
+		</if>
+		<if test=" param.mMobile!=null and param.mMobile!='' ">
+			and t.M_Mobile like '%${param.mMobile}%'
+		</if>
+		<if test=" param.bcId!=null and param.bcId!='' ">
+			and t.BC_ID=#{param.bcId}
+		</if>
+		<if test=" param.mType!=null and param.mType!='' ">
+			and t.M_TYPE=#{param.mType}
+		</if>
+		ORDER BY t.M_ID desc
+	</select>
+
+</mapper>

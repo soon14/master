@@ -1,0 +1,23 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-war" name="manage_platform:war exploded">
+    <output-path>$PROJECT_DIR$/out/artifacts/manage_platform_war_exploded</output-path>
+    <root id="root">
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="classes">
+          <element id="module-output" name="manage_platform" />
+          <element id="module-output" name="common" />
+          <element id="module-output" name="pojo" />
+          <element id="module-output" name="service" />
+          <element id="module-output" name="dao" />
+          <element id="module-output" name="vo" />
+          <element id="module-output" name="form" />
+          <element id="module-output" name="process" />
+        </element>
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="lib" />
+        </element>
+      </element>
+      <element id="javaee-facet-resources" facet="manage_platform/web/Web" />
+    </root>
+  </artifact>
+</component>

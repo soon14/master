@@ -1,0 +1,33 @@
+package com.jy.task.job.request;
+
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.SpringWebContextUtil;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.impl.system.request.UserTransDetailRequestProcessImpl;
+import org.springframework.context.ApplicationContext;
+
+/**
+ * Created by shixi on 2017/4/28.
+ */
+public class UserTransTask extends BaseTask
+{
+
+    public void saveData() {
+        log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " 同步用户交易数据开始运行");
+        ApplicationContext ac = SpringWebContextUtil.getApplicationContext();
+        UserTransDetailRequestProcessImpl process = (UserTransDetailRequestProcessImpl) ac.getBean("userTransDetailRequestProcess");
+        //分页数据
+        RequestParamInfoForm req = new RequestParamInfoForm();
+        req.setPage("true");//是否开启分页，默认开启
+        req.setQueryAll(super.getParam()[0]);//是否查询全部，默认按照天数查询
+        req.setCurrentPage(1);//默认为第一页
+        req.setQueryTime(super.getParam()[2].equals("default")?DateUtils.getDate("yyyyMMdd"):super.getParam()[2]);//默认当天;
+        req.setPageSize(Integer.parseInt(super.getParam()[1]));//默认5000
+        try {
+            process.synchronizationUserTransData(req);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + "  同步用户交易数据结束");
+    }
+}

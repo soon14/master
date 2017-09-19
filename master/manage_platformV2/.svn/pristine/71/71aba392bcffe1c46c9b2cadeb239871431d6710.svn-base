@@ -1,0 +1,23 @@
+package com.jy.test;
+
+import com.jy.process.system.request.lottery.TaskWithdrawProcess;
+import org.junit.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+public class TaskWithdrawProcessTest extends BaseJunit4Test {
+    @Autowired
+    private TaskWithdrawProcess dw;
+
+    @Test
+    public void saveWithDraw() {
+        try {
+            dw.saveTaskWithdrawInfoList("20170612");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+}

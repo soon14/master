@@ -1,0 +1,452 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.CashDifferenceDao">
+	<resultMap id="CashDifference" type="CashDifference" >
+		<result property="date" column="date"/>
+		<result property="startGap" column="start_gap"/>
+		<result property="onlineRedeemAmount" column="online_redeem_amount"/>
+		<result property="bigAmount" column="big_amount"/>
+		<result property="onlineSentAmount" column="online_sent_amount"/>
+		<result property="redeemSentGap" column="redeem_sent_gap"/>
+		<result property="endGap" column="end_gap"/>
+		<result property="offlineRedeemAmount" column="offline_redeem_amount"/>
+		<result property="totalRedeemAmount" column="total_redeem_amount"/>
+	</resultMap>
+
+	<!-- 保存兑奖派奖差异list到数据库 -->
+	<insert id="saveCashDifferenceList" parameterType="java.util.List">
+
+		INSERT INTO RP_CashAmountGap (
+		date,
+		start_gap,
+		online_redeem_amount,
+		big_amount,
+		online_sent_amount,
+		redeem_sent_gap,
+		end_gap,
+		offline_redeem_amount,
+		total_redeem_amount,
+		create_date,
+		create_user)
+		values
+		<foreach collection="list" item="item" index="index" separator=",">
+			(#{item.date},
+			#{item.startGap},
+			#{item.onlineRedeemAmount},
+			#{item.bigAmount},
+			#{item.onlineSentAmount},
+			#{item.redeemSentGap},
+			#{item.endGap},
+			#{item.offlineRedeemAmount},
+			#{item.totalRedeemAmount},
+			#{item.createDate},
+			#{item.createUser}
+			)
+		</foreach>
+	</insert>
+	<!-- 保存差异明细数据 v2.0-->
+	<insert id="saveCashDiffDetail" parameterType="java.util.List">
+		INSERT INTO RP_CashDiffDetail
+		(NormalDate,
+		PrizeTime,
+		TicketNo,
+		SendPrize,
+		TicketPrize,
+		DiffMoney,
+		DF_InitDate,
+		DF_ProcessInfo
+		)
+		values
+		<foreach collection="list" item="item" index="index" separator=",">
+			(#{item.normalDate},
+			#{item.prizeTime},
+			#{item.ticketNo},
+			#{item.sendPrize},
+			#{item.ticketPrize},
+			#{item.diffMoney},
+			#{item.dfInitDate},
+			#{item.dfProcessInfo}
+			)
+		</foreach>
+	</insert>
+	<!--重新保存(重置)该段时间内的兑奖明细数据reSavaCashDetail  -->
+
+	<insert id="reSavaCashDetail" parameterType="java.util.List">
+		INSERT INTO RP_CashDiffDetail (
+		NormalDate,
+		PrizeTime,
+		TicketNo,
+		SendPrize,
+		TicketPrize,
+		DiffMoney,
+		DF_InitDate,
+		DF_ProcessInfo
+		)
+		values
+		<foreach collection="list" item="item" index="index" separator=",">
+			(#{item.normalDate},
+			#{item.prizeTime},
+			#{item.ticketNo},
+			#{item.sendPrize},
+			#{item.ticketPrize},
+			#{item.diffMoney},
+			#{item.dfInitDate},
+			#{item.dfProcessInfo}
+			)
+		</foreach>
+	</insert>
+
+	<!-- 更新保存线下兑奖录入的数据 updateCountAumone-->
+	<update id="updateCountAumone" parameterType="CashDifference">
+		UPDATE RP_CashAmountGap SET offline_redeem_amount =#{param.offlineRedeemAmount},total_redeem_amount=#{param.totalRedeemAmount} where date =#{param.date}
+	</update>
+
+	<!-- 删除该日期的兑奖差异数据date_format(#{param.date},'%Y-%m') V2.0 -->
+	<delete id="deleteCashDiffByDate"  parameterType="CashDifference">
+		DELETE FROM RP_CashAmountGap  WHERE date = #{param.date}
+	</delete>
+	<!-- 删除该段时间内的所有订单的差异数据 deleteByTicketNo V2.0-->
+	<delete id="deleteByTicketNo" parameterType="java.util.Map">
+		delete from RP_CashDiffDetail
+		<where>
+			1=1
+			<if test="_startDate != null and startDate != ''">
+				AND (date_format(NormalDate,'%Y-%m') &gt;=
+				date_format(#{_startDate},'%Y-%m')
+				or date_format(PrizeTime,'%Y-%m') &gt;=
+				date_format(#{_startDate},'%Y-%m'))
+			</if>
+			<if test="_endDate != null and endDate != ''">
+				AND (date_format(NormalDate,'%Y-%m') &lt;=
+				date_format(#{_endDate},'%Y-%m')
+				or date_format(PrizeTime,'%Y-%m') &lt;=
+				date_format(#{_endDate},'%Y-%m'))
+			</if>
+			<!-- 	AND TicketNo in
+			<foreach collection="_tList" item="item"  open="(" separator="," close=")">
+				#{item.ticketNo}
+			</foreach> -->
+		</where>
+
+	</delete>
+	<!-- 查询该日期的派奖和对奖的差异 -->
+	<select id="findByDate" parameterType="CashDifference"  resultMap="CashDifference">
+		select
+		c.date as date,
+		c.start_gap as startGap,
+		c.online_redeem_amount as onlineRedeemAmount,
+		c.big_amount as bigAmount,
+		c.online_sent_amount as onlineSentAmount,
+		c.redeem_sent_gap AS redeemSentGap,
+		c.end_gap AS endGap,
+		c.offline_redeem_amount AS offlineRedeemAmount,
+		c.total_redeem_amount AS totalRedeemAmount
+		from RP_CashAmountGap c where 1=1
+		<if test="param.date !=null and param.date!=''">
+			and	c.date=date_format(#{param.date},'%Y-%m')
+		</if>
+		order By c.date desc
+	</select>
+
+	<!-- 查询该时间段内每日的兑奖总金额讯息:v1.0 -->
+	<!-- <select id="findCashSumbyDates" parameterType="String"  resultType="java.math.BigDecimal">
+        SELECT sum(c.machine_after_tax_bonus) as cashTotalAccount from TS_CashPrize c where c.prize_date like CONCAT(CONCAT(#{date}), '%')
+    </select> -->
+	<!-- 查询该日期所在月份兑奖总总金额:v2.0 date_format(#{date},'%Y-%m')-->
+	<select id="findCashSumbyDates" parameterType="String"  resultType="java.math.BigDecimal">
+		SELECT sum(c.machine_after_tax_bonus) as cashTotalAccount from TS_CashPrize c where c.prize_date like CONCAT(CONCAT(date_format(#{date},'%Y-%m')), '%')
+	</select>
+
+	<!-- 查询该时间段内每日的的派奖总金额讯息 :v1.0-->
+	<!-- <select id="findSendPrizeSumByDates" parameterType="String"  resultType="java.math.BigDecimal">
+        SELECT sum(c.prize) as sendPrizeTotalAccount from DC_PrizeInfo  c where c.prizeTime like CONCAT(CONCAT(#{date}), '%')
+    </select> -->
+	<!-- 查询该时间段内每日的的派奖总金额讯息 :v2.0-->
+	<select id="findSendPrizeSumByDates" parameterType="String"  resultType="java.math.BigDecimal">
+		SELECT sum(c.prize) as sendPrizeTotalAccount from DC_PrizeInfo  c where c.prizeTime like CONCAT(CONCAT(date_format(#{date},'%Y-%m')), '%')
+	</select>
+
+
+	<!-- 获取制定日期的期末差异额 -->
+	<select id="findEndGap" parameterType="String"  resultType="java.math.BigDecimal">
+		SELECT c.end_gap as endGap from RP_CashAmountGap c where c.date=#{date}
+	</select>
+
+
+
+	<!-- 查询兑奖明细数据 V2.0-->
+	<select id="findCashDiffDetails" parameterType="String" resultType="CashDiffDetail">
+		SELECT
+		c.NormalDate as normalDate,
+		c.PrizeTime as prizeTime,
+		c.TicketNo as ticketNo,
+		c.SendPrize as sendPrize,
+		c.TicketPrize as ticketPrize,
+		c.DiffMoney as diffMoney,
+		c.DF_ProcessStauts as dfProcessStauts,
+		c.DF_ProcessInfo as dfProcessInfo
+		FROM
+		RP_CashDiffDetail c WHERE(c.NormalDate LIKE  CONCAT(CONCAT(#{date}), '%') OR c.PrizeTime LIKE  CONCAT(CONCAT(#{date}), '%'))
+	</select>
+
+	<!-- 依据时间联合查询每个订单的兑奖信息 -->
+	<!--  <select id="findCashDiffBySchemeId" parameterType="String" resultType="CashDiffDetail">
+     SELECT
+            A.schemeExtendId AS ticketNo,
+            SUM(P.net_after_tax_bonus) AS ticketPrize,
+            A.prizeTime as normalDate
+        FROM
+            (
+                SELECT DISTINCT
+                    t.schemeExtendId,
+                    t.batchId,
+                    p.prizeTime
+                FROM
+                    DC_TicketInfo t
+                JOIN DC_PrizeInfo p ON t.schemeExtendId = p.schemeExtendId
+                WHERE
+                    p.prizeTime LIKE CONCAT(CONCAT(#{date}), '%')
+                ORDER BY
+                    t.batchId
+            ) A
+        LEFT JOIN TS_CashPrize P ON A.batchId = P.ticket_number
+        GROUP BY
+            A.schemeExtendId
+        ORDER BY
+            A.schemeExtendId desc
+     </select> -->
+	<!-- 依据时间联合查询每个订单的兑奖信息 v1.0-->
+	<!--  <select id="findCashDiffBySchemeId" parameterType="String" resultType="CashDiffDetail">
+    SELECT DISTINCT
+        tk.schemeExtendId AS ticketNo,
+        SUM(cs.machine_after_tax_bonus) AS ticketPrize,
+        cs.prize_date AS normalDate
+    FROM
+        TS_CashPrize cs
+
+    LEFT JOIN (SELECT  DISTINCT batchId,schemeExtendId FROM DC_TicketInfo) AS tk ON tk.batchId = cs.ticket_number
+    WHERE
+        cs.prize_date LIKE  CONCAT(CONCAT(#{date}), '%')
+    GROUP BY
+         tk.schemeExtendId
+        ORDER BY
+        tk.schemeExtendId desc
+     </select> -->
+	<!-- 依据时间联合查询每个订单的兑奖信息 v2.0-->
+	<select id="findCashDiffBySchemeId" parameterType="String" resultType="CashDiffDetail">
+		SELECT DISTINCT
+		tk.schemeExtendId AS ticketNo,
+		SUM(cs.machine_after_tax_bonus) AS ticketPrize,
+		cs.prize_date AS normalDate
+		FROM
+		TS_CashPrize cs
+
+		LEFT JOIN (SELECT  DISTINCT batchId,schemeExtendId FROM DC_TicketInfo) AS tk ON tk.batchId = cs.ticket_number
+		WHERE
+		cs.prize_date LIKE  CONCAT(CONCAT(date_format(#{date},'%Y-%m')), '%')
+		GROUP BY
+		tk.schemeExtendId
+		ORDER BY
+		tk.schemeExtendId desc
+	</select>
+
+
+	<!-- 依据时间查询每个订单派奖信息 v1.0-->
+	<!--  <select id="findSendDiffBySchemeId" parameterType="String" resultType="CashDiffDetail">
+      SELECT
+        pz.schemeExtendId AS ticketNo,
+        pz.prize AS sendPrize,
+        pz.prizeTime as normalDate
+    FROM
+        DC_PrizeInfo pz
+    WHERE
+        pz.prizeTime LIKE CONCAT(CONCAT(#{date}), '%')
+        ORDER BY
+        pz.schemeExtendId desc
+     </select>-->
+	<!-- 依据时间查询每个订单派奖信息 v2.0-->
+	<select id="findSendDiffBySchemeId" parameterType="String" resultType="CashDiffDetail">
+		SELECT
+		pz.schemeExtendId AS ticketNo,
+		pz.prize AS sendPrize,
+		pz.prizeTime as prizeTime
+		FROM
+		DC_PrizeInfo pz
+		WHERE
+		pz.prizeTime LIKE CONCAT(CONCAT(date_format(#{date},'%Y-%m')), '%')
+		ORDER BY
+		pz.schemeExtendId desc
+	</select>
+
+	<!-- 查询该时间段内每日的兑奖总金额 findCashByRedates-->
+	<select id="findCashByRedates" parameterType="java.util.Date" resultType="com.jy.entity.system.channels.CashInfo">
+		SELECT c.prize_date as prizeDate, sum(c.machine_after_tax_bonus) as cashTotalAccount from TS_CashPrize c where 1=1
+
+		<if test="startDate != null and startDate != ''">
+			AND date_format(c.prize_date,'%Y-%m') &gt;=
+			date_format(#{startDate},'%Y-%m')
+		</if>
+		<if test="endDate != null and endDate != ''">
+			AND date_format(c.prize_date,'%Y-%m') &lt;=
+			date_format(#{endDate},'%Y-%m')
+		</if>
+		group by date_format(c.prize_date ,'%Y-%m') ORDER BY c.prize_date
+		asc
+	</select>
+	<!-- 查询该时间段内每日的派奖总金额 findsendByRedates-->
+	<select id="findsendByRedates" parameterType="java.util.Date" resultType="com.jy.entity.system.finance.reconciliation.lottery.SendPrizeInfo">
+		SELECT c.prizeTime,sum(c.prize) as sendPrizeTotalAccount from DC_PrizeInfo  c where 1=1
+
+		<if test="startDate != null and startDate != ''">
+			AND date_format(c.prizeTime,'%Y-%m') &gt;=
+			date_format(#{startDate},'%Y-%m')
+		</if>
+		<if test="endDate != null and endDate != ''">
+			AND date_format(c.prizeTime,'%Y-%m') &lt;=
+			date_format(#{endDate},'%Y-%m')
+		</if>
+		group by date_format(c.prizeTime ,'%Y-%m') ORDER BY c.prizeTime
+		asc
+	</select>
+	<!-- 得到要重置的派奖明细refindSendDiffBySchemeId -->
+	<select id="refindSendDiffBySchemeId" parameterType="java.util.Date" resultType="com.jy.entity.system.finance.reconciliation.lottery.CashDiffDetail">
+		SELECT
+		pz.schemeExtendId AS ticketNo,
+		pz.prize AS sendPrize,
+		pz.prizeTime as prizeTime
+		FROM
+		DC_PrizeInfo pz
+		WHERE 1=1
+		<if test="startDate != null and startDate != ''">
+			AND date_format(pz.prizeTime,'%Y-%m') &gt;=
+			date_format(#{startDate},'%Y-%m')
+		</if>
+		<if test="endDate != null and endDate != ''">
+			AND date_format(pz.prizeTime,'%Y-%m') &lt;=
+			date_format(#{endDate},'%Y-%m')
+		</if>
+		ORDER BY
+		pz.schemeExtendId desc
+	</select>
+
+	<!-- 得到要重置的兑奖明细refindCashDiffBySchemeId -->
+	<select id="refindCashDiffBySchemeId" parameterType="java.util.Date" resultType="com.jy.entity.system.finance.reconciliation.lottery.CashDiffDetail">
+		SELECT DISTINCT
+		tk.schemeExtendId AS ticketNo,
+		SUM(cs.machine_after_tax_bonus) AS ticketPrize,
+		cs.prize_date AS normalDate
+		FROM
+		TS_CashPrize cs
+
+		LEFT JOIN (SELECT  DISTINCT batchId,schemeExtendId FROM DC_TicketInfo) AS tk ON tk.batchId = cs.ticket_number
+		WHERE 1=1
+		<if test="startDate != null and startDate != ''">
+			and date_format(cs.prize_date,'%Y-%m') &gt;=
+			date_format(#{startDate},'%Y-%m')
+		</if>
+		<if test="endDate != null and endDate != ''">
+			AND date_format(cs.prize_date,'%Y-%m') &lt;=
+			date_format(#{endDate},'%Y-%m')
+		</if>
+		GROUP BY
+		tk.schemeExtendId
+		ORDER BY
+		tk.schemeExtendId desc
+		<!-- SELECT
+                A.schemeExtendId AS ticketNo,
+                SUM(P.net_after_tax_bonus) AS ticketPrize,
+                A.prizeTime as normalDate
+            FROM
+                (
+                    SELECT DISTINCT
+                        t.schemeExtendId,
+                        t.batchId,
+                        p.prizeTime
+                    FROM
+                        DC_TicketInfo t
+                    JOIN DC_PrizeInfo p ON t.schemeExtendId = p.schemeExtendId
+                    WHERE 1=1
+                    <if test="startDate != null and startDate != ''">
+                        and date_format(p.prizeTime,'%Y-%m-%d') &gt;=
+                        date_format(#{startDate},'%Y-%m-%d')
+                    </if>
+                    <if test="endDate != null and endDate != ''">
+                        AND date_format(p.prizeTime,'%Y-%m-%d') &lt;=
+                        date_format(#{endDate},'%Y-%m-%d')
+                    </if>
+                    ORDER BY
+                        t.batchId
+                        ) A
+            LEFT JOIN TS_CashPrize P ON A.batchId = P.ticket_number
+            GROUP BY
+                A.schemeExtendId
+            ORDER BY
+                A.schemeExtendId desc -->
+	</select>
+	<!-- 查询该日期所在月的所有差异数据 -->
+	<select id="findAllCashDiffByMonth" parameterType="java.util.Date" resultType="com.jy.entity.system.finance.reconciliation.lottery.CashDifference" >
+		select
+		c.date as date,
+		c.start_gap as startGap,
+		c.online_redeem_amount as onlineRedeemAmount,
+		c.big_amount as bigAmount,
+		c.online_sent_amount as onlineSentAmount,
+		c.redeem_sent_gap AS redeemSentGap,
+		c.end_gap AS endGap,
+		c.offline_redeem_amount AS offlineRedeemAmount,
+		c.total_redeem_amount AS totalRedeemAmount
+		from RP_CashAmountGap c where 1=1
+		<if test="date !=null and date !=''">
+			and c.date like CONCAT(CONCAT(date_format(#{date},'%Y')),'%')
+		</if>
+		ORDER BY c.date
+	</select>
+
+	<!-- 查询该日期所在年的所有差异明细数据 findAllCashDetialDiff-->
+	<select id="findAllCashDetialDiff" parameterType="java.util.Date" resultType="com.jy.entity.system.finance.reconciliation.lottery.CashDiffDetail" >
+		SELECT
+		c.NormalDate as normalDate,
+		c.PrizeTime as prizeTime,
+		c.TicketNo as ticketNo,
+		c.SendPrize as sendPrize,
+		c.TicketPrize as ticketPrize,
+		c.DiffMoney as diffMoney,
+		c.DF_ProcessStauts as dfProcessStauts,
+		c.DF_ProcessInfo as dfProcessInfo
+		FROM
+		RP_CashDiffDetail c WHERE 1=1
+		<if test="date !=null and date !=''">
+			and (c.NormalDate like CONCAT(CONCAT(date_format(#{date},'%Y')),'%') or c.PrizeTime like CONCAT(CONCAT(date_format(#{date},'%Y')),'%'))
+		</if>
+		ORDER BY c.PrizeTime DESC
+	</select>
+	<!--  查询该用户方案编号的明细findschemeExtendIdDetails-->
+	<select id="findschemeExtendIdDetails" parameterType="String" resultType="com.jy.entity.system.finance.reconciliation.lottery.CashDiffDetail">
+		SELECT
+		c.NormalDate as normalDate,
+		c.PrizeTime as prizeTime,
+		c.TicketNo as ticketNo,
+		c.SendPrize as sendPrize,
+		c.TicketPrize as ticketPrize,
+		c.DiffMoney as diffMoney,
+		c.DF_ProcessStauts as dfProcessStauts,
+		c.DF_ProcessInfo as dfProcessInfo
+		FROM
+		RP_CashDiffDetail c WHERE 1=1
+		<if test="schemeExtendId !=null and schemeExtendId !=''">
+			and TicketNo = #{schemeExtendId}
+		</if>
+	</select>
+
+	<!--查询指定日期的一笔兑奖差异findOfflineRedeemAmount-->
+	<select id="findOfflineRedeemAmount" parameterType="String" resultType="com.jy.entity.system.finance.reconciliation.lottery.CashDifference">
+		SELECT c.offline_redeem_amount AS offlineRedeemAmount FROM RP_CashAmountGap c WHERE c.date = #{date}
+	</select>
+
+
+
+
+
+
+
+</mapper>

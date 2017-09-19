@@ -1,0 +1,9 @@
+package com.jy.process.system.request;
+
+/**
+ * Created by Matthew on 2017/4/26.
+ */
+public interface TranceRequestProcess {
+
+    void synchronizeTranceData(String  date) throws Exception;
+}

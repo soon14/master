@@ -1,0 +1,56 @@
+package com.jy.process.impl.system.channels;
+
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.channels.OutLineDataInfo;
+import com.jy.entity.system.channels.Prepayment;
+import com.jy.entity.system.channels.PrepaymentExtend;
+import com.jy.from.system.request.OutLineDataForm;
+import com.jy.from.system.request.TerminalForm;
+import com.jy.process.system.channels.OutLineDataProcess;
+import com.jy.process.system.channels.TerminalProcess;
+import com.jy.service.system.channels.OutLineDataService;
+import com.jy.service.system.channels.TerminalService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/5/17.
+ */
+@Service
+public class TerminalProcessImpl implements TerminalProcess {
+    @Autowired
+    private TerminalService terminalService;
+
+
+    @Override
+    public void addTerminal(TerminalForm terminalForm) throws Exception {
+        terminalService.addTerminal(terminalForm);
+    }
+    @Override
+    public void delTerminal(TerminalForm terminalForm) throws Exception {
+        terminalService.delTerminal(terminalForm);
+    }
+    @Override
+    public void updateTerminal(TerminalForm terminalForm) throws Exception {
+        terminalService.updateTerminal(terminalForm);
+    }
+
+    @Override
+    public List<TerminalForm> findTerminalForm(Map map) throws Exception {
+        return terminalService.findTerminal(map);
+    }
+    @Override
+    public TerminalForm findTerminal(Map map) throws Exception {
+        return terminalService.findTerminals(map);
+    }
+    @Override
+    public List<TerminalForm> findTerminalForm(Map map,int a) throws Exception {
+        return terminalService.findTerminal(map, a);
+    }
+}
+

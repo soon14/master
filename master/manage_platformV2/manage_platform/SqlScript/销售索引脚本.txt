@@ -1,0 +1,12 @@
+/*添加投注表批次索引*/
+ALTER TABLE `DC_TicketInfo` ADD INDEX batchid (`batchId`);
+/*添加投注表出票时间索引*/
+ALTER TABLE `DC_TicketInfo` ADD INDEX ticket_time (`ticketTime`);
+/*添加出票表批次索引*/
+ALTER TABLE `TS_TicketInfo` ADD INDEX ticket_no (`ticketNo`);
+/*添加出票表出票时间索引*/
+ALTER TABLE `TS_TicketInfo` ADD INDEX ticket_date (`ticketDate`);
+/*添加销售总表统计时间索引*/
+ALTER TABLE `RP_TotalSaleInfo` ADD INDEX statistics_date (`statistics_date`);
+/*添加销售差异表统计时间索引*/
+ALTER TABLE `RP_SaleDiffInfo` ADD INDEX df_normaldate (`DF_NormalDate`);

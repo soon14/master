@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.TicketImportRecordsDao">
+	<resultMap type="com.jy.entity.system.channels.TicketImportRecordsVO" id="ticketImportResult">
+		<result property="fileName" column="TF_FileName"/>
+		<result property="createTime" column="TF_CreateTime"/>
+		<result property="transType" column="TF_TransType"/>
+		<result property="transStatus" column="TF_TransStatus"/>
+		<result property="username" column="TF_UserName"/>
+		<result property="createDate" column="TF_CreateDate"/>
+		<result property="isValid" column="isValid"/>
+		<result property="originalName" column="originalName"/>
+	</resultMap>
+	<!--新增出票导入记录 -->
+	<insert id="insert"  parameterType="BaseTicketImportRecords">
+		INSERT INTO PT_TRANSFILERECORDS(
+		TF_CreateTime,TF_TransType,TF_TransStatus,
+		TF_UserName,TF_CreateDate,isvalid,TF_FileName,originalName
+		) VALUES (#{createTime},#{transType},#{transStatus},#{username},#{createDate},1,#{fileName},#{originalName})
+	</insert>
+	<!--清除导入记录 -->
+	<update id="update" parameterType="BaseTicketImportRecords">
+		UPDATE PT_TRANSFILERECORDS t
+		SET isValid = 0
+		WHERE t.TF_FileName=#{fileName}
+	</update>
+	<!--查找出票导入记录 -->
+    <select id="findByPage" resultMap="ticketImportResult" parameterType="BaseTicketImportRecords">
+      SELECT t.*
+       		  FROM PT_TRANSFILERECORDS t
+      WHERE 1 =1
+       <if test="param.beginTimes != null and param.beginTimes!='' ">
+        	and t.TF_CreateDate>=#{param.beginTimes}
+       </if>
+       <if test="param.endTimes != null and param.endTimes!=''">
+		   <![CDATA[
+        	and t.TF_CreateDate<=#{param.endTimes}
+        	]]>
+       </if>
+		<if test="param.transType != null and param.transType!=''">
+			<![CDATA[
+        	and t.TF_TransType=#{param.transType}
+        	]]>
+		</if>
+		<if test="param.isValid != null and param.isValid!=''">
+			<![CDATA[
+        	and t.isValid=#{param.isValid}
+        	]]>
+		</if>
+		ORDER BY t.TF_ID DESC,t.TF_FileName DESC
+    </select>
+	<!--查找出当天导入次数 -->
+	<select id="findImportCount" resultType="java.lang.Integer" parameterType="java.lang.String">
+		SELECT count(*)
+		FROM PT_TRANSFILERECORDS t
+		WHERE t.TF_CreateDate =#{createDate}
+		AND   t.TF_TransType =#{transType}
+	</select>
+</mapper>

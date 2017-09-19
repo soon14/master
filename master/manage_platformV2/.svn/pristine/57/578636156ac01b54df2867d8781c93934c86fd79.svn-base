@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.task.withdraw.TaskWithdrawDao">
+	<insert id="saveTaskWithdrawInfoList" parameterType="java.util.Map">
+		INSERT INTO DC_CP_WithdrawInfo (
+		SycDate,
+		UserId,
+		TMoney,
+		TAccount,
+		TBank,
+		TStatus,
+		TransTime,
+		TResultDate,
+		TFlowNo
+		)
+		VALUES
+		<foreach collection="list" item="item" index="index" separator="," >
+			(str_to_date(#{thisDay},'%Y-%m-%d'),#{item.userId},
+			#{item.tMoney},
+			#{item.tAccount},#{item.tBank},#{item.tStatus},
+			str_to_date(concat(SUBSTR(#{item.transTime},1,4),"-",SUBSTR(#{item.transTime},5,2),"-",SUBSTR(#{item.transTime},7,2)," ",SUBSTR(#{item.transTime},9,2),
+			":",SUBSTR(#{item.transTime},11,2),":",SUBSTR(#{item.transTime},13,2)),'%Y-%m-%d %H:%i:%s'),
+			str_to_date(concat(SUBSTR(#{item.transTime},1,4),"-",SUBSTR(#{item.transTime},5,2),"-",SUBSTR(#{item.transTime},7,2)," ",SUBSTR(#{item.transTime},9,2),
+			":",SUBSTR(#{item.transTime},11,2),":",SUBSTR(#{item.transTime},13,2)),'%Y-%m-%d %H:%i:%s'),
+			#{item.tFlowNo})
+		</foreach>
+    </insert>
+	<delete id="deleteWithDrawInfo" parameterType="java.util.Map">
+				DELETE FROM DC_CP_WithdrawInfo  WHERE  1=1
+				<if test="yesDay != null and yesDay!='' ">
+					AND #{yesDay} = str_to_date(TransTime,'%Y-%m-%d')
+				</if>
+
+	</delete>
+
+	<insert id="saveTaskWith" parameterType="java.util.List">
+		INSERT INTO DC_CP_WithdrawInfo (
+		UserId,
+		TMoney,
+		TAccount,
+		TBank,
+		TStatus,
+		TransTime,
+		TFlowNo,
+		TResultDate
+		)
+		VALUES
+		<foreach collection="list" item="item" index="index" separator="," >
+			(#{item[0]},#{item[1]},#{item[2]},#{item[3]},#{item[4]},#{item[5]},#{item[7]},#{item[6]})
+		</foreach>
+	</insert>
+</mapper>
+
+

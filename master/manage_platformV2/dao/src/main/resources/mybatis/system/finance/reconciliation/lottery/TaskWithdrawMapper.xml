@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.TaskWithdrawDao">
+	<insert id="saveTaskWithdrawInfoList" parameterType="String">
+       LOAD DATA LOCAL INFILE #{fileName}
+        into table DC_CP_WithdrawInfo  character set utf8mb4 lines terminated by "\r\n" IGNORE 3 LINES
+       (userId,TMoney,TAccount,TBank,Tstatus,TransTime,TFlowNo) SET sycDate=#{sycTime};
+    </insert>
+	<delete id="deleteWithDrawInfo" parameterType="String">
+				DELETE FROM DC_CP_WithdrawInfo  WHERE  DATE_FORMAT(sycDate,'%Y%m%d')=#{deleteTime}
+	</delete>
+</mapper>
+
+

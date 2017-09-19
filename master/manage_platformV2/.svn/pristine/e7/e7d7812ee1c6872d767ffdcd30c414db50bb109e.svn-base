@@ -1,0 +1,64 @@
+package com.jy.service.system.finance.reconciliation.lottery;
+
+import com.jy.common.exception.DaysBaseException;
+import com.jy.entity.system.finance.reconciliation.lottery.BettingDifference;
+import com.jy.entity.system.finance.reconciliation.lottery.CountSale;
+import com.jy.mybatis.Page;
+import com.jy.service.base.BaseService;
+
+import java.util.Date;
+
+
+/**
+ * @文件名:  销售差异对账服务接口
+ * @功能描述：
+ * @创建日期:2017年3月9日下午8:20:41
+ * @创建人：lijunke
+ * @Copyright（c） 2017,all rights reserved by days 
+ */
+public interface BettingDifferenceService extends BaseService<BettingDifference>
+{
+
+
+    /**
+     * 显示销售汇总数据
+     * @param page
+     * @return
+     */
+    Page<CountSale> findAll(String startDate,String endDate, Page<CountSale> page);
+
+
+    /**
+     *
+     * @方法功能描述：  显示明细页面的数据
+     * @param billDate
+     * @param page
+     * @return
+     * Page<BettingDifference>
+     * @author lijunke
+     * @创建时间： 2017年3月14日下午5:44:03
+     */
+    Page<BettingDifference> differenceList(String billDate, Page<BettingDifference> page,String ids);
+
+
+    /**
+     *
+     * @方法功能描述： 手动重置
+     * @return
+     * Page<CountSale>
+     * @author lijunke
+     * @创建时间： 2017年3月15日下午4:17:53
+     */
+    public void restTask(Date startDate, Date endDate) throws DaysBaseException;
+
+
+
+    /**
+     *跑批或重置都走这个接口
+     * @param startTime
+     * @param endTime
+     */
+
+   void runBetting(Date startTime, Date endTime) throws DaysBaseException;
+
+}

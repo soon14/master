@@ -1,0 +1,31 @@
+package com.jy.repository.system.channels;
+
+import com.jy.entity.system.finance.CpOrderInfo;
+import com.jy.repository.base.BaseDao;
+import com.jy.repository.base.JYBatis;
+import org.apache.ibatis.annotations.Param;
+import java.util.List;
+
+
+@JYBatis
+public interface CpOrderInfoDao extends BaseDao<CpOrderInfo> {
+
+
+	/**
+	 * 用户购彩接口
+	 * @param cpOrderInfo
+     */
+	int orderSave(@Param("list") List<CpOrderInfo> cpOrderInfo);
+
+	/**
+	 * 购彩追期接口
+	 * @param cpOrderInfo
+	 */
+	int tranceSave(@Param("list") List<CpOrderInfo> cpOrderInfo);
+
+	void orderClean(@Param("date")String date);
+
+	void tranceClean(@Param("date")String date,@Param("type")String type);
+
+	int findByTypeAndTime(@Param("date")String date,@Param("type")String type);
+}

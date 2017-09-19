@@ -1,0 +1,106 @@
+package com.jy.process.impl.system.request;
+
+
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.process.system.request.TaskWithdrawProcess;
+import com.jy.service.system.finance.reconciliation.lottery.TaskWithdrawService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+@Service("taskWithdrawProcess")
+public class TaskWithdrawProcessImpl extends ApiRequestTxtProcessImpl implements TaskWithdrawProcess {
+
+    @Value("${ftpAddress}")
+    private String ftpAddress;//ftp登录信息
+    @Value("${ftpDownLoad}")
+    private String ftpDownLoad;//ftp文件的路径
+    @Value("${localhostAddr}")
+    private String localhostAdd;//下载到本地的路径
+    @Value("${user.withdraw}")
+    private String ftpFileName;//下载文件的名称
+    @Autowired
+    private TaskWithdrawService taskWithdrawService;
+    @Autowired
+    private JobTaskStatisticsService jobTaskStatisticsService;
+
+    private static final Logger LOG = LoggerFactory.getLogger(TaskWithdrawProcessImpl.class);
+
+    @Override
+    public String byJobName() {
+        return null;
+    }
+
+    @Override
+    public void saveJobLog(JobTaskStatistics jobTaskStatistics) {
+
+    }
+
+    @Override
+    public int saveFTPData(String filePath, String date) {
+        return 0;
+    }
+
+    @Override
+    public void saveTaskWithdrawInfoList(String date) throws Exception {
+
+    }
+
+  /*  @Override
+    public void saveTaskWithdrawInfoList(String date) throws Exception {
+        String[] ftpAddr = ftpAddress.split("/");   //ip,端口、账户、密码
+        String ftpPath = super.stringBuffer(ftpDownLoad, date, "/");
+        String ftpFileNames = super.stringBuffer(ftpFileName, date, "_");
+        int status = super.byFTPData(ftpAddr[0], ftpAddr[1], ftpAddr[2], ftpAddr[3], ftpPath, ftpFileNames, localhostAdd, date);
+        if (status != 0) {
+            if (status == TxtDataEnum.LOGIN_FAIL.getValue()) {
+                this.saveLog(TxtDataEnum.getName(status));
+            } else {
+                this.saveLog(TxtDataEnum.getName(status));
+            }
+        } else {
+            LOG.info("数据解析成功，文件生成成功，数据保存入库成功！");
+        }
+    }
+
+    @Override
+    public void saveFTPData(String lineCount, String filePath, String date) {
+        try {
+            LOG.info("获取到的文本数据:{}", lineCount);
+            int count = taskWithdrawService.saveTaskWithdrawInfoList(filePath, date);
+            this.saveLog(String.valueOf(count), lineCount);
+            LOG.info("入库成功，受影响行数：{}", count);
+        } catch (Exception e) {
+            LOG.info("用户提现接口保存数据失败！");
+            e.printStackTrace();
+        }
+    }
+
+    //保存log日志
+    public void saveLog(String... logs) {
+        try {
+            JobTaskStatistics jobTaskStatistics = new JobTaskStatistics();
+            jobTaskStatistics.setJobName("用户提现信息");//日志名称
+            jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));
+            if (logs.length == 1) {
+                jobTaskStatistics.setDescription(logs[0]);
+            } else {
+                jobTaskStatistics.setStorageNumber(Integer.valueOf(logs[0]));
+                jobTaskStatistics.setInterfaceNumber(Integer.valueOf(logs[1]));
+            }
+            jobTaskStatisticsService.insertJobTaskStatistics(jobTaskStatistics);
+        } catch (NumberFormatException e) {
+            LOG.info("用户提现接口类型装换错误！");
+            e.printStackTrace();
+        } catch (Exception e) {
+            LOG.info("用户提现接口保存LOG数据失败！");
+            e.printStackTrace();
+        }
+    }*/
+}

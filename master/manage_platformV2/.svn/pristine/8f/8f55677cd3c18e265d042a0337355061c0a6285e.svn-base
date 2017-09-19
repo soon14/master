@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.org.PositionDao">
+	<!-- com.jy.entity.system.org.Org -->
+	<!-- com.jy.entity.system.org.Position -->
+    <resultMap id="baseOrg" type="BaseOrg"></resultMap>
+    <resultMap id="basePos" type="BasePos"></resultMap>
+    <!--  com.jy.entity.system.account.Account -->
+    <resultMap id="baseAccount" type="BaseAccount">
+      <id column="ID" jdbcType="VARCHAR" property="accountId"/>
+    </resultMap> 
+    <resultMap id="ZNodes" type="com.jy.entity.utils.ZNodes"></resultMap>
+	<resultMap id="Org" type="com.jy.entity.system.org.Org"></resultMap>
+	<select id="find"  resultMap="basePos" parameterType="basePos">
+       SELECT t.* FROM JY_BASE_POSITION t WHERE 1=1 
+       <if test="id != null and id!='' ">
+        	AND t.id=#{id}
+       </if>
+    </select> 
+    <select id="findByPage"  resultMap="basePos" parameterType="basePos">
+       SELECT t.* FROM JY_BASE_POSITION t WHERE 1=1
+       <if test="param.keyWord!= null and param.keyWord!=''">
+        	AND (t.name like CONCAT('%',#{param.keyWord},'%') )
+       </if>
+       <if test="param.orgId!= null and param.orgId!=''">
+        	AND t.orgId=#{param.orgId}
+       </if>
+       ORDER BY t.createTime
+    </select>
+     <select id="findAllPosByPage"  resultMap="basePos" parameterType="basePos">
+       SELECT t.* FROM JY_BASE_POSITION t WHERE 1=1
+       <if test="param.keyWord!= null and param.keyWord!=''">
+        	AND (t.name like CONCAT('%',#{param.keyWord},'%') )
+       </if>
+        <if test="param.allOrgIds!= null and param.allOrgIds!=''">
+        	AND t.orgId IN (${param.allOrgIds})
+      </if>
+       ORDER BY t.createTime
+    </select>    
+     <select id="count"  resultType="int" parameterType="basePos">
+       SELECT count(*) FROM JY_BASE_POSITION t WHERE 1=1 
+    </select>  
+    <insert id="insert"  parameterType="basePos">	
+ 	<![CDATA[
+	INSERT INTO JY_BASE_POSITION(id,orgId,name,type,posLevel,description,createTime)
+	VALUES (#{id},#{orgId},#{name},#{type},#{posLevel},#{description},#{createTime})
+	]]>  
+	</insert>  
+	<delete id="delete" parameterType="basePos">
+	DELETE FROM JY_BASE_POSITION  
+	WHERE id=#{id} 
+	</delete>
+	<delete id="deleteBatch" parameterType="java.util.List">
+	DELETE FROM JY_BASE_POSITION 
+	WHERE id in(
+		<foreach item="o" collection="list" open="" separator="," close="" >
+			#{o.id}
+		</foreach>
+		)
+	</delete>
+	<update id="update" parameterType="basePos">
+		UPDATE JY_BASE_POSITION 
+		SET name =#{name},
+			orgId =#{orgId},
+		    type =#{type},
+			description=#{description},
+			updateTime =#{updateTime},
+			poslevel =#{posLevel}
+		WHERE id=#{id}
+	</update>	
+	<select id="getOrgAndPositionTree" resultMap="ZNodes" parameterType="String">
+		SELECT jbo.id,
+			 jbo.pId,
+			 CONCAT('组织:',jbo.name) as name,
+			 'o' as other 
+		FROM JY_BASE_ORG jbo
+		UNION ALL 
+		SELECT CONCAT('pos',jbp.id) as id,
+			 jbp.orgId as pId,
+			 CONCAT('职务:',jbp.name) as name,
+			 'p' as other 
+		FROM JY_BASE_POSITION jbp
+    </select> 
+    <!-- 控件树 -->
+    <select id="getOrgTrees" resultMap="ZNodes" parameterType="String">
+		SELECT jbo.id,
+			 jbo.pId,
+			 jbo.name as name,
+			 'o' as other 
+		FROM JY_BASE_ORG jbo
+		where jbo.id in(
+				SELECT a.pid FROM JY_BASE_ORG a where a.id in(
+				select DISTINCT a.id from JY_BASE_ORG a where a.id in (select c.pid from JY_BASE_ACCOUNT_POSITION a, JY_BASE_POSITION b,JY_BASE_ORG c
+				where a.accountId = #{userId} and a.posid=b.id and b.orgid=c.id))
+				union all
+				select DISTINCT a.id from JY_BASE_ORG a where a.id in (select c.pid from JY_BASE_ACCOUNT_POSITION a, JY_BASE_POSITION b,JY_BASE_ORG c
+				where a.accountId = #{userId} and a.posid=b.id and b.orgid=c.id)
+				union all
+				select DISTINCT c.id from JY_BASE_ACCOUNT_POSITION a, JY_BASE_POSITION b,JY_BASE_ORG c
+				where a.accountId = #{userId} and a.posid=b.id and b.orgid=c.id
+				union all
+				select DISTINCT a.id from JY_BASE_ORG a where a.pid in (select c.id from JY_BASE_ACCOUNT_POSITION a, JY_BASE_POSITION b,JY_BASE_ORG c
+				where a.accountId = #{userId} and a.posid=b.id and b.orgid=c.id)
+				union all
+				select DISTINCT a.id from JY_BASE_ORG a where a.pid in(select DISTINCT a.id from JY_BASE_ORG a where a.pid in (select c.id from JY_BASE_ACCOUNT_POSITION a, JY_BASE_POSITION b,JY_BASE_ORG c
+				where a.accountId = #{userId} and a.posid=b.id and b.orgid=c.id))
+			)
+    </select> 
+    
+    <select id="findPosLevel" resultMap="ZNodes" parameterType="String">
+		select max(b.poslevel) as poslevel from JY_BASE_ACCOUNT_POSITION  a ,JY_BASE_POSITION b where a.posid=b.id and b.orgid in(
+				select DISTINCT c.id from JY_BASE_ACCOUNT_POSITION a, JY_BASE_POSITION b,JY_BASE_ORG c
+				where a.accountId = #{userId} and a.posid=b.id and b.orgid=c.id
+				union all
+				select DISTINCT a.id from JY_BASE_ORG a where a.pid in (select c.id from JY_BASE_ACCOUNT_POSITION a, JY_BASE_POSITION b,JY_BASE_ORG c
+				where a.accountId = #{userId} and a.posid=b.id and b.orgid=c.id)
+				union all
+				select DISTINCT a.id from JY_BASE_ORG a where a.pid in(select DISTINCT a.id from JY_BASE_ORG a where a.pid in (select c.id from JY_BASE_ACCOUNT_POSITION a, JY_BASE_POSITION b,JY_BASE_ORG c
+				where a.accountId = #{userId} and a.posid=b.id and b.orgid=c.id))
+		)
+		union all
+		SELECT min(a.poslevel) as poslevel FROM JY_BASE_POSITION a, JY_BASE_ORG b ,JY_BASE_ACCOUNT_POSITION c
+		where a.orgid=b.id and c.posid=a.id and c.accountId = #{userId}
+    </select> 
+    
+        <!-- 上级机构树 -->
+    <select id="getPreOrgTree" resultMap="ZNodes" parameterType="String">
+       SELECT t.id as id,
+	   		  t.name as name,
+	   		  t.pId as pId
+	   FROM JY_BASE_ORG t
+       ORDER BY t.id,t.name
+    </select> 
+    <insert id="insertAccountPosition" parameterType="java.util.List">
+		INSERT INTO JY_BASE_ACCOUNT_POSITION(accountId,posId)  
+		VALUES 
+		<foreach item="o" collection="list"  separator="," >
+			(#{o.accountId},#{o.posId})
+		</foreach>
+	</insert>
+	<delete id="deleteAccPosByAccId" parameterType="String">
+		DELETE FROM JY_BASE_ACCOUNT_POSITION  
+		WHERE accountId=#{accountId} 
+	</delete>
+	<delete id="deleteBatchAccPosByAccId" parameterType="java.util.List">
+	DELETE FROM JY_BASE_ACCOUNT_POSITION 
+	WHERE accountId in(
+		<foreach item="o" collection="list" open="" separator="," close="" >
+			#{o.accountId}
+		</foreach>
+		)
+	</delete>
+    <delete id="deleteAccPosByPosId" parameterType="String">
+		DELETE FROM JY_BASE_ACCOUNT_POSITION  
+		WHERE posId=#{posId} 
+	</delete>
+	<delete id="deleteBatchAccPosByPosId" parameterType="java.util.List">
+	DELETE FROM JY_BASE_ACCOUNT_POSITION 
+	WHERE posId in(
+		<foreach item="o" collection="list" open="" separator="," close="" >
+			#{o.id}
+		</foreach>
+		)
+	</delete>
+	<select id="findArrangeAccByPage"  resultMap="baseAccount" parameterType="basePos">
+	    SELECT jba.id,jba.loginName,jba.name,jba.roleId,jbr.name as roleName,jba.description FROM JY_BASE_ACCOUNT jba 
+	    LEFT JOIN JY_BASE_ROLE jbr
+        ON jbr.id=jba.roleId
+	    WHERE NOT EXISTS (SELECT jbap.accountId FROM JY_BASE_ACCOUNT_POSITION jbap 
+						WHERE jba.id=jbap.accountId AND jbap.posId=#{param.id} )
+		<if test="param.keyWord!= null and param.keyWord!=''">
+        	AND (jba.name LIKE CONCAT('%',#{param.keyWord},'%') 
+        	OR	jba.loginName LIKE CONCAT('%',#{param.keyWord},'%'))
+        </if>
+	 	ORDER BY jba.createTime
+    </select>  
+    <select id="findPosByPage"  resultMap="baseAccount" parameterType="basePos">
+	    SELECT jba.id,jba.loginName,jba.name,jba.roleId,jbr.name as roleName,jba.description FROM JY_BASE_ACCOUNT jba 
+	    LEFT JOIN JY_BASE_ROLE jbr
+        ON jbr.id=jba.roleId
+	    WHERE 1=1
+		<if test="param.keyWord!= null and param.keyWord!=''">
+        	AND (jba.name LIKE CONCAT('%',#{param.keyWord},'%') 
+        	OR	jba.loginName LIKE CONCAT('%',#{param.keyWord},'%'))
+        </if>
+        AND EXISTS (SELECT jbap.accountId FROM JY_BASE_ACCOUNT_POSITION jbap 
+						WHERE jba.id=jbap.accountId AND jbap.posId=#{param.id} )	
+	 	ORDER BY jba.createTime
+    </select>  
+    <select id="findByOrgId" resultMap="basePos" parameterType="basePos">
+       SELECT t.* FROM JY_BASE_POSITION t WHERE t.orgId=#{orgId}
+    </select> 
+     <!-- 控件树 -->
+    <select id="getOrgTreesByPos" resultMap="ZNodes" parameterType="String">
+    	SELECT jbo.id,jbo.pId,jbo.name as name,'true' as checked,'true' as open,'' as chkDisabled FROM JY_BASE_ORG_POSITION bop
+		INNER JOIN JY_BASE_ORG jbo where bop.orgId=jbo.id and bop.posId=#{posId}
+		UNION
+		select org.id,org.pId,org.name as name,'' as checked,'' as open,'' as chkDisabled
+		FROM JY_BASE_ORG org where org.id not in(
+		select o.id FROM JY_BASE_ORG o
+		INNER JOIN JY_BASE_ORG_POSITION op on op.orgId=o.id and op.posId=#{posId}
+		) 
+    </select> 
+	<delete id="deletePos_Org" parameterType="String">
+	DELETE FROM JY_BASE_ORG_POSITION
+	WHERE posId=#{posId}
+	</delete>
+	    <insert id="insertPos_Org" parameterType="java.util.List">
+		INSERT INTO JY_BASE_ORG_POSITION(posId,orgId)  
+		VALUES 
+		<foreach item="o" collection="list"  separator="," >
+			(#{o.posId},#{o.orgId})
+		</foreach>
+	</insert>
+
+	<select id="findBasePosition" resultMap="Org" parameterType="String">
+		select f.id,f.orgId,f.posLevel from JY_BASE_POSITION f where f.orgid in(
+		select e.id from JY_BASE_ORG e where e.pid in(
+			select d.id from JY_BASE_ORG d where d.pid in(
+			SELECT c.id from JY_BASE_ACCOUNT_POSITION a,JY_BASE_POSITION b,JY_BASE_ORG c
+			where a.posid=b.id and b.orgid=c.id and a.accountId = #{userId})
+		)
+		union
+		select d.id from JY_BASE_ORG d where d.pid in(
+		SELECT c.id from JY_BASE_ACCOUNT_POSITION a,JY_BASE_POSITION b,JY_BASE_ORG c
+		where a.posid=b.id and b.orgid=c.id and a.accountId = #{userId})
+		union
+		SELECT c.id from JY_BASE_ACCOUNT_POSITION a,JY_BASE_POSITION b,JY_BASE_ORG c
+		where a.posid=b.id and b.orgid=c.id and a.accountId = #{userId}
+		)
+	</select>
+
+	<select id="findUserID" resultMap="Org" parameterType="Map">
+		SELECT DISTINCT g.id as accountId from JY_BASE_ACCOUNT g where g.id in(
+			select g.accountId from JY_BASE_ACCOUNT_POSITION g where g.posId in(
+			select f.id from JY_BASE_POSITION f where f.orgid in(
+			select e.id from JY_BASE_ORG e where e.pid in(
+			select d.id from JY_BASE_ORG d where d.pid in(
+			SELECT c.id from JY_BASE_ACCOUNT_POSITION a,JY_BASE_POSITION b,JY_BASE_ORG c
+			where a.posid=b.id and b.orgid=c.id and a.accountId = #{userId})
+			)
+			union
+			select d.id from JY_BASE_ORG d where d.pid in(
+			SELECT c.id from JY_BASE_ACCOUNT_POSITION a,JY_BASE_POSITION b,JY_BASE_ORG c
+			where a.posid=b.id and b.orgid=c.id and a.accountId = #{userId})
+			union
+			SELECT c.id from JY_BASE_ACCOUNT_POSITION a,JY_BASE_POSITION b,JY_BASE_ORG c
+			where a.posid=b.id and b.orgid=c.id and a.accountId = #{userId}
+			)) and g.posId not in
+			<foreach collection="userIds" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		)
+	</select>
+
+
+	<select id="findUserLevel" resultMap="Org" parameterType="String">
+		SELECT b.orgId,min(b.posLevel) as posLevel from JY_BASE_ACCOUNT_POSITION a,JY_BASE_POSITION b,JY_BASE_ORG c
+		where a.posid=b.id and b.orgid=c.id and a.accountId = #{userId}
+		GROUP BY b.orgId
+	</select>
+</mapper>

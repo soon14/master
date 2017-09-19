@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.TaskPrizeDao">
+	<resultMap id="useprize" type="TaskPrizeInfo">
+	</resultMap>
+	<insert id="save" parameterType="String">
+ 		LOAD DATA LOCAL INFILE #{fileName}
+        into table DC_PrizeInfo  character set utf8mb4 lines terminated by "\r\n" IGNORE 3 LINES
+        (schemeId,schemeExtendId,money,userId,lotteryName,lotteryId,issue,prize,prizeTime) SET sycDate=#{sycDate}
+	</insert>
+	<delete id="deleteByAll" parameterType="String">
+		 DELETE  FROM DC_PrizeInfo WHERE DATE_FORMAT(sycDate,'%Y%m%d') = #{sycDate}
+	</delete>
+</mapper>

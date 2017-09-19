@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.statistics.lottery.QrCodeSoldDailyReportDao">
+    <resultMap id="list" type="QrCodeSoldDailyReport">
+      <id column="QS_ID" jdbcType="BIGINT" property="id"/>
+		<result column="QS_BATCHID" property="batchId" />
+		<result column="QS_BATCHSTARTTIME" property="batchStartTime" />
+		<result column="QS_BATCHENDTIME" property="batchEndTime" />
+		<result column="QS_DATE" property="date" />
+		<result column="QS_STARTALLMONEY" property="startAllMoney" />
+		<result column="QS_SELFSALEMONEY" property="selfSaleMoney" />
+		<result column="QS_SELFUSEDMONEY" property="selfUsedMoney" />
+		<result column="QS_WEITUOSALEMONEY" property="weiTuoSaleMoney" />
+		<result column="QS_WEITUOUSEDMONEY" property="weiTuoUsedMoney" />
+		<result column="QS_SALEALLMONEY" property="saleAllMoney" />
+		<result column="QS_USEDALLMONEY" property="usedAllMoney" />
+		<result column="QS_DIFF" property="diff" />
+		<result column="QS_STARTEXPIREMONEY" property="startExpireMoney" />
+		<result column="QS_NOWNEWEXPIREMONEY" property="nowNewExpireMoney" />
+		<result column="QS_NOWEXPIREMONEY" property="nowExpireMoney" />
+		<result column="QS_ENDEXPIREMONEY" property="endExpireMoney" />
+    </resultMap>
+
+
+	<select id="findByPage"  resultMap="list" parameterType="QrCodeSoldDailyReport">
+		SELECT t.QS_ID,
+		t.QS_BATCHID,
+		t.QS_BATCHSTARTTIME,
+		t.QS_BATCHENDTIME,
+		t.QS_DATE,
+		t.QS_STARTALLMONEY,
+		t.QS_SELFSALEMONEY,
+		t.QS_SELFUSEDMONEY,
+		t.QS_WEITUOSALEMONEY,
+		t.QS_WEITUOUSEDMONEY,
+		t.QS_SALEALLMONEY,
+		t.QS_USEDALLMONEY,
+		t.QS_DIFF,
+		t.QS_STARTEXPIREMONEY,
+		t.QS_NOWNEWEXPIREMONEY,
+		t.QS_NOWEXPIREMONEY,
+		t.QS_ENDEXPIREMONEY FROM TJ_QRCODESOLDDAILYREPORT t
+		<where>
+			<if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')">
+				t.QS_DATE BETWEEN #{param.beginTime} and #{param.endTime}
+			</if>
+		</where>
+		ORDER BY t.QS_DATE desc
+	</select>
+
+
+	<insert id="insert"  parameterType="QrCodeSoldDailyReport">
+		<![CDATA[
+	INSERT INTO TJ_QRCODESOLDDAILYREPORT(
+	QS_ID,
+		QS_BATCHID,
+		QS_BATCHSTARTTIME,
+		QS_BATCHENDTIME,
+		QS_DATE,
+		QS_STARTALLMONEY,
+		QS_SELFSALEMONEY,
+		QS_SELFUSEDMONEY,
+		QS_WEITUOSALEMONEY,
+		QS_WEITUOUSEDMONEY,
+		QS_SALEALLMONEY,
+		QS_USEDALLMONEY,
+		QS_DIFF,
+		QS_STARTEXPIREMONEY,
+		QS_NOWNEWEXPIREMONEY,
+		QS_NOWEXPIREMONEY,
+		QS_ENDEXPIREMONEY
+	) VALUES (#{id},#{batchId},#{batchStartTime},#{batchEndTime},#{date},#{startAllMoney},#{selfSaleMoney},#{selfUsedMoney},#{weiTuoSaleMoney},#{weiTuoUsedMoney}
+	,#{saleAllMoney},#{usedAllMoney},#{diff},#{startExpireMoney},#{nowNewExpireMoney},#{nowExpireMoney},#{endExpireMoney}
+	)
+	]]>
+	</insert>
+
+	<resultMap id="totalSales" type="Double">
+		<result column="sales" property="sales" />
+	</resultMap>
+
+
+	<!--根据参数获取某日委托或者自取方式券售出额-->
+	<select id="findSaleMoneyByWay"  resultType="Double"  resultMap="totalSales">
+		SELECT
+	sum(vMoney) AS sales
+FROM
+	DC_VoucherInfo
+WHERE buyWay = #{0}
+AND UsedDate BETWEEN #{1} and #{2}
+
+	</select>
+
+	<select id="findIsExitByDate"  resultMap="list" parameterType="QrCodeSoldDailyReport">
+		SELECT t.* FROM TJ_QRCODESOLDDAILYREPORT t
+		<where>
+				t.QS_DATE = #{0}
+		</where>
+		ORDER BY t.QS_DATE desc
+	</select>
+
+
+	<delete id="deleteList" parameterType="QrCodeSoldDailyReport">
+		delete from TJ_QRCODESOLDDAILYREPORT
+		WHERE QS_ID in
+		<foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+			#{item.id}
+		</foreach>
+	</delete>
+
+	<update id="update"  parameterType="QrCodeSoldDailyReport">
+		<![CDATA[
+	UPDATE TJ_QRCODESOLDDAILYREPORT set
+		QS_BATCHID=#{batchId},
+		QS_BATCHSTARTTIME=#{batchStartTime},
+		QS_BATCHENDTIME=#{batchEndTime},
+		QS_DATE=#{date},
+		QS_STARTALLMONEY=#{startAllMoney},
+		QS_SELFSALEMONEY=#{selfSaleMoney},
+		QS_SELFUSEDMONEY=#{selfUsedMoney},
+		QS_WEITUOSALEMONEY=#{weiTuoSaleMoney},
+		QS_WEITUOUSEDMONEY=#{weiTuoUsedMoney},
+		QS_SALEALLMONEY=#{saleAllMoney},
+		QS_USEDALLMONEY=#{usedAllMoney},
+		QS_DIFF=#{diff},
+		QS_STARTEXPIREMONEY=#{startExpireMoney},
+		QS_NOWNEWEXPIREMONEY=#{nowNewExpireMoney},
+		QS_NOWEXPIREMONEY=#{nowExpireMoney},
+		QS_ENDEXPIREMONEY=#{endExpireMoney}
+	where QS_ID=#{id}
+	]]>
+	</update>
+
+
+	<select id="find"  resultMap="list" parameterType="QrCodeSoldDailyReport">
+		SELECT t.QS_ID,
+		t.QS_BATCHID,
+		t.QS_BATCHSTARTTIME,
+		t.QS_BATCHENDTIME,
+		t.QS_DATE,
+		t.QS_STARTALLMONEY,
+		t.QS_SELFSALEMONEY,
+		t.QS_SELFUSEDMONEY,
+		t.QS_WEITUOSALEMONEY,
+		t.QS_WEITUOUSEDMONEY,
+		t.QS_SALEALLMONEY,
+		t.QS_USEDALLMONEY,
+		t.QS_DIFF,
+		t.QS_STARTEXPIREMONEY,
+		t.QS_NOWNEWEXPIREMONEY,
+		t.QS_NOWEXPIREMONEY,
+		t.QS_ENDEXPIREMONEY FROM TJ_QRCODESOLDDAILYREPORT t
+		<where>
+			<if test="date!=null and date!=''">
+				t.QS_DATE = #{date}
+			</if>
+		</where>
+		ORDER BY t.QS_DATE desc
+	</select>
+
+
+	<select id="findMonth"  resultMap="list" parameterType="QrCodeSoldDailyReport">
+		SELECT t.QS_ID,
+		t.QS_BATCHID,
+		t.QS_BATCHSTARTTIME,
+		t.QS_BATCHENDTIME,
+		t.QS_DATE,
+		t.QS_STARTALLMONEY,
+		t.QS_SELFSALEMONEY,
+		t.QS_SELFUSEDMONEY,
+		t.QS_WEITUOSALEMONEY,
+		t.QS_WEITUOUSEDMONEY,
+		t.QS_SALEALLMONEY,
+		t.QS_USEDALLMONEY,
+		t.QS_DIFF,
+		t.QS_STARTEXPIREMONEY,
+		t.QS_NOWNEWEXPIREMONEY,
+		t.QS_NOWEXPIREMONEY,
+		t.QS_ENDEXPIREMONEY FROM TJ_QRCODESOLDDAILYREPORT t
+		<where>
+			<if test="date!=null and date!=''">
+				t.QS_DATE like '%${date}%'
+			</if>
+		</where>
+		ORDER BY t.QS_DATE asc
+	</select>
+</mapper>

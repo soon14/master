@@ -1,0 +1,14 @@
+package com.jy.repository.system.finance.reconciliation.lottery;
+
+import com.jy.repository.base.JYBatis;
+
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/26.
+ */
+@JYBatis
+public interface TaskPrizeDao {
+    public void saveTaskPrizeInfoList(Map map);
+    public void deletePrizeInfo(Map map);
+}

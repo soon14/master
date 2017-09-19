@@ -1,0 +1,118 @@
+package com.jy.entity.system.finance.vo;
+
+/**
+ * Created by Administrator on 2017/3/14.
+ */
+public class FundsDiveVo {
+    private  Integer cpId;
+    private  Integer cpWay;
+    private String cpPayFlowNo;
+    private  Double cpMoney;
+    private String cpTime;
+
+    private  Integer thirdId;
+    private  Integer thirdWay;
+    private String thirdPayFlowNo;
+    private  Double thirdMoney;
+    private String thirdTime;
+    private  Double dealmoney;
+
+    private  Integer datediff;
+
+    public Double getCpMoney() {
+        return cpMoney;
+    }
+
+    public Integer getCpId() {
+        return cpId;
+    }
+
+    public void setThirdTime(String thirdTime) {
+        this.thirdTime = thirdTime;
+    }
+
+    public Double getThirdMoney() {
+        return thirdMoney;
+    }
+
+    public Integer getCpWay() {
+        return cpWay;
+    }
+
+    public Integer getThirdId() {
+        return thirdId;
+    }
+
+    public Integer getThirdWay() {
+        return thirdWay;
+    }
+
+    public String getCpTime() {
+        return cpTime;
+    }
+
+    public String getCpPayFlowNo() {
+        return cpPayFlowNo;
+    }
+
+    public String getThirdPayFlowNo() {
+        return thirdPayFlowNo;
+    }
+
+    public String getThirdTime() {
+        return thirdTime;
+    }
+
+    public Double getDealmoney() {
+        return dealmoney;
+    }
+
+    public Integer getDatediff() {
+        return datediff;
+    }
+
+    public void setCpId(Integer cpId) {
+
+        this.cpId = cpId;
+    }
+
+    public void setCpWay(Integer cpWay) {
+        this.cpWay = cpWay;
+    }
+
+    public void setCpPayFlowNo(String cpPayFlowNo) {
+        this.cpPayFlowNo = cpPayFlowNo;
+    }
+
+    public void setCpMoney(Double cpMoney) {
+        this.cpMoney = cpMoney;
+    }
+
+    public void setCpTime(String cpTime) {
+        this.cpTime = cpTime;
+    }
+
+    public void setThirdId(Integer thirdId) {
+        this.thirdId = thirdId;
+    }
+
+    public void setThirdWay(Integer thirdWay) {
+        this.thirdWay = thirdWay;
+    }
+
+    public void setThirdPayFlowNo(String thirdPayFlowNo) {
+        this.thirdPayFlowNo = thirdPayFlowNo;
+    }
+
+    public void setThirdMoney(Double thirdMoney) {
+        this.thirdMoney = thirdMoney;
+    }
+
+    public void setDealmoney(Double dealmoney) {
+        this.dealmoney = dealmoney;
+    }
+
+    public void setDatediff(Integer datediff) {
+        this.datediff = datediff;
+    }
+}

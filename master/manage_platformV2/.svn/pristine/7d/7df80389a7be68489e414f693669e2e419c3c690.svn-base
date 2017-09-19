@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.OutLineDataDao">
+	<resultMap type="com.jy.entity.system.channels.OutLineDataInfo" id="outLineDataResult">
+		<id column="ID"  property="id"/>
+		<result column="DATETIME" property="dateTime"/>
+		<result column="MACHINENUM" property="machineNum"/>
+		<result column="OFFSETVOUCHERMONEY" property="saleMoney"/>
+		<result column="RETURNVOUCHERMONEY" property="winningMoney"/>
+		<result column="SALEMONEY" property="offsetVoucherMoney"/>
+		<result column="WINMONEY" property="returnVoucherMoney"/>
+		<result column="OLDPREDEPOSIT" property="oldPreDeposit"/>
+		<result column="NOWPREDEPOSIT" property="nowPreDeposit"/>
+		<result column="STORAGETIME" property="storageTime" />
+    </resultMap>
+	<resultMap id="prepayment" type="Prepayment">
+		<id column="Pp_ID"  property="id"/>
+		<result column="M_Id" property="merchantId" />
+		<result column="merchantName" property="merchantName" />
+		<result column="Pp_PayMoney" property="payMoney" />
+		<result column="Pp_PayType" property="payType" />
+		<result column="Pp_Balance" property="balance" />
+		<result column="Pp_WaringMoney" property="warningMoney" />
+		<result column="Pp_UserId" property="userId" />
+		<result column="Pp_UserName" property="userName" />
+		<result column="Pp_ChangeDate" property="changeDate" />
+		<result column="pp_Status" property="ppStatus" />
+		<result column="salesVolume" property="salesVolume" />
+		<result column="dataType" property="dataType" />
+
+	</resultMap>
+	<resultMap id="Merchant" type="Merchant">
+		<id column="M_ID"  property="mId"/>
+		<result column="BC_ID_Line" property="bcIdLine" />
+		<result column="BC_ID" property="bcId" />
+		<result column="M_CPUserid" property="mCpUserId" />
+		<result column="M_Name" property="mName" />
+		<result column="M_ParentMerchant" property="mParentMerchant" />
+		<result column="M_Type" property="mType" />
+		<result column="M_Level" property="mLevel" />
+		<result column="M_Status" property="mStatus" />
+		<result column="M_BarCode" property="mBarcode" />
+		<result column="M_Mobile" property="mMobile" />
+		<result column="M_Address" property="mAddress" />
+		<result column="M_ContactUser" property="mContactUser" />
+		<result column="M_ContactMobile" property="mContactMobile"/>
+		<result column="M_License" property="mLicense" />
+		<result column="M_IdCard" property="mIdCard" />
+		<result column="M_Introduce" property="mIntroduce" />
+		<result column="M_AccountId" property="mAccountId" />
+		<result column="M_Info2" property="mInfo2" />
+		<result column="M_Info3" property="mInfo3" />
+		<result column="createTime" property="mCreateTime"/>
+		<result column="M_CommionType" property="mCommionType"/>
+		<result column="BC_flag" property="bcFlag"/>
+		<result column="recMoney" property="recMoney"/>
+		<result column="purMoney" property="purMoney"/>
+		<result column="balMoney" property="balMoney"/>
+		<result column="commission" property="commission"/>
+	</resultMap>
+	<select id="findOutLineData" parameterType="java.util.Map"   resultMap="outLineDataResult">
+		SELECT
+			t.ID,
+			t.DATETIME,
+			t.MACHINENUM,
+			t.OFFSETVOUCHERMONEY,
+			t.RETURNVOUCHERMONEY,
+			t.SALEMONEY,
+			t.WINMONEY,
+			t.OLDPREDEPOSIT,
+			t.NOWPREDEPOSIT,
+			t.MERCHANTID,
+			t.MERCHANTNAME,
+			t.MERCHANTPHONE,
+		DATE_FORMAT(t.STORAGETIME,'%Y-%m-%d %H:%i:%s') AS STORAGETIME
+		FROM
+			MP_OutLineData t WHERE 1=1
+		<if test="machineNum!=null and machineNum!=''">
+			AND t.MACHINENUM LIKE CONCAT('%',#{machineNum},'%')
+		</if>
+		<if test="endTime!=null and endTime!=''">
+			AND t.DATETIME = DATE_FORMAT(#{endTime},'%Y-%m-%d')
+		</if>
+		ORDER BY t.DATETIME DESC
+		LIMIT #{pageNum},#{pageSize}
+	</select>
+	<select id="findOutLineDataTotal" parameterType="java.util.Map"   resultMap="outLineDataResult">
+		SELECT
+			t.ID,
+			t.DATETIME,
+			t.MACHINENUM,
+			t.OFFSETVOUCHERMONEY,
+			t.RETURNVOUCHERMONEY,
+			t.SALEMONEY,
+			t.WINMONEY
+		FROM
+			MP_OutLineData t WHERE 1=1
+		<if test="machineNum!=null and machineNum!=''">
+			AND t.MACHINENUM LIKE CONCAT('%',#{machineNum},'%')
+		</if>
+		<if test="endTime!=null and endTime!=''">
+			AND t.DATETIME = DATE_FORMAT(#{endTime},'%Y-%m-%d')
+		</if>
+		ORDER BY t.DATETIME DESC
+	</select>
+	<insert id="addOutLineData" parameterType="com.jy.from.system.request.OutLineDataForm">
+		INSERT  INTO MP_OutLineData (
+			DATETIME,
+			MACHINENUM,
+			SALEMONEY,
+			WINMONEY,
+			OFFSETVOUCHERMONEY,
+			RETURNVOUCHERMONEY,
+			MERCHANTID,
+			OLDPREDEPOSIT,
+			NOWPREDEPOSIT,
+			MERCHANTNAME,
+			MERCHANTPHONE,
+			STORAGETIME
+			)
+			VALUE
+			(
+			#{endTime},#{machineNum},#{saleMoney},#{winningMoney},#{offsetVoucherMoney},#{returnVoucherMoney},#{merchantId},#{oldPreDeposit},#{nowPreDeposit}
+			,#{merchantName},#{merchantPhone},NOW()
+			)
+
+	</insert>
+
+	<update id="updatePreDepositBalance" parameterType="java.util.Map">
+		UPDATE MP_PrePaymentInfo t
+		SET t.PP_Balance =(t.PP_Balance-#{sale})
+		WHERE
+			t.dataType = 2
+		AND t.M_ID = #{mId}
+	</update>
+	<select id="findPrePaymentInfo" parameterType="java.util.Map"  resultMap="prepayment" >
+
+		SELECT
+			*
+		FROM
+			MP_PrePaymentInfo t
+		WHERE
+			t.M_ID = #{mId} AND  t.dataType = 2
+	</select>
+	<select id="findMerchant" parameterType="java.util.Map"  resultMap="Merchant" >
+		SELECT DISTINCT
+			t.M_ID,
+			t.M_Name
+		FROM
+			MP_MerchantInfo t
+		JOIN MP_PrePaymentInfo p ON p.M_ID = t.M_ID
+		WHERE
+			t.M_Level = 2
+		AND t.M_Status = 2
+
+	</select>
+</mapper>

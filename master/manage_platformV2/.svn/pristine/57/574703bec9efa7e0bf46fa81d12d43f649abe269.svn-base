@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.TradeOnlineDetailDao">
+    <resultMap id="TradeOnlineDetail" type="TradeOnlineDetail">
+		<id column="id"  property="id"/>
+		<result column="cpUserId" property="cpUserId"/>
+		<result column="schemeType" property="schemeType"/>
+		<result column="createTime" property="createTime"/>
+		<result column="tranTime" property="createTime"/>
+		<result column="tradeMoney" property="tranTime"/>
+		<result column="balance" property="balance"/>
+		<result column="lotteryId" property="lotteryId"/>
+		<result column="userName" property="userName"/>
+    </resultMap>
+
+	<!--线上交易明细数据导入 -->
+	<insert id="save" parameterType="java.util.List">
+		INSERT INTO MP_TradeOnlineDetail(
+		cpUserId,
+		schemeType,
+		createTime,
+		tranTime,
+		tradeMoney,
+		balance,
+		lotteryId
+		) VALUES
+		<foreach collection="list" item="item" index="index"
+				 separator=",">
+			(#{item.cpUserId},#{item.schemeType},#{item.createTime},
+			#{item.tranTime},#{item.tradeMoney},#{item.balance},
+			#{item.lotteryId})
+		</foreach>
+	</insert>
+	<!--清空线上交易明细数据表-->
+	<delete id="clean" >
+		DELETE FROM MP_TradeOnlineDetail
+		<where>
+			<if test="date!=null and date!=''">
+				DATE_FORMAT(createTime,'%Y%m%d') = #{date}
+			</if>
+		</where>
+	</delete>
+</mapper>

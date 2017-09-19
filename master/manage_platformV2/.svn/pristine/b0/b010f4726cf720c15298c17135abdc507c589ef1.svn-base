@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.CommissionDao">
+	<resultMap id="commission" type="Commission">
+		<id column="C_ID" jdbcType="VARCHAR" property="id"/>
+		<result column="M_Id" property="merchantId" />
+		<result column="BC_ID" property="baseCommssionId" />
+		<result column="beginDate" property="beginDate" />
+		<result column="endDate" property="endDate" />
+		<result column="sellMoney" property="sellMoney" />
+		<!--<result column="sellMoneyOffline" property="sellMoneyOffline" />-->
+		<result column="commission" property="commission" />
+		<!--<result column="commissionOffline" property="commissionOffline" />-->
+		<result column="userId" property="userId" />
+		<result column="isOver" property="isOver" />
+		<result column="sendCommissionDate" property="sendCommissionDate" />
+		<result column="M_CommionType" property="commissionType" />
+		<result column="M_NAME" property="merchantName" />
+		<result column="dataType" property="dataType" />
+	</resultMap>
+	<!--导入商户佣金信息表.线上-->
+	<insert id="insertList"  parameterType="java.util.List">
+		INSERT INTO MP_Commission(
+		M_Id,
+		BC_ID,
+		beginDate,
+		sellMoney,
+		commission,
+		userName,
+		dataType
+		) VALUES
+		<foreach collection="list" item="item" index="index" separator="," >
+			(#{item.merchantId},
+			#{item.baseCommssionId},
+			#{item.beginDate},
+			#{item.sellMoney},
+			#{item.commission},
+			#{item.userName},
+			1
+			)
+		</foreach>
+	</insert>
+
+	<!--导入商户佣金信息表.线下-->
+	<insert id="insertListOffline"  parameterType="java.util.List">
+		INSERT INTO MP_Commission(
+		M_Id,
+		BC_ID,
+		beginDate,
+		sellMoney,
+		commission,
+		userName,
+		dataType
+		) VALUES
+		<foreach collection="list" item="item" index="index" separator="," >
+			(#{item.merchantId},
+			#{item.baseCommssionId},
+			#{item.beginDate},
+			#{item.sellMoney},
+			#{item.commission},
+			#{item.userName},
+			2
+			)
+		</foreach>
+	</insert>
+
+	<!--生成结算单.更改状态-->
+	<update id="updateStatus"  parameterType="java.util.List">
+		UPDATE MP_Commission t SET t.isOver = 2
+		<where>
+			t.C_ID IN
+			<foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</where>
+	</update>
+
+	<!--佣金信息.删除-->
+	<update id="update" parameterType="Commission">
+		UPDATE MP_Commission t SET t.isOver = 3 where t.C_ID =#{id}
+	</update>
+
+	<!--佣金日报展示-->
+	<select id="findByPage" parameterType="Map"   resultMap="commission">
+		select t.*,m.M_Name,m.M_CommionType FROM MP_Commission t,MP_MerchantInfo m WHERE t.M_ID=m.M_ID AND t.commission != 0
+		<!--<if test="mid!= null and mid!=''">-->
+			<!--and t.M_ID in-->
+			<!--<foreach collection="mid" index="index" item="item" open="(" separator="," close=")">-->
+				<!--#{item}-->
+			<!--</foreach>-->
+		<!--</if>-->
+		<if test="beginTime != null and beginTime!='' ">
+			and t.beginDate >=#{beginTime}
+		</if>
+		<if test="endTime != null and endTime!=''">
+			<![CDATA[
+        	and t.beginDate<=#{endTime}
+        	]]>
+		</if>
+		<if test="merchantName != null and merchantName!=''">
+			and m.M_NAME LIKE CONCAT('%', #{merchantName}, '%')
+		</if>
+		<if test="dataType != null and dataType!=''">
+			and t.dataType =#{dataType}
+		</if>
+		<if test="ids!= null and ids.size > 0">
+			and t.C_ID in
+			<foreach collection="ids" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		ORDER BY t.M_ID,t.beginDate DESC
+		LIMIT #{rn},#{pageSize}
+	</select>
+	<delete id="delete">
+		DELETE from MP_Commission WHERE dataType=1
+		<if test="startDate != null and startDate!='' ">
+			and beginDate >=#{startDate}
+		</if>
+		<if test="endDate != null and endDate!=''">
+			<![CDATA[
+        	and beginDate<=#{endDate}
+        	]]>
+		</if>
+	</delete>
+
+	<!--佣金日报统计条数-->
+	<select id="counts" parameterType="Map"   resultType="java.lang.Integer">
+		select count(*) FROM MP_Commission t,MP_MerchantInfo m WHERE t.M_ID=m.M_ID AND t.commission != 0
+		<if test="mid!= null and mid!=''">
+			and t.M_ID in
+			<foreach collection="mid" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test="beginTime != null and beginTime!='' ">
+			and t.beginDate >=#{beginTime}
+		</if>
+		<if test="endTime != null and endTime!=''">
+			<![CDATA[
+        	and t.beginDate<=#{endTime}
+        	]]>
+		</if>
+		<if test="merchantName != null and merchantName!=''">
+			and m.M_NAME LIKE CONCAT('%', #{merchantName}, '%')
+		</if>
+		<if test="ids!= null and ids.size > 0">
+			and t.C_ID in
+			<foreach collection="ids" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+	</select>
+
+	<!--生成结算单.合并查找-->
+	<select id="findByIds"  parameterType="java.util.List"  resultMap="commission">
+		select t.* FROM MP_Commission t
+		<where>
+			t.C_ID IN
+			<foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</where>
+	</select>
+	<!--返佣应付账款.所有-->
+	<!--<select id="findAll" parameterType="java.lang.String" resultMap="commission">-->
+		<!--SELECT m.M_ID,-->
+		   <!--m.BC_ID,-->
+		   <!--m.M_CommionType,-->
+		   <!--SUM(t.SCR_COMMISSION) AS commission,-->
+		   <!--SUM(t.SCR_SALES) AS sellMoney,-->
+		   <!--t.SCR_MERCHANTID,-->
+		   <!--MIN(t.SCR_DATE) AS beginDate,-->
+		   <!--MAX(t.SCR_DATE) AS endDate-->
+	  <!--from TJ_SALESCOMMISSIONREPORT t, MP_MerchantInfo m-->
+	 <!--WHERE t.SCR_MERCHANTID = m.M_ID-->
+    <!--AND DATE_FORMAT(t.SCR_DATE,"%Y-%m-%d") BETWEEN #{startDate} AND #{endDate}-->
+	 <!--GROUP BY t.SCR_MERCHANTID-->
+	<!--</select>-->
+	<!--返佣日报.线上-->
+	<select id="findAll" parameterType="java.lang.String" resultMap="commission">
+		SELECT m.M_ID,
+		   m.BC_ID,
+		   m.M_CommionType,
+		  t.SCR_COMMISSION AS commission,
+		  t.SCR_SALES AS sellMoney,
+		   t.SCR_MERCHANTID,
+		   t.SCR_DATE AS beginDate,
+       t.SCR_ID
+	  from TJ_SALESCOMMISSIONREPORT t, MP_MerchantInfo m
+	 WHERE DATE_FORMAT(t.SCR_DATE,"%Y-%m-%d") BETWEEN #{startDate} AND #{endDate}
+     AND t.SCR_MERCHANTID = m.M_ID
+     AND  t.SCR_ID NOT IN (select t.SCR_ID
+                            from MP_Commission m
+                            join TJ_SALESCOMMISSIONREPORT t
+                              ON m.M_ID=t.SCR_MERCHANTID
+                             and t.SCR_DATE=m.beginDate
+                           where m.isOver=2)
+   ORDER BY t.SCR_DATE
+	</select>
+	<!--返佣日报.线下-->
+	<select id="findAllOffline" parameterType="java.lang.String" resultMap="commission">
+	SELECT
+	m.M_ID,
+	m.BC_ID,
+    o.DATETIME AS beginDate,
+	o.SALEMONEY AS sellMoney,2 AS dataType,
+		CASE
+		WHEN (
+			o.SALEMONEY BETWEEN b.BC_OneRankMin*10000
+			AND b.BC_OneRankMax*10000
+		) THEN
+			o.SALEMONEY*b.BC_OnePercent/100
+		WHEN (
+			o.SALEMONEY BETWEEN b.BC_TwoRankMin*10000
+			AND b.BC_TwoRankMax*10000
+		) THEN
+			o.SALEMONEY*b.BC_OnePercent/100
+		WHEN (
+			o.SALEMONEY BETWEEN b.BC_ThreeRankMin*10000
+			AND b.BC_ThreeRankMax*10000
+		) THEN
+			o.SALEMONEY*b.BC_OnePercent/100 END AS commission
+	FROM
+		MP_OutLineData o,
+		MP_MerchantInfo m,
+		MP_BaseCommission b
+	WHERE
+		b.BC_ID = m.BC_ID
+	AND m.M_ID = o.MERCHANTID
+	</select>
+	<!--返佣应付账款.返佣周期：天返-->
+	<select id="findByDay" resultMap="commission">
+	 SELECT m.M_ID,
+		   m.BC_ID,
+		   m.M_CommionType,
+		   SUM(t.SCR_COMMISSION) AS commissionOnline,
+		   SUM(t.SCR_SALES) AS sellMoneyOnline,
+		   t.SCR_MERCHANTID,
+		   MIN(t.SCR_DATE) AS beginDate,
+		   MAX(t.SCR_DATE) AS endDate
+	  from TJ_SALESCOMMISSIONREPORT t, MP_MerchantInfo m
+	 WHERE t.SCR_MERCHANTID = m.M_ID
+	   AND m.M_CommionType = 1
+	   AND t.SCR_DATE = curdate()
+	 GROUP BY t.SCR_MERCHANTID
+	</select>
+
+	<!--返佣应付账款.返佣周期：周返-->
+	<select id="findByWeek" resultMap="commission">
+	 SELECT m.M_ID,
+		   m.BC_ID,
+		   m.M_CommionType,
+		   SUM(t.SCR_COMMISSION) AS commissionOnline,
+		   SUM(t.SCR_SALES) AS sellMoneyOnline,
+		   t.SCR_MERCHANTID,
+		   MIN(t.SCR_DATE) AS beginDate,
+		   MAX(t.SCR_DATE) AS endDate
+	  from TJ_SALESCOMMISSIONREPORT t, MP_MerchantInfo m
+	 WHERE t.SCR_MERCHANTID = m.M_ID
+	   AND m.M_CommionType = 2
+	   AND YEARWEEK(date_format(t.SCR_DATE, '%Y-%m-%d')) = YEARWEEK(str_to_date('2017-03-18 00:00:00 ','%Y-%m-%d %H:%i:%s'))
+	 GROUP BY t.SCR_MERCHANTID
+	</select>
+
+	<!--返佣应付账款.返佣周期：月返-->
+	<select id="findByMonth" resultMap="commission">
+	 SELECT m.M_ID,
+		   m.BC_ID,
+		   m.M_CommionType,
+		   SUM(t.SCR_COMMISSION) AS commissionOnline,
+		   SUM(t.SCR_SALES) AS sellMoneyOnline,
+		   t.SCR_MERCHANTID,
+		   MIN(t.SCR_DATE) AS beginDate,
+		   MAX(t.SCR_DATE) AS endDate
+	  from TJ_SALESCOMMISSIONREPORT t, MP_MerchantInfo m
+	 WHERE t.SCR_MERCHANTID = m.M_ID
+	   AND m.M_CommionType = 3
+	   AND month(t.SCR_DATE) = month(curdate())
+	 GROUP BY t.SCR_MERCHANTID
+	</select>
+	<!--返佣应付账款.返佣周期：季返-->
+	<select id="findByQuarter" resultMap="commission">
+	 SELECT m.M_ID,
+		   m.BC_ID,
+		   m.M_CommionType,
+		   SUM(t.SCR_COMMISSION) AS commissionOnline,
+		   SUM(t.SCR_SALES) AS sellMoneyOnline,
+		   t.SCR_MERCHANTID,
+		   MIN(t.SCR_DATE) AS beginDate,
+		   MAX(t.SCR_DATE) AS endDate
+	  from TJ_SALESCOMMISSIONREPORT t, MP_MerchantInfo m
+	 WHERE t.SCR_MERCHANTID = m.M_ID
+	   AND m.M_CommionType = 4
+	   AND quarter(t.SCR_DATE) = quarter(curdate())
+	 GROUP BY t.SCR_MERCHANTID
+	</select>
+</mapper>

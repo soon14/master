@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.NewTicketDao">
+
+    <resultMap id="NewTicketInfo" type="NewTicketInfo">
+        <id property="id" column="id"/>
+        <result property="schemeExtendId" column="schemeExtendId"/>
+        <result property="ticketNo" column="ticketNo"/>
+        <result property="money" column="money"/>
+        <result property="ticketTime" column="ticketTime"/>
+        <result property="lotteryId" column="lotteryId"/>
+        <result property="issue" column="issue"/>
+        <result property="mulity" column="mulity"/>
+        <result property="splitTime" column="splitTime"/>
+        <result property="postTime" column="postTime"/>
+        <result property="awardTime" column="awardTime"/>
+        <result property="interfaceId" column="interfaceId"/>
+        <result property="voteTicketId" column="voteTicketId"/>
+        <result property="castStatus" column="castStatus"/>
+        <result property="castMsg" column="castMsg"/>
+        <result property="voteId" column="voteId"/>
+        <result property="prize" column="prize"/>
+        <result property="taxPrize" column="taxPrize"/>
+        <result property="isBigPrize" column="isBigPrize"/>
+        <result property="prizeInfo" column="prizeInfo"/>
+        <result property="codes" column="codes"/>
+        <result property="isChaseNum" column="isChaseNum"/>
+        <result property="createTime" column="createTime"/>
+        <result property="isValid" column="isValid"/>
+        <result property="sycDate" column="sycDate"/>
+    </resultMap>
+
+    <insert id="save" parameterType="java.util.Map">
+        LOAD DATA LOCAL INFILE #{fileName}
+        into table  DC_TicketInfo  character set gbk
+        IGNORE 3 LINES
+        (schemeExtendId,
+        ticketNo,
+        money,
+        ticketTime,
+        lotteryId,
+        issue,mulity,
+        splitTime,
+        postTime,
+        awardTime,
+        interfaceId,
+        voteTicketId,
+        castStatus,
+        castMsg,
+        voteId,
+        prize,
+        taxPrize,
+        isBigPrize,
+        prizeInfo,
+        codes,
+        isChaseNum)
+        SET sycDate=#{currentDate}
+    </insert>
+    <insert id="saveNewTicket" parameterType="java.util.List">
+        <![CDATA[ INSERT INTO DC_TicketInfo(
+        schemeExtendId,
+        ticketNo,
+        money,
+        ticketTime,
+        lotteryId,
+        issue,mulity,
+        splitTime,
+        postTime,
+        awardTime,
+        interfaceId,
+        voteTicketId,
+        castStatus,
+        castMsg,
+        voteId,
+        prize,
+        taxPrize,
+        isBigPrize,
+        prizeInfo,
+        codes,
+        isChaseNum,
+        createTime
+        )
+        values  ]]>
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            <![CDATA[
+            #{item.schemeExtendId},
+            #{item.ticketNo},
+            #{item.money},
+            #{item.ticketTime},
+            #{item.lotteryId},
+            #{item.issue},
+            #{item.mulity},
+            #{item.splitTime},
+            #{item.postTime},
+            #{item.awardTime},
+            #{item.interfaceId},
+            #{item.voteTicketId},
+            #{item.castStatus},
+            #{item.castMsg},
+            #{item.voteId},
+            #{item.prize},
+            #{item.taxPrize},
+            #{item.isBigPrize},
+            #{item.prizeInfo},
+            #{item.codes},
+            #{item.isChaseNum},
+            #{item.createTime}
+            )]]>
+        </foreach>
+    </insert>
+
+
+    <delete id="delete" parameterType="NewTicketInfo">
+        DELETE FROM DC_TicketInfo WHERE ticketTime = STR_TO_DATE(#{ticketTime},'%Y-%m-%d')
+    </delete>
+    <delete id="deleteByDate" >
+        DELETE FROM DC_TicketInfo WHERE ticketTime = STR_TO_DATE(#{currentDate},'%Y-%m-%d')
+    </delete>
+
+
+</mapper>

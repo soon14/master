@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.statistics.lottery.QrCodeDetailDailyReportDao">
+	<resultMap id="list" type="QrCodeDetailDailyReport">
+		<id column="QD_ID" jdbcType="BIGINT" property="id"/>
+		<result column="QD_BATCHID" property="batchId" />
+		<result column="QD_BATCHSTARTTIME" property="batchStartTime" />
+		<result column="QD_BATCHENDTIME" property="batchEndTime" />
+		<result column="QD_DATE" property="date" />
+
+		<result column="QD_STARTALLMONEY" property="startAllMoney" />
+		<result column="QD_STARTTWOMONEY" property="startTwoMoney" />
+		<result column="QD_STARTTHREEMONEY" property="startThreeMoney" />
+		<result column="QD_STARTTENMONEY" property="startTenMoney" />
+		<result column="QD_STARTTWENTYMONEY" property="startTwentyMoney" />
+		<result column="QD_STARTFIFTYMONEY" property="startFiftyMoney" />
+		<result column="QD_STARTHUNDREDMONEY" property="startHundredMoney" />
+
+		<result column="QD_SOLDALLMONEY" property="soldAllMoney" />
+		<result column="QD_SOLDTWOMONEY" property="soldTwoMoney" />
+		<result column="QD_SOLDTHREEMONEY" property="soldThreeMoney" />
+		<result column="QD_SOLDTENMONEY" property="soldTenMoney" />
+		<result column="QD_SOLDTWENTYMONEY" property="soldTwentyMoney" />
+		<result column="QD_SOLDFIFTYMONEY" property="soldFiftyMoney" />
+		<result column="QD_SOLDHUNDREDMONEY" property="soldHundredMoney" />
+
+
+		<result column="QD_ENDALLMONEY" property="endAllMoney" />
+		<result column="QD_ENDTWOMONEY" property="endTwoMoney" />
+		<result column="QD_ENDTHREEMONEY" property="endThreeMoney" />
+		<result column="QD_ENDTENMONEY" property="endTenMoney" />
+		<result column="QD_ENDTWENTYMONEY" property="endTwentyMoney" />
+		<result column="QD_ENDFIFTYMONEY" property="endFiftyMoney" />
+		<result column="QD_ENDHUNDREDMONEY" property="endHundredMoney" />
+
+
+	</resultMap>
+
+
+	<select id="findByPage"  resultMap="list" parameterType="QrCodeDetailDailyReport">
+		SELECT t.* FROM TJ_QRCODEDETAILDAILYREPORT t
+		<where>
+			<if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')">
+				t.QD_DATE BETWEEN #{param.beginTime} and #{param.endTime}
+			</if>
+		</where>
+		ORDER BY t.QD_DATE desc
+	</select>
+
+	<!--不同面额的兑换券售出额-->
+	<select id="findSoldMoneyByType"  resultMap="list" parameterType="QrCodeDetailDailyReport">
+		<![CDATA[select sum(vMoney) as saleMoney
+		from DC_VoucherInfo
+		where UsedDate between #{0} and #{1} and VStatus=1
+		and vMoney=#{2}
+		]]>
+	</select>
+
+
+
+<!--不同面额的兑换券期初额-->
+	<select id="findStartMoneyByType"  resultMap="list" parameterType="QrCodeDetailDailyReport">
+		<![CDATA[SELECT
+	SUM(CASE WHEN UsedDate<#{0} then 0 ELSE VMoney end)
+FROM
+	DC_VoucherInfo
+WHERE
+	1 = 1
+AND VStart = #{1}
+AND VEnd = #{2}
+		and vMoney=#{3}
+		]]>
+	</select>
+
+
+	<insert id="insert"  parameterType="QrCodeDetailDailyReport">
+		<![CDATA[
+	INSERT INTO TJ_QRCODEDETAILDAILYREPORT(
+	    QD_ID,
+		QD_BATCHID,
+		QD_BATCHSTARTTIME,
+		QD_BATCHENDTIME,
+		QD_DATE,
+		QD_STARTALLMONEY,
+		QD_STARTTWOMONEY,
+		QD_STARTTHREEMONEY,
+		QD_STARTTENMONEY,
+		QD_STARTTWENTYMONEY,
+		QD_STARTFIFTYMONEY,
+		QD_STARTHUNDREDMONEY,
+
+		QD_SOLDALLMONEY,
+		QD_SOLDTWOMONEY,
+		QD_SOLDTHREEMONEY,
+		QD_SOLDTENMONEY,
+		QD_SOLDTWENTYMONEY,
+		QD_SOLDFIFTYMONEY,
+		QD_SOLDHUNDREDMONEY,
+
+
+		QD_ENDALLMONEY,
+		QD_ENDTWOMONEY,
+		QD_ENDTHREEMONEY,
+		QD_ENDTENMONEY,
+		QD_ENDTWENTYMONEY,
+		QD_ENDFIFTYMONEY,
+		QD_ENDHUNDREDMONEY
+
+	) VALUES (#{id},#{batchId},#{batchStartTime},#{batchEndTime},#{date},#{startAllMoney},#{startTwoMoney},#{startThreeMoney}
+	,#{startTenMoney},#{startTwentyMoney},#{startFiftyMoney},#{startHundredMoney},
+	#{soldAllMoney},#{soldTwoMoney},#{soldThreeMoney},#{soldTenMoney},#{soldTwentyMoney},#{soldFiftyMoney},#{soldHundredMoney},
+	#{endAllMoney},#{endTwoMoney},#{endThreeMoney},#{endTenMoney},#{endTwentyMoney},#{endFiftyMoney},#{endHundredMoney}
+	)
+	]]>
+	</insert>
+
+
+	<delete id="deleteList" parameterType="QrCodeDetailDailyReport">
+		delete from TJ_QRCODEDETAILDAILYREPORT
+		WHERE QD_ID  in
+		<foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+			#{item.id}
+		</foreach>
+	</delete>
+
+
+
+	<select id="findIsExitByDate"  resultMap="list" parameterType="QrCodeDetailDailyReport">
+		SELECT t.* FROM TJ_QRCODEDETAILDAILYREPORT t
+		<where>
+				t.QD_DATE = #{0}
+		</where>
+		ORDER BY t.QD_DATE desc
+	</select>
+
+
+
+	<!--<update id="update"  parameterType="QrCodeSoldDailyReport">-->
+	<!--update  TJ_QRCODESOLDDAILYREPORT set-->
+	<!--SCR_ID=#{id},SCR_DATE=#{date},SCR_MERCHANTID=#{merchantId},SCR_CHILDMERCHANTCOUNT=#{childMerchantCount},-->
+	<!--SCR_SALES=#{sales},SCR_LEVEL=#{level},SCR_PERCENT=#{percent},SCR_COMMISSION=#{commission}-->
+	<!--WHERE SCR_ID=#{id}-->
+	<!--</update>-->
+
+	<select id="find"  resultMap="list" parameterType="QrCodeDetailDailyReport">
+		SELECT t.* FROM TJ_QRCODEDETAILDAILYREPORT t
+		<where>
+			<if test="date!=null and date!=''">
+				t.QD_DATE = #{date}
+			</if>
+		</where>
+		ORDER BY t.QD_DATE desc
+	</select>
+	<select id="findMonth"  resultMap="list" parameterType="QrCodeDetailDailyReport">
+		SELECT t.* FROM TJ_QRCODEDETAILDAILYREPORT t
+		<where>
+			<if test="date!=null and date!=''">
+				t.QD_DATE like '%${date}%'
+			</if>
+		</where>
+		ORDER BY t.QD_DATE ASC
+	</select>
+
+
+
+
+	<select id="findAllReport"  resultMap="list" parameterType="QrCodeDetailDailyReport">
+		<![CDATA[SELECT
+		*, (
+		startTwoMoney + startThreeMoney + startTenMoney + startTwentyMoney + startFiftyMoney + startHundredMoney
+		) AS startAllMoney
+		FROM
+		(
+		SELECT
+		sum(
+		CASE
+		WHEN a.vMoney = 2 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startTwoMoney,
+		sum(
+		CASE
+		WHEN a.vMoney = 3 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startThreeMoney,
+		sum(
+		CASE
+		WHEN a.vMoney = 10 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startTenMoney,
+		sum(
+		CASE
+		WHEN a.vMoney = 20 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startTwentyMoney,
+		sum(
+		CASE
+		WHEN a.vMoney = 50 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startFiftyMoney,
+		sum(
+		CASE
+		WHEN a.vMoney = 100 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startHundredMoney
+		FROM
+		DC_VoucherInfo a
+		WHERE
+		1 = 1
+		AND VStart = #{0}
+AND VEnd=#{1}
+		) AS pc
+		]]>
+
+	</select>
+
+
+	<select id="findQcReport"  resultMap="list" parameterType="QrCodeDetailDailyReport">
+		<![CDATA[SELECT
+		*, (
+		startTwoMoney + startThreeMoney + startTenMoney + startTwentyMoney + startFiftyMoney + startHundredMoney
+		) AS startAllMoney
+		FROM
+		(
+		SELECT
+		sum(
+		CASE
+		WHEN a.vMoney = 2 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startTwoMoney,
+		sum(
+		CASE
+		WHEN a.vMoney = 3 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startThreeMoney,
+		sum(
+		CASE
+		WHEN a.vMoney = 10 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startTenMoney,
+		sum(
+		CASE
+		WHEN a.vMoney = 20 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startTwentyMoney,
+		sum(
+		CASE
+		WHEN a.vMoney = 50 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startFiftyMoney,
+		sum(
+		CASE
+		WHEN a.vMoney = 100 THEN
+		a.vMoney
+		ELSE
+		0
+		END
+		) AS startHundredMoney
+		FROM
+		(SELECT
+	     (CASE WHEN UsedDate<#{0} then 0 ELSE VMoney end ) as VMoney
+
+	      FROM DC_VoucherInfo
+		    WHERE
+				1 = 1
+			  AND VStart = #{1}
+			 AND VEnd = #{2}) AS a
+		) AS pc
+
+		]]>
+
+	</select>
+
+	<select id="findSoldReport"  resultMap="list" parameterType="QrCodeDetailDailyReport">
+		<![CDATA[SELECT
+	*, (
+		soldTwoMoney + soldThreeMoney + soldTenMoney + soldTwentyMoney + soldFiftyMoney + soldHundredMoney
+	) AS soldAllMoney
+FROM
+	(
+		SELECT
+			date_format(a.UsedDate, '%Y-%m-%d') AS date,
+			sum(
+				CASE
+				WHEN a.vMoney = 2 THEN
+					a.vMoney
+				ELSE
+					0
+				END
+			) AS soldTwoMoney,
+			sum(
+				CASE
+				WHEN a.vMoney = 3 THEN
+					a.vMoney
+				ELSE
+					0
+				END
+			) AS soldThreeMoney,
+			sum(
+				CASE
+				WHEN a.vMoney = 10 THEN
+					a.vMoney
+				ELSE
+					0
+				END
+			) AS soldTenMoney,
+			sum(
+				CASE
+				WHEN a.vMoney = 20 THEN
+					a.vMoney
+				ELSE
+					0
+				END
+			) AS soldTwentyMoney,
+			sum(
+				CASE
+				WHEN a.vMoney = 50 THEN
+					a.vMoney
+				ELSE
+					0
+				END
+			) AS soldFiftyMoney,
+			sum(
+				CASE
+				WHEN a.vMoney = 100 THEN
+					a.vMoney
+				ELSE
+					0
+				END
+			) AS soldHundredMoney
+		FROM
+			DC_VoucherInfo a
+		WHERE
+			1 = 1
+		AND a.UsedDate BETWEEN  #{0} AND #{1}
+		AND a.VStatus=1
+		GROUP BY
+			date_format(a.UsedDate, '%y-%m-%d')
+		ORDER BY
+			a.UsedDate ASC
+	) AS cp
+		]]>
+
+	</select>
+</mapper>

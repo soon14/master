@@ -1,0 +1,72 @@
+$(function () {
+	//下拉框
+	JY.Dict.setSelect("selectisValid", "isValid", 2, "全部");
+	getbaseList();
+	//增加回车事件
+	$("#baseForm").keydown(function (e) {
+		keycode = e.which || e.keyCode;
+		if (keycode == 13) {
+			search();
+		}
+	});
+});
+
+function getbaseList(init) {
+	if (init == 1)$("#baseForm .pageNum").val(1);
+	JY.Model.loading();
+    JY.Ajax.doRequest("baseForm",jypath +'/channels/findChildMerchantByMId',null,function(data){
+		$("#baseTable tbody").empty();
+		var obj = data.obj;
+		var list = obj.list;
+		var results = list.results;
+		var pageNum = list.pageNum, pageSize = list.pageSize, totalRecord = list.totalRecord;
+		var html = "";
+		if (results != null && results.length > 0) {
+			var leng = (pageNum - 1) * pageSize;//计算序号
+			for (var i = 0; i < results.length; i++) {
+				var l = results[i];
+				html += "<tr>";
+                html += "<td class='center hidden-480' >" + JY.Object.notEmpty(l.mName) + "</td>";
+                if(l.mType==1){
+                    html+="<td class='center hidden-480' >个人</td>";
+				}else{
+                    html+="<td class='center hidden-480' >企业</td>";
+				}
+                html += "<td class='center hidden-480' >" + JY.Object.notEmpty(l.mMobile) + "</td>";
+                html+="<td class='center hidden-480'><a style='cursor:pointer' onclick='findChildCustomer(\""+l.mId+"\")'>"+JY.Object.notEmpty(l.childCustomerNum)+"</a></td>";
+                var v="";
+                if(l.line==0){
+                    v="线上+线下";
+                }else if(l.line==1){
+                    v="线上";
+                }else if(l.line==2){
+                    v="线下";
+                }
+                html+="<td class='center hidden-480'>"+JY.Object.notEmpty(v)+"</td>";
+                html += "</tr>";
+			}
+			$("#baseTable tbody").append(html);
+			JY.Page.setPage("baseForm", "pageing", pageSize, pageNum, totalRecord, "getbaseList");
+		} else {
+			html += "<tr><td colspan='5' class='center'>没有相关数据</td></tr>";
+			$("#baseTable tbody").append(html);
+			$("#pageing ul").empty();//清空分页
+		}
+		JY.Model.loadingClose();
+	});
+}
+
+function findChildCustomer(id){
+    var index = jeBox.open({
+        cell:"jbx",
+        padding:"0",
+        title:"查看发展客户",
+        maxBtn:true,
+        area:["700px","90%"],
+        type:2,
+        maskClose:true,
+        content: 'findChildCustomer?mId='+id,
+        button: [ {name: '取消'},
+        ]
+    })
+}

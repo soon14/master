@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.CountSaleDao">
+    <resultMap id="CountSale" type="CountSale">
+        <id column="id" property="id"/>
+        <result property="bettingAmount" column="betting_amount"/>
+        <result property="ticketAmount" column="ticket_amount"/>
+        <result property="bettingNumber" column="betting_number"/>
+        <result property="ticketNumber" column="ticket_number"/>
+        <result property="statisticsDate" column="statistics_date"/>
+        <result property="totalAumone" column="total_aumone"/>
+        <result property="amountDifference" column="amount_difference"/>
+        <result property="numberDifference" column="number_difference"/>
+        <result property="offlineVolume" column="offline_volume"/>
+        <result property="createDate" column="create_date"/>
+        <result property="createUser" column="create_user"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="java.util.Map">
+		 <![CDATA[
+
+ 		INSERT INTO RP_TotalSaleInfo (
+		betting_amount,
+		ticket_amount,
+		betting_number,
+		ticket_number,
+		statistics_date,
+		total_aumone,
+		amount_difference,
+		number_difference,
+		offline_volume,
+		create_date
+		) SELECT
+		dc.money1,
+		ts.money2,
+		dc.count1,
+		ts.count2,
+		dc.tdate,
+		dc.money1,
+		(dc.money1 - ts.money2),
+		(dc.count1 - ts.count2),
+		0,
+		CURRENT_TIMESTAMP
+		FROM
+		(
+		SELECT
+		COUNT(1) AS count1,
+		SUM(d.money) AS money1,
+		d.ticketTime AS tdate
+		FROM
+		DC_TicketInfo d
+		WHERE
+		d.ticketTime >= STR_TO_DATE(#{startTime},'%Y-%m-%d %H:%i:%s')
+		AND d.ticketTime <  STR_TO_DATE(#{endTime},'%Y-%m-%d %H:%i:%s')
+		) dc,
+		(
+		SELECT
+		COUNT(1) AS count2,
+		SUM(t.ticketMoney) AS money2
+		FROM
+		TS_TicketInfo t
+		WHERE
+		t.ticketDate >= STR_TO_DATE(#{startTime},'%Y-%m-%d %H:%i:%s')
+		AND t.ticketDate <  STR_TO_DATE(#{endTime},'%Y-%m-%d %H:%i:%s')
+		) ts
+
+        ]]>
+	</insert>
+
+    <delete id="delete" parameterType="java.util.Map">
+		DELETE FROM RP_TotalSaleInfo WHERE statistics_date = STR_TO_DATE(#{startTime},'%Y-%m-%d %H:%i:%s')
+	</delete>
+
+    <select id="findAll" parameterType="java.util.Map" resultType="CountSale">
+
+          	 select
+   	 c.id AS id,
+   	 c.betting_amount AS bettingAmount,
+   	 c.ticket_amount  AS ticketAmount,
+   	 c.betting_number AS bettingNumber,
+   	 c.ticket_number  AS ticketNumber,
+   	 c.statistics_date AS statisticsDate,
+   	 c.total_aumone AS totalAumone,
+   	 c.amount_difference AS amountDifference,
+   	 c.number_difference AS numberDifference,
+   	 c.offline_volume AS offlineVolume,
+   	 c.create_date AS createDate
+   	  from RP_TotalSaleInfo c where 1 = 1 
+   	 		<if test="startTime != null and startTime != ''">
+        <![CDATA[	and	c.statistics_date >= STR_TO_DATE(#{startTime},'%Y-%m-%d %H:%i:%s') ]]>
+			</if>
+			<if test="endTime != null and endTime != ''">
+        <![CDATA[	and	c.statistics_date < STR_TO_DATE(#{endTime},'%Y-%m-%d %H:%i:%s') ]]>
+			</if>
+		order By c.statistics_date desc
+
+    </select>
+
+    <update id="updateCountAumone" parameterType="CountSale">
+		<![CDATA[
+         UPDATE RP_TotalSaleInfo SET offline_volume =#{offlineVolume},total_aumone=#{totalAumone} where id =#{id}
+        ]]>
+	</update>
+
+</mapper>

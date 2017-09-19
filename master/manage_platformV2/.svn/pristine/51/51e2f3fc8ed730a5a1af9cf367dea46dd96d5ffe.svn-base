@@ -1,0 +1,368 @@
+package com.jy.common.utils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import sun.net.ftp.FtpClient;
+import sun.net.ftp.FtpProtocolException;
+
+import java.io.*;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.*;
+
+/**
+ * Java自带的API对FTP的操作
+ */
+public class FtpUtil {
+
+    private static final Logger LOG = LoggerFactory.getLogger(FtpUtil.class);
+    private static final String CHECK_KEY = "cheKey";       //标记检查数据后返回的验证key
+    private static final String FILE_SUFFIX = ".txt";       //文件后缀
+    private static final String SUFFIX_BAK = "_bak";        //定义生成的文件后缀
+    private static final String SUFFIX_OK = "_ok";
+    private static final String SUFFIX_ERR = "_err";
+    //总列数
+    private static String columnNumber;
+
+    /**
+     * 连接ftp服务器 JDK 1.7
+     *
+     * @param url
+     * @param port
+     * @param username
+     * @param password
+     * @return FtpClient
+     * @throws FtpProtocolException
+     * @throws IOException
+     */
+    public static FtpClient connectFTP(String url, int port, String username, String password) { //创建ftp
+        FtpClient ftp = null;
+        try {
+            //创建地址
+            SocketAddress addr = new InetSocketAddress(url, port);
+            //连接
+            ftp = FtpClient.create();
+            ftp.connect(addr);
+            //登陆
+            ftp.login(username, password.toCharArray());
+            ftp.setBinaryType();
+            System.out.println(ftp.getWelcomeMsg());
+        } catch (FtpProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return ftp;
+    }
+
+    /**
+     * 文件下载
+     * ftp文件目录名称
+     * ftp文件名称
+     * 本地服务器地址目录名称
+     * 本地服务器地址文件名称
+     *
+     * @param
+     * @param ftpFile
+     * @param ftp
+     */
+    public static Map<String, String> downloadAndChekData(String ftpPath, String ftpFile, String localPath, FtpClient ftp) {
+
+        int i = 0;      // 循环计数器
+        int maxNo = 1;  //批次号默认为1
+        InputStream is = null;
+        String rowsNumber = null;
+        FileOutputStream fos = null;
+        BufferedReader bufferedReader = null;
+        StringBuffer sbFtpFile = new StringBuffer();
+        StringBuffer sblocalFile = new StringBuffer();
+        Map<String, String> checkResult = new HashMap<>();
+
+        try {
+            //创建当天的文件夹
+            String[] currentDate = ftpPath.split("/");
+            //根据协议取文件的最大批次号,拼接ftp文件名
+            maxNo = getLastModifyFileName(ftp, ftpPath, ftpFile);
+            if (maxNo != 0) {
+                sbFtpFile.append(ftpPath).append(ftpFile).append(maxNo).append(FILE_SUFFIX);
+            } else {
+                LOG.error("未在TFP服务器找到文件！");
+                return null;
+            }
+            //得到ftp文件
+            is = ftp.getFileStream(sbFtpFile.toString());
+            //生成本地文件名
+            sblocalFile.append(localPath).append(currentDate[2]).append("/").append(ftpFile).append(maxNo).append(SUFFIX_BAK).append(FILE_SUFFIX);
+            StringBuffer sb = new StringBuffer();
+            File filePath = new File(sb.append(localPath).append(currentDate[2]).toString());
+            if (!filePath.isDirectory()) {
+                filePath.mkdirs();
+            }
+            File file = new File(sblocalFile.toString());
+            bufferedReader = new BufferedReader(new InputStreamReader(is, "utf-8"));
+            //bufferedReader = new BufferedReader(new InputStreamReader(is));
+            byte[] bytes = new byte[1024];
+            fos = new FileOutputStream(file);
+            String lineTxt;
+            for (i = 0; (lineTxt = bufferedReader.readLine()) != null; i++) {
+                //文本第一行为总行数
+                if (i == 0) {
+                    rowsNumber = lineTxt;
+                }
+                if (null == checkResult.get(CHECK_KEY)) {
+                    checkResult = checkTxtDataComplete(i, lineTxt, ftpFile + maxNo);
+                }
+                lineTxt += "\r\n";
+                fos.write(lineTxt.getBytes());
+            }
+            bufferedReader.close();
+            //LOG.info("file download success!!");
+        } catch (FtpProtocolException e) {
+            LOG.info("file download fail!!");
+            e.printStackTrace();
+        } catch (IOException e) {
+            LOG.info("file download fail!!");
+            e.printStackTrace();
+        } finally {
+            try {
+                close(fos, bufferedReader, is);
+            } catch (Exception e) {
+                LOG.info("stream close fail!!");
+                e.printStackTrace();
+            }
+        }
+        //返回服务器地址
+        String localServerPath = null;
+        //i从0开始,去除前3行 拿到的结果为全部内容的行数
+        int diff = (i - 3) - Integer.parseInt(rowsNumber);
+        if ((diff == 0 && null == checkResult.get(CHECK_KEY)) || Integer.parseInt(rowsNumber) == 0) {
+            LOG.info("Available file!!");
+            localServerPath = writeFile(sblocalFile.toString(), true, null);
+            if (null != localServerPath) {
+                //返回路径和总数据量
+                Map<String, String> mapReturn = new HashMap<>();
+                mapReturn.put("path", localServerPath);
+                mapReturn.put("count", rowsNumber);
+                return mapReturn;
+
+            } else {
+                //未生成备份文件....
+                LOG.error("#未生成备份文件！");
+                return null;
+            }
+        } else {
+            LOG.info("Unavailable file!!");
+            if (diff != 0) {
+                String value = "文件名为：" + (ftpFile + maxNo) + "，行数不一致，FTP文件的行数为" + rowsNumber + "，经检查过的行数为" + i;
+                checkResult.put(CHECK_KEY, value);
+            }
+            writeFile(sblocalFile.toString(), false, checkResult.get(CHECK_KEY));
+        }
+        return null;
+
+    }
+
+
+    /**
+     * 取得相对于当前连接目录的某个目录下所有文件列表
+     *
+     * @param path
+     * @return
+     * @throws FtpProtocolException
+     */
+    private static List<String> getFileList(FtpClient ftpClient, String path) throws FtpProtocolException {
+        List<String> list = new ArrayList<>();
+        DataInputStream dis;
+        try {
+            dis = new DataInputStream(ftpClient.nameList(path));
+            String filename = "";
+            while ((filename = dis.readLine()) != null) {
+                list.add(filename);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+
+    /**
+     * 根据文件排序，获取最大批次号
+     *
+     * @param ftp
+     * @param dir
+     * @param tfpFileName
+     * @return
+     */
+    private static int getLastModifyFileName(FtpClient ftp, String dir, String tfpFileName) {
+        List<Integer> screenList = new ArrayList<>();
+        try {
+            ftp.changeDirectory(dir);
+            List<String> fileNameList = getFileList(ftp, dir);
+            if (null != fileNameList && fileNameList.size() > 0) {
+                for (String str : fileNameList) {
+                    if (str.contains(tfpFileName)) {
+                        String[] strSplit = str.split("\\.");
+                        int index = strSplit[0].lastIndexOf("_");
+                        String lastStr = strSplit[0].substring(index + 1, strSplit[0].length());
+                        screenList.add(Integer.parseInt(lastStr));
+                    }
+                }
+                Collections.sort(screenList, new Comparator<Integer>() {
+                    @Override
+                    public int compare(Integer integer1, Integer integer2) {
+                        Integer i1 = integer1;
+                        Integer i2 = integer2;
+                        return i2.compareTo(i1);
+                    }
+                });
+            } else {
+                LOG.info("当前FTP目录" + dir + "下不存在任何文件！");
+                return 0;
+            }
+        } catch (FtpProtocolException e) {
+            LOG.info("文件不存在！");
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return screenList.get(0);
+    }
+
+
+    private static Map<String, String> checkTxtDataComplete(int i, String lineTxt, String fileNmae) {
+        Map<String, String> map = new HashMap<>();      // value为空等于成功
+        //设置map默认值为成功
+        String value = null;
+        if (lineTxt != null && lineTxt.length() != 0) {
+            //文本第1行为每行总列数
+            if (i == 1) {
+                columnNumber = lineTxt;
+            }
+        } else {
+            //当前行为空
+            value = "文件名为：" + fileNmae + "，第" + (i - 2) + "行的数据为空！";
+            map.put(CHECK_KEY, value);
+            return map;
+        }
+        /**
+         *  从第2行开始验证数据
+         *  根据TAB键进行分割文本，拿到分割后的结果总数。
+         *  第1行是总列数，两者相等则给出的数据格式没有问题
+         */
+        if (i >= 2) {
+            String[] txtObject = lineTxt.split("\t");
+            if (Integer.parseInt(columnNumber) - txtObject.length != 0) {
+                value = "文件名为：" + fileNmae + "，第" + (i - 2) + "行数据不正确，投注系统给到的列数为" + columnNumber + "列,检查列数为" + txtObject.length + "列";
+                LOG.info("文件名为：" + fileNmae + "，第" + (i - 2) + "行数据不正确，投注系统给到的列数为" + columnNumber + "列,检查列数为" + txtObject.length + "列");
+                map.put(CHECK_KEY, value);
+                return map;
+            }
+        }
+        map.put(CHECK_KEY, value);
+        return map;
+    }
+
+
+    /**
+     * param1 备份文件的地址
+     * param2 是否可用文件
+     * param3 错误记录数
+     * 从备份文件写入到成功或失败文件
+     */
+    private static String writeFile(String bakFileName, boolean flag, String vaule) {
+        FileOutputStream fos = null;
+        BufferedReader br = null;
+        StringBuffer sb = null;
+        try {
+            File read = new File(bakFileName);
+            if (!read.exists()) {
+                LOG.info(bakFileName + "文件夹不存在！");
+                return null;
+            }
+            //根据协议按照下划线分割
+            String[] backSplit = bakFileName.split("_");
+            StringBuffer fileName = new StringBuffer();
+            fileName.append(backSplit[0] + "_").append(backSplit[1] + "_").append(backSplit[2] + "_").append(backSplit[3]);
+            sb = new StringBuffer();
+            if (flag) {
+                sb.append(fileName).append(SUFFIX_OK).append(FILE_SUFFIX);
+            } else {
+                sb.append(fileName).append(SUFFIX_ERR).append(FILE_SUFFIX);
+            }
+            //要写入的文件名
+            File writeFile = new File(sb.toString());
+            br = new BufferedReader(new FileReader(read));
+            String temp;
+            fos = new FileOutputStream(writeFile);
+            for (int i = 0; (temp = br.readLine()) != null; i++) {
+                temp += "\r\n";
+                if (sb.toString().contains(SUFFIX_ERR)) {
+                    // 写入错误提示
+                    if (i == 1) {
+                        temp += (vaule + "\r\n");
+                    }
+                }
+                fos.write(temp.getBytes());
+            }
+            fos.close();
+            br.close();
+        } catch (FileNotFoundException e) { //文件未找到
+            LOG.info("File not found!!");
+            e.printStackTrace();
+        } catch (IOException e) {
+            LOG.info("File write fail");
+            e.printStackTrace();
+        } finally {
+            close(fos, br, null);
+        }
+        return sb.toString();
+    }
+
+    private static void close(FileOutputStream fos, BufferedReader br, InputStream is) {
+        try {
+            if (fos != null) {
+                fos.close();
+            }
+            if (br != null) {
+                br.close();
+            }
+            if (is != null) {
+                is.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static String getSplitData(String interfaceName, String date) {
+        StringBuffer stringBuffer = new StringBuffer();
+        stringBuffer.append(interfaceName).append("_").append(date).append("_");
+        return stringBuffer.toString();
+    }
+
+   /* public static void main(String[] args) {
+        try {
+            InetAddress addr = InetAddress.getLocalHost();
+            System.out.println(addr.getHostAddress());
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        String ip = "192.168.192.211";
+        int port = 21;
+        String username = "admin";
+        String password = "admin";
+        //连接ftp
+        FtpClient ftp = FtpUtil.connectFTP(ip, port, username, password);
+        if (ftp.isLoggedIn()) {
+            LOG.info("SUCCESS");
+        } else {
+            LOG.info("FAILD");
+        }
+        System.out.println(ftp.getWelcomeMsg());
+        Map<String, String> path = FtpUtil.downloadAndChekData("/daysluck/20170619/", "DSCS_QUL_20170619_", "E:/localhost/", ftp);
+        System.out.print(path);
+        System.exit(0);
+    }*/
+}

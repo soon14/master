@@ -1,0 +1,153 @@
+package com.jy.controller.system.channels;
+
+import com.jy.common.ajax.AjaxRes;
+import com.jy.common.utils.base.Const;
+import com.jy.controller.base.BaseController;
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.channels.OutLineDataInfo;
+import com.jy.from.system.request.OutLineDataForm;
+import com.jy.mybatis.Page;
+import com.jy.process.system.channels.OutLineDataProcess;
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.web.servlet.ModelAndView;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by Matthew on 2017/1/19 0005.
+ * 商户销量展示信息
+ */
+@Controller
+@RequestMapping("/channels/deposit/")
+public class DepositController extends BaseController implements
+        HandlerExceptionResolver {
+
+    @Autowired
+   private OutLineDataProcess outLineDataProcess;
+
+    Logger logger = Logger.getLogger(DepositController.class);
+    @RequestMapping("depositInit")
+    public String depositInit(Model model){
+        if(doSecurityIntercept(Const.RESOURCES_TYPE_MENU)){
+            model.addAttribute("permitBtn", getPermitBtn(Const.RESOURCES_TYPE_FUNCTION));
+            return "/system/channels/deposit";
+        }
+        return Const.NO_AUTHORIZED_URL;
+    }
+    @RequestMapping(value="findDeposit", method= RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes findByPage(Page<Merchant> page, Merchant o) {
+        AjaxRes ar = getAjaxRes();
+        Page<Merchant> reports=new Page<Merchant>();
+        Map map = new HashMap();
+        map.put("pageNum",(page.getPageNum()-1)*page.getPageSize());
+        map.put("pageSize",page.getPageSize());
+        map.put("mName",o.getmName());
+        map.put("phone",o.getmMobile());
+        List<Merchant> listTotal = new ArrayList<Merchant>();
+        List<Merchant> list = new ArrayList<Merchant>();
+        try {
+            listTotal = outLineDataProcess.findDeposit(map,1);
+             list = outLineDataProcess.findDeposit(map);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        int total=listTotal.size();
+        int totalPage = total/page.getPageSize();
+        if(total % page.getPageSize()>0){
+            totalPage++;
+        }
+        reports.setTotalPage(totalPage);
+        reports.setPageNum(page.getPageNum());
+        reports.setPageSize(page.getPageSize());
+        reports.setTotalRecord(total);
+        reports.setResults(list);
+        Map<String, Object> p=new HashMap<String, Object>();
+        p.put("permitBtn", getPermitBtn("3"));
+        p.put("list", reports);
+        ar.setSucceed(p);
+        return ar;
+    }
+    @RequestMapping("addDepositInit")
+    public String addOutLineDataInit(Model model){
+        List<Merchant> list = new ArrayList<Merchant>();
+        Map map = new HashMap();
+        map.put("mId",getRequest().getParameter("merchantId"));
+        try {
+            list = outLineDataProcess.findDeposit(map,1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if(list.size()>0){
+            Double deposit = list.get(0).getDeposit();
+            if(deposit>0){
+                model.addAttribute("addExist","1");
+                model.addAttribute("deposit",deposit);
+            }
+        }
+        model.addAttribute("permitBtn", getPermitBtn(Const.RESOURCES_TYPE_FUNCTION));
+        model.addAttribute("mId", getRequest().getParameter("merchantId"));
+
+            return "/system/channels/addDepositInit";
+    }
+    @RequestMapping(value = "addDeposit", method = RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes addDeposit(Merchant merchant, HttpServletResponse response){
+        AjaxRes ar = getAjaxRes();
+        try {
+                outLineDataProcess.addDeposit(merchant);
+            ar.setSucceedMsg("success");
+        } catch (Exception e) {
+            e.printStackTrace();ar.setSucceedMsg("fail");
+        }
+        return ar;
+    }
+    @RequestMapping(value = "updateDeposit", method = RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes updateDeposit(Merchant merchant, HttpServletResponse response){
+        AjaxRes ar = getAjaxRes();
+        try {
+                outLineDataProcess.updateDeposit(merchant);
+            ar.setSucceedMsg("success");
+        } catch (Exception e) {
+            e.printStackTrace();ar.setSucceedMsg("fail");
+        }
+        return ar;
+    }
+    @RequestMapping(value = "findMerchant", method = RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes findMerchant(){
+        AjaxRes ar = getAjaxRes();
+        Page<Merchant> reports=new Page<Merchant>();
+
+        List<Merchant> list = new ArrayList<Merchant>();
+        try {
+            list = outLineDataProcess.findMerchant();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        reports.setResults(list);
+        Map<String, Object> p=new HashMap<String, Object>();
+        p.put("list", reports);
+        p.put("size", list.size());
+        ar.setSucceed(p);
+        return ar;
+    }
+    @Override
+    public ModelAndView resolveException(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Object o, Exception e) {
+        return null;
+    }
+
+}

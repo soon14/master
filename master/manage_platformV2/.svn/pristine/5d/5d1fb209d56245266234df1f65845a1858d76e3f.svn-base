@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.BettingDifferenceDao">
+    <resultMap id="BettingDifference" type="BettingDifference">
+        <id column="DF_ID" property="id"/>
+        <result property="ticketNo" column="DF_TicketNo"/>
+        <result property="btTicketPrize" column="BT_TicketPrize"/>
+        <result property="ttTicketPrize" column="TT_TicketPrize"/>
+        <result property="dfDiffMoney" column="DF_DiffMoney"/>
+        <result property="dfInitDate" column="DF_InitDate"/>
+        <result property="dfNormalDate" column="DF_NormalDate"/>
+        <result property="dfProcessStauts" column="DF_ProcessStauts"/>
+        <result property="dfProcessInfo" column="DF_ProcessInfo"/>
+        <result property="dfReason" column="DF_Reason"/>
+        <result property="dfType" column="DF_Type"/>
+        <result property="dfReportID" column="DF_ReportID"/>
+    </resultMap>
+
+    <select id="findByDate" resultType="BettingDifference" parameterType="java.util.Map">
+   <![CDATA[
+         select
+         q.DF_NormalDate as dfNormalDate,
+         q.DF_TicketNo as ticketNo,
+         q.DF_DiffMoney as dfDiffMoney,
+         q.DF_Reason as dfReason,
+   		 q.DF_Type as dfType
+   		from
+   		RP_SaleDiffInfo q
+   		where
+   	    q.DF_NormalDate = STR_TO_DATE(#{date},'%Y-%m-%d')
+   	     ]]>
+   	    <if test="number == 1">
+        <![CDATA[  and	q.DF_Type not in (1) ]]>
+		</if>
+
+    </select>
+
+    <select id="findAll" resultType="BettingDifference" parameterType="java.util.Map">
+      <![CDATA[
+         SELECT
+         q.BT_TicketPrize as btTicketPrize,
+         q.TT_TicketPrize as ttTicketPrize,
+         q.DF_DiffMoney as dfDiffMoney,
+         q.DF_NormalDate as dfNormalDate,
+         q.DF_InitDate as dfInitDate,
+         q.DF_TicketNo as ticketNo,
+         q.DF_Reason as dfReason,
+   		  q.DF_Type as dfType
+   		 FROM RP_SaleDiffInfo q
+        WHERE q.DF_NormalDate = STR_TO_DATE(#{startTime},'%Y-%m-%d')
+           ]]>
+    </select>
+
+
+    <delete id="delete" parameterType="java.util.Map">
+   		 DELETE FROM RP_SaleDiffInfo WHERE DF_NormalDate = STR_TO_DATE(#{startTime},'%Y-%m-%d %H:%i:%s')
+    </delete>
+
+
+    <insert id="insert" parameterType="java.util.Map">
+		<![CDATA[
+            INSERT INTO RP_SaleDiffInfo
+            (DF_NormalDate,DF_TicketNo,BT_TicketPrize,TT_TicketPrize,DF_DiffMoney,DF_Type,DF_InitDate)
+            SELECT dc.ticketTime,dc.voteTicketId,dc.money,ts.money,(dc.money - ts.money) as diff,1 as type,CURRENT_TIMESTAMP FROM
+            (SELECT d.voteTicketId,d.money,d.ticketTime FROM DC_TicketInfo d
+            WHERE	 d.voteId IN (8000, 8001, 8002, 3863) and d.ticketTime >= #{startTime} and d.ticketTime < #{endTime} ) dc
+            INNER JOIN
+            (SELECT t.ticketNo,sum(t.ticketMoney) as money,t.ticketDate FROM TS_TicketInfo t
+            WHERE	 t.ticketDate >= #{startTime} and t.ticketDate <#{endTime} GROUP BY t.ticketNo) ts
+            on(dc.voteTicketId = ts.ticketNo) WHERE (dc.money - ts.money) != 0
+            UNION
+            -- 投注有，9188无单边账数据
+            SELECT dc.ticketTime,dc.voteTicketId,dc.money,0,dc.money,2 as type,CURRENT_TIMESTAMP FROM
+            (SELECT d.voteTicketId,d.money,d.ticketTime FROM DC_TicketInfo d
+            WHERE	d.voteId IN (8000, 8001, 8002, 3863) and d.ticketTime >= #{startTime} and d.ticketTime < #{endTime}) dc
+            LEFT JOIN
+            (SELECT t.ticketNo,sum(t.ticketMoney) as money,t.ticketDate FROM TS_TicketInfo t
+            WHERE	 t.ticketDate >= #{startTime} and t.ticketDate <#{endTime} GROUP BY t.ticketNo) ts
+            ON (dc.voteTicketId = ts.ticketNo)  WHERE ts.ticketNo IS NULL
+            UNION
+            -- 投注无，9188有单边账数据
+            SELECT ts.ticketDate,ts.ticketNo,0,ts.moeny,0 - ts.moeny,3 as type,CURRENT_TIMESTAMP FROM
+            (SELECT t.ticketNo,sum(t.ticketMoney) as moeny,t.ticketDate FROM TS_TicketInfo t
+            WHERE	 t.ticketDate >= #{startTime} and t.ticketDate <#{endTime} GROUP BY t.ticketNo) ts
+            LEFT JOIN
+            (SELECT d.voteTicketId,d.money,d.ticketTime FROM DC_TicketInfo d
+            WHERE	 d.voteId IN (8000, 8001, 8002, 3863) and d.ticketTime >= #{startTime} and d.ticketTime < #{endTime}) dc
+            ON (dc.voteTicketId = ts.ticketNo) WHERE dc.voteTicketId IS NULL
+         ]]>
+            </insert>
+</mapper>

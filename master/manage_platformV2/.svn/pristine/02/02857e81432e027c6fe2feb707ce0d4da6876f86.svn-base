@@ -1,0 +1,17 @@
+package com.jy.service.system.finance.common;
+
+import com.jy.from.system.request.UserBalanceForm;
+
+import java.util.List;
+
+/**
+ * Created by shixi on 2017/4/27.
+ */
+public interface UserBalanceService
+{
+
+    public int userBalanceforPojoSave(List<UserBalanceForm> listAll) throws Exception;
+
+    public  void deleteByAll(String date) throws Exception;
+
+}

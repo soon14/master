@@ -1,0 +1,551 @@
+package com.jy.service.impl.system.finance.reconciliation.lottery;
+
+import com.jy.common.enumerate.SaleEnum;
+import com.jy.common.exception.DaysBaseException;
+import com.jy.common.mybatis.PageCalculation;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.excel.ExcelReport;
+import com.jy.entity.system.channels.TicketInfoPO;
+import com.jy.entity.system.finance.reconciliation.lottery.BettingDifference;
+import com.jy.entity.system.finance.reconciliation.lottery.CountSale;
+import com.jy.entity.system.finance.reconciliation.lottery.TicketInfoDetail;
+import com.jy.mybatis.Page;
+import com.jy.repository.system.channels.TicketInfoDao;
+import com.jy.repository.system.finance.reconciliation.lottery.BettingDifferenceDao;
+import com.jy.repository.system.finance.reconciliation.lottery.CountSaleDao;
+import com.jy.repository.system.finance.reconciliation.lottery.TicketInfoDetailDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.impl.help.ExcelUtil;
+import com.jy.service.system.finance.reconciliation.lottery.BettingDifferenceService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * @文件名: 投注系统 出票系统对账服务
+ * @功能描述：
+ * @创建日期:2017年3月9日下午8:21:53
+ * @创建人：lijunke
+ * @Copyright（c） 2017, all rights reserved by days
+ */
+@SuppressWarnings("unchecked")
+@Service("bettingDifferenceService")
+public class BettingDifferenceServiceImpl extends BaseServiceImp<BettingDifference> implements BettingDifferenceService {
+
+    // 销售总表dao
+    @Autowired
+    private CountSaleDao countSaleDao;
+
+    // 出票系统dao
+    @Autowired
+    private TicketInfoDao ticketInfoDao;
+
+    // 投注系统dao
+    @Autowired
+    private TicketInfoDetailDao ticketInfoDetailDao;
+
+    // 差异表dao，用来保存数据
+    @Autowired
+    private BettingDifferenceDao bettingDifferenceDao;
+
+    @Autowired
+    private ExcelUtil excelutil;
+    @Value("${download.betting.filename}")
+    private String bettingFileName;
+
+    @Value("${download.detail.filename}")
+    private String detailFileName;
+
+
+    /**
+     * @功能描述： 统计总页面
+     * @author lijunke
+     * @DATE 2017年3月15日下午4:00:10
+     */
+    @Override
+    public Page<CountSale> bettingDifferenceDate(String date, Page<CountSale> page) {
+        CountSale cs = new CountSale();
+        cs.setStatisticsDate(date);
+        List<CountSale> list = this.countSaleDao.findByDate(cs);
+        page.setResults(list);
+        page.setPageSize(page.getPageSize());
+        page.setPageNum(page.getPageNum());
+        page = (Page<CountSale>) PageCalculation.getPageCalculation(page);
+        if (null != page.getResults()) {
+            page.setTotalRecord(list.size());
+        }
+        return page;
+    }
+
+    /**
+     * @功能描述： 明细页面数据查询
+     * @author lijunke
+     * @DATE 2017年3月15日下午4:00:27
+     */
+    @Override
+    public Page<BettingDifference> differenceList(String date, Page<BettingDifference> page, String ids) {
+
+        List<BettingDifference> blist = this.bettingDifferenceDao.findByDate(date, ids);
+        page.setResults(blist);
+        page.setPageSize(page.getPageSize());
+        page.setPageNum(page.getPageNum());
+        page = (Page<BettingDifference>) PageCalculation.getPageCalculation(page);
+        if (null != page.getResults()) {
+            page.setTotalRecord(blist.size());
+        }
+        return page;
+    }
+
+    /**
+     * @功能描述： 手动重置
+     * @author lijunke
+     * @DATE 2017年3月15日下午4:00:10
+     */
+    @Override
+    public Page<CountSale> restTask(Date startDate, Date endDate, Page<CountSale> page) throws DaysBaseException {
+        logger.info("执行手动重置方法，调用跑批程序，成生数据!");
+        this.runBetting(startDate, endDate);
+        return page;
+    }
+
+    public List<CountSale> findAllCountSale(String date) {
+        List<CountSale> list;
+        CountSale cs = new CountSale();
+        // 查询数据
+        if (date != "") {
+            cs.setStatisticsDate(date);
+        }
+        list = this.countSaleDao.findByDate(cs);
+        return list;
+    }
+
+    /**
+     * 执行跑批或重置
+     */
+    public void runBetting(Date startTime, Date endTime) throws DaysBaseException {
+
+        if (DateUtils.compareDate(startTime, endTime)) {
+            startTime = DateUtils.getDateStart(startTime);
+            endTime = DateUtils.getDateEnd(endTime);
+        }
+        this.batchRunReport(startTime, endTime);
+
+        // 统计总表当前期间的差异数据
+        List<CountSale> list = this.countSaleDao.queryDateAndId(startTime, endTime);
+        // 总表1天的汇总，明细会有多条记录，查询日期区间的差异数据，循环调用对账逻辑，生成对账数据
+        for (CountSale countSale : list) {
+            // 删除某天对账明细
+            this.bettingDifferenceDao.delete(countSale.getStatisticsDate());
+            // 总账单中的某一天的数据
+            compareBill(countSale.getStatisticsDate(), countSale.getId().toString());
+        }
+        this.batchRunDetailReport(startTime, endTime);
+    }
+
+    // 总差异页面，拿到两边条数金额对比
+    public List<CountSale> difference(Date startDate, Date endDate) throws DaysBaseException {
+        logger.info("进入销售总差异方法，开始统计总条数、总差异数！");
+
+        List<CountSale> list = new ArrayList<>();
+    /*	List<Date> dataList = DateUtils.findDates(startDate,endDate);
+        for (Date dataTo : dataList) {*/
+        CountSale cs;
+        // 1 拿到投注系统的总条数和总金额并根据日期分组
+        List<TicketInfoDetail> ticketInfoDetail = ticketInfoDetailDao.queryByDate(startDate, endDate);
+        // 2 拿到出票系统的总条数和总金额
+        List<TicketInfoPO> ticketInfoPO = ticketInfoDao.queryByDate(startDate, endDate);
+        if (ticketInfoPO.size() == 0 || ticketInfoDetail.size() == 0) {
+            logger.info("投注或者出票数据为空！");
+            throw new DaysBaseException();
+        }
+
+        for (TicketInfoDetail detail : ticketInfoDetail) {
+            for (TicketInfoPO infoPO : ticketInfoPO) {
+                if (DateUtils.formatDate(detail.getTicketTime()).equals(DateUtils.formatDate(infoPO.getTicketDate()))) {
+                    cs = new CountSale();
+
+                    // 投注 笔数 金额
+                    cs.setBettingAmount(detail.getTotalAumone());
+                    if (null != detail.getTotalNumber()) {
+                        cs.setBettingNumber(Integer.parseInt(detail.getTotalNumber()));
+                    } else {
+                        cs.setBettingNumber(0);
+                    }
+
+                    // 出票 笔数 金额
+                    cs.setTicketAmount(infoPO.getTotalAumone());
+                    cs.setTicketNumber(Integer.parseInt(infoPO.getSummCount()));
+                    // 差异金额
+                    cs.setAmountDifference(detail.getTotalAumone().subtract(infoPO.getTotalAumone()));
+                    // 差异总条数
+                    int ticketInfoDetailCountNumber = 0;
+                    if (null != detail.getTotalNumber()) {
+
+                        ticketInfoDetailCountNumber = Integer.parseInt(detail.getTotalNumber());
+                    }
+                    int ticketInfoCountNumber = Integer.parseInt(infoPO.getSummCount());
+                    cs.setNumberDifference(ticketInfoDetailCountNumber - ticketInfoCountNumber);
+                    // 总金额
+                    BigDecimal sumAumo = detail.getTotalAumone();
+                    sumAumo.add(cs.getOfflineVolume() == null ? new BigDecimal(0) : cs.getOfflineVolume());
+                    cs.setTotalAumone(sumAumo);
+
+                    // 日期
+                    cs.setStatisticsDate(DateUtils.format(detail.getTicketTime(), "yyyy-MM-dd"));
+                    cs.setCreateDate(new Date());
+                    list.add(cs);
+
+                } else {
+                    logger.info("某天之内计算总笔数总金额为差，日期为空！");
+                }
+            }
+        }
+        // 保存总记录数
+        this.updateOrsaveCountSale(list);
+
+        return list;
+    }
+
+    /**
+     * @功能描述： 差异数据比对
+     * @author lijunke
+     * @DATE 2017年3月14日下午5:13:13
+     */
+    public synchronized List<BettingDifference> compareBill(String date, String ids) {
+
+        // 调用对账逻辑,保存差异数据
+        List<BettingDifference> list = this.BillLogic(date, ids);
+        return list;
+    }
+
+    /**
+     * @param list
+     * @方法功能描述： 如果没有就添加 否则修改 总表统计数据
+     * @author lijunke
+     * @创建时间： 2017年3月15日下午2:08:19
+     */
+    private void updateOrsaveCountSale(List<CountSale> list) {
+
+        for (int i = 0; i < list.size(); i++) {
+
+            int count = countSaleDao.findByDates(list.get(i));
+            if (count <= 0) {
+                this.countSaleDao.save(list.get(i));
+            } else {
+                this.countSaleDao.update(list.get(i));
+
+            }
+        }
+    }
+
+    /**
+     * @功能描述： 明细对账
+     * @author lijunke
+     * @DATE 2017年3月14日上午9:04:44
+     */
+    private synchronized List<BettingDifference> BillLogic(String date, String ids) {
+        logger.info("销售差异开始对账！");
+
+        // 记录差异数据的集合
+        List<BettingDifference> SdList = new ArrayList<>();
+        BettingDifference sd = new BettingDifference();
+        // 根据日期拿到投注系统的总条数和总金额
+        TicketInfoDetail ticketInfoDetail = ticketInfoDetailDao.queryTotal(date);
+
+        // 根据日期拿到出票系统的总条数和总金额
+        TicketInfoPO ticketInfoPO = ticketInfoDao.queryTotal(date);
+        // 判断金额和条数只要有任意一个不满足的则对比明细信息
+        // 按照投注为主表的对账方式
+        if (ticketInfoDetail.getTotalAumone() == null) {
+            ticketInfoDetail.setTotalAumone(new BigDecimal(0));
+        }
+        if (ticketInfoPO.getTotalAumone() == null) {
+            ticketInfoPO.setTotalAumone(new BigDecimal(0));
+        }
+        BigDecimal countDf = ticketInfoDetail.getTotalAumone().subtract(ticketInfoPO.getTotalAumone());
+        if (!ticketInfoDetail.getTotalNumber().equals(ticketInfoPO.getSummCount()) || (countDf.doubleValue() != 0)) {
+            // 根据日期拿到所有投注的数据
+            List<TicketInfoDetail> ticketInfoDetaiList = ticketInfoDetailDao.findAll(date);
+            // 根据日期拿到所有出票的数据
+            List<TicketInfoPO> ticketInfoList = ticketInfoDao.findAll(date);
+            // 根据金额和批次，对集合进行排序
+            comparatorList(ticketInfoDetaiList, ticketInfoList);
+            // 循环匹配，返回所有的差异条数
+            SdList = this.LoopMatching(SdList, sd, ticketInfoDetaiList, ticketInfoList, date, ids);
+
+            // 保存数据
+            if (SdList.size() > 0) {
+                this.bettingDifferenceDao.save(SdList);
+            }
+        }
+        return SdList;
+    }
+
+    /**
+     * @param ticketInfoDetaiList
+     * @param ticketInfoList      void
+     * @方法功能描述： 对金额和批次号进行升序排序
+     * @author lijunke
+     * @创建时间： 2017年3月16日上午11:40:30
+     */
+    private void comparatorList(List<TicketInfoDetail> ticketInfoDetaiList, List<TicketInfoPO> ticketInfoList) {
+
+        Collections.sort(ticketInfoDetaiList, new Comparator<TicketInfoDetail>() {
+
+            @Override
+            public int compare(TicketInfoDetail arg0, TicketInfoDetail arg1) {
+                if (arg0.getTicketNo().compareTo(arg1.getTicketNo()) == 0) {
+                    return (Double.valueOf(arg0.getMoney())).compareTo(Double.valueOf(arg1.getMoney()));
+                } else {
+                    return arg0.getTicketNo().compareTo(arg1.getTicketNo());
+                }
+            }
+        });
+
+        Collections.sort(ticketInfoList, new Comparator<TicketInfoPO>() {
+
+            @Override
+            public int compare(TicketInfoPO arg0, TicketInfoPO arg1) {
+                if (arg0.getTicketNo().compareTo(arg1.getTicketNo()) == 0) {
+                    return (Double.valueOf(arg0.getTicketMoney())).compareTo(Double.valueOf(arg1.getTicketMoney()));
+                } else {
+                    return arg0.getTicketNo().compareTo(arg1.getTicketNo());
+                }
+            }
+        });
+    }
+
+    // 循环对比
+    private synchronized List<BettingDifference> LoopMatching(List<BettingDifference> SdList, BettingDifference sd, List<TicketInfoDetail> ticketInfoDetaiList, List<TicketInfoPO> ticketInfoList, String date, String ids) {
+        logger.info("循环匹配对账！");
+        Map<String, BettingDifference> m = new ConcurrentHashMap<>();
+        m.clear();
+
+        Map<String, TicketInfoDetail> mbt = new HashMap<>(); // 投注
+        Map<String, TicketInfoPO> mtt = new HashMap<>(); // 出票
+
+        for (int i = 0; i < ticketInfoDetaiList.size(); i++) {
+            mbt.put(ticketInfoDetaiList.get(i).getTicketNo(), ticketInfoDetaiList.get(i));
+        }
+
+        for (int i = 0; i < ticketInfoList.size(); i++) {
+            mtt.put(ticketInfoList.get(i).getTicketNo(), ticketInfoList.get(i));
+        }
+
+        for (TicketInfoPO ticketInfoPO : ticketInfoList) {
+            // 判断批次是否包含在投注的map里
+            if (!mbt.containsKey(ticketInfoPO.getTicketNo())) {
+                // 批次不相同，直接保存当前数据
+                sd = new BettingDifference();
+                logger.info("以投注为主表的单边账批次号{}", ticketInfoPO.getTicketNo());
+                if (null == sd.getBtTicketPrize()) {
+                    sd.setBtTicketPrize(new BigDecimal(0));
+
+                } else if (null == sd.getTtTicketPrize()) {
+                    sd.setTtTicketPrize(new BigDecimal(0));
+                }
+                sd.setTicketNo(ticketInfoPO.getTicketNo());
+                sd.setTtTicketPrize(new BigDecimal(ticketInfoPO.getTicketMoney()));
+                sd.setBtTicketPrize(new BigDecimal(0));
+                sd.setDfDiffMoney(sd.getBtTicketPrize().subtract(sd.getTtTicketPrize()));
+                sd.setDfType(SaleEnum.TICKET_DF.getValue());
+                sd.setDfReason(String.format(SaleEnum.TICKET_DF.getViewName(), ticketInfoPO.getTicketNo()));
+                sd.setDfInitDate(DateUtils.getDate("yyyy-MM-dd HH-mm-ss"));
+                sd.setDfNormalDate(date);
+                // 插入总表id
+                sd.setDfReportID(Integer.parseInt(ids));
+                if (!m.containsKey(sd.getTicketNo())) {
+                    m.put(sd.getTicketNo(), sd);
+                }
+
+            } else {
+                // 批次相同 判断金额是否相同，如果不相同，保存差异数据
+                // mbt.get(ticketInfoList.get(i).getBatchNo()).getMoney();
+
+                BigDecimal detaillMoney = new BigDecimal(mbt.get(ticketInfoPO.getTicketNo()).getMoney()).setScale(2, BigDecimal.ROUND_HALF_DOWN);
+                BigDecimal infoMoney = new BigDecimal(ticketInfoPO.getTicketMoney()).setScale(2, BigDecimal.ROUND_HALF_DOWN);
+                BigDecimal dfm = detaillMoney.subtract(infoMoney);
+                if ((int) dfm.doubleValue() > 0) {
+                    sd = new BettingDifference();
+
+                    sd.setTicketNo(ticketInfoPO.getTicketNo());
+                    sd.setBtTicketPrize(new BigDecimal(mbt.get(ticketInfoPO.getTicketNo()).getMoney()));
+                    sd.setTtTicketPrize(new BigDecimal(ticketInfoPO.getTicketMoney()));
+
+                    // 等于null时， 赋值为0
+                    if (null == sd.getBtTicketPrize()) {
+                        sd.setBtTicketPrize(new BigDecimal(0));
+
+                    } else if (null == sd.getTtTicketPrize()) {
+                        sd.setTtTicketPrize(new BigDecimal(0));
+                    }
+
+                    sd.setDfDiffMoney(sd.getBtTicketPrize().subtract(sd.getTtTicketPrize()));
+                    sd.setDfInitDate(DateUtils.getDate("yyyy-MM-dd HH-mm-ss"));
+
+                    sd.setDfType(SaleEnum.AMOUNT_DF.getValue());
+                    sd.setDfReason(String.format(SaleEnum.AMOUNT_DF.getViewName(), sd.getDfDiffMoney()));
+                    sd.setDfNormalDate(date);
+                    // 插入总表id
+                    sd.setDfReportID(Integer.parseInt(ids));
+                    if (!m.containsKey(sd.getTicketNo())) {
+                        m.put(sd.getTicketNo(), sd);
+                        logger.info("差异批次号为：{}", sd.getTicketNo());
+                    }
+                }
+            }
+        }
+
+        for (TicketInfoDetail infoDetail : ticketInfoDetaiList) {
+            // 判断批次是否包含在投注的map里
+            if (!mtt.containsKey(infoDetail.getTicketNo())) {
+                // 批次不相同，直接保存当前数据
+                sd = new BettingDifference();
+                if (null == sd.getBtTicketPrize()) {
+                    sd.setBtTicketPrize(new BigDecimal(0));
+
+                } else if (null == sd.getTtTicketPrize()) {
+                    sd.setTtTicketPrize(new BigDecimal(0));
+                }
+                sd.setTicketNo(infoDetail.getTicketNo());
+                sd.setTtTicketPrize(new BigDecimal(0));
+                sd.setBtTicketPrize(new BigDecimal(infoDetail.getMoney()));
+                sd.setDfDiffMoney(sd.getBtTicketPrize().subtract(sd.getTtTicketPrize()));
+                sd.setDfInitDate(DateUtils.getDate("yyyy-MM-dd HH-mm-ss"));
+                sd.setDfNormalDate(date);
+                sd.setDfType(SaleEnum.BETTING_DF.getValue());
+                sd.setDfReason(String.format(SaleEnum.BETTING_DF.getViewName(), sd.getTicketNo()));
+                // 插入总表id
+                sd.setDfReportID(Integer.parseInt(ids));
+                if (!m.containsKey(sd.getTicketNo())) {
+                    m.put(sd.getTicketNo(), sd);
+                }
+
+            } else {
+                // 批次相同 判断金额是否相同，如果不相同，保存差异数据
+
+                BigDecimal detaillMoney = new BigDecimal(mtt.get(infoDetail.getTicketNo()).getTicketMoney()).setScale(2, BigDecimal.ROUND_HALF_DOWN);
+                BigDecimal infoMoney = new BigDecimal(infoDetail.getMoney()).setScale(2, BigDecimal.ROUND_HALF_DOWN);
+                BigDecimal dfm = infoMoney.subtract(detaillMoney);
+                if ((int) dfm.doubleValue() > 0) {
+                    sd = new BettingDifference();
+
+                    sd.setTicketNo(infoDetail.getTicketNo());
+                    sd.setBtTicketPrize(new BigDecimal(infoDetail.getMoney()));
+                    sd.setTtTicketPrize(new BigDecimal(mtt.get(infoDetail.getTicketNo()).getTicketMoney()));
+
+                    // 等于null时， 赋值为0
+                    if (null == sd.getBtTicketPrize()) {
+                        sd.setBtTicketPrize(new BigDecimal(0));
+
+                    } else if (null == sd.getTtTicketPrize()) {
+                        sd.setTtTicketPrize(new BigDecimal(0));
+                    }
+
+                    sd.setDfDiffMoney(sd.getBtTicketPrize().subtract(sd.getTtTicketPrize()));
+                    sd.setDfInitDate(DateUtils.getDate("yyyy-MM-dd HH-mm-ss"));
+                    sd.setDfNormalDate(date);
+                    sd.setDfType(SaleEnum.AMOUNT_DF.getValue());
+                    sd.setDfReason(String.format(SaleEnum.AMOUNT_DF.getViewName(), sd.getTicketNo()));
+                    // 插入总表id
+                    sd.setDfReportID(Integer.parseInt(ids));
+                    if (!m.containsKey(sd.getTicketNo())) {
+                        m.put(sd.getTicketNo(), sd);
+                    }
+                }
+            }
+        }
+
+        for (Map.Entry<String, BettingDifference> en : m.entrySet()) {
+            BettingDifference value = en.getValue();
+            SdList.add(value);
+        }
+        return SdList;
+    }
+
+    /**
+     * 开始生成excel，调用总差异的逻辑，这样才能拿到放入excel里面的数据
+     *
+     * @param startTime
+     * @param endTime   void
+     * @创建时间： 2017年4月5日下午6:19:41
+     */
+    public void batchRunReport(Date startTime, Date endTime) throws DaysBaseException {
+        ExcelReport ep = this.returnCountPro();
+        List<CountSale> list = this.difference(startTime, endTime);
+        net.sf.json.JSONArray data = net.sf.json.JSONArray.fromObject(list);
+        ep.setData(data);
+        ep.setCheckAttr("statisticsDate");
+        ep.setColumnNo(0);
+        try {
+            excelutil.replaceData(ep);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * @创建时间： 2017年4月5日下午6:51:15
+     */
+    public void batchRunDetailReport(Date startTime, Date endTime) {
+        ExcelReport ep = this.returnDetailPro();
+        String startDate = DateUtils.format(startTime, "yyyy-MM-dd");
+        String endDate = DateUtils.format(endTime, "yyyy-MM-dd");
+        List<BettingDifference> bettingDifference = this.bettingDifferenceDao.queryDate(startDate, endDate);
+        net.sf.json.JSONArray data = net.sf.json.JSONArray.fromObject(bettingDifference);
+        ep.setData(data);
+        ep.setCheckAttr("ticketNo");
+        ep.setColumnNo(0);
+        try {
+            excelutil.replaceData(ep);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 总差异页面的报表生成方法
+     */
+    private ExcelReport returnCountPro() {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        ep.setTitle(bettingFileName);
+        String fileName = bettingFileName;
+        String date = DateUtils.format(new Date(), "yyyy-MM");
+        ep.setFileName(sbf.append(fileName).append(date).toString());
+        String headers[] = new String[]{
+                "日期", "投注系统销售总笔数", "投注系统销售总金额", "出票系统销售总笔数", "出票系统销售总金额", "线下销量", "销售总额", "投注系统-出票系统(差异总笔数)", "投注系统-出票系统(差异总金额)"};
+        String attrs[] = new String[]{
+                "statisticsDate", "bettingNumber", "bettingAmount", "ticketNumber", "ticketAmount", "offlineVolume", "totalAumone", "numberDifference", "amountDifference"};
+
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        return ep;
+    }
+
+    /**
+     * 明细差异页面的报表生成方法
+     */
+    private ExcelReport returnDetailPro() {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        ep.setTitle(detailFileName);
+        String fileName = detailFileName;
+        String date = DateUtils.format(new Date(), "yyyy-MM");
+        ep.setFileName(sbf.append(fileName).append(date).toString());
+        String headers[] = new String[]{
+                "日期", "编号", "差异金额", "差异类型", "差异产生的具体原因", "是否需要处理", "建议处理意见", "处理人", "预计完成时间", "处理状态"};
+        String attrs[] = new String[]{
+                "dfInitDate", "ticketNo", "dfDiffMoney", "dfType", "dfReason"};
+
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        return ep;
+    }
+
+}

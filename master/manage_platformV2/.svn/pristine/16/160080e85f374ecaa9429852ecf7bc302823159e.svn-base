@@ -1,0 +1,979 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.PlatformFundsDao">
+    <resultMap id="platformFunds" type="PlatformFunds">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="dzDate" property="dzDate"/>
+        <result column="qcye" property="qcye"/>
+        <result column="totalRecharge" property="totalRecharge"/>
+        <result column="recharge" property="recharge"/>
+        <result column="internalDeposit" property="internalDeposit"/>
+        <result column="totalBuyPick" property="totalBuyPick"/>
+        <result column="totalBuyEntrust" property="totalBuyEntrust"/>
+        <result column="totalBuyTrance" property="totalBuyTrance"/>
+        <result column="totalBuyCommon" property="totalBuyCommon"/>
+        <result column="totalBuy" property="totalBuy"/>
+        <result column="totalPrizeAmt" property="totalPrizeAmt"/>
+        <result column="totalWithdraw" property="totalWithdraw"/>
+        <result column="internalExtraction" property="internalExtraction"/>
+        <result column="withdraw" property="withdraw"/>
+        <result column="totalRefund" property="totalRefund"/>
+        <result column="totalRefundWithDraw" property="totalRefundWithDraw"/>
+        <result column="totalRefundTicketFail" property="totalRefundTicketFail"/>
+        <result column="commission" property="commission"/>
+        <result column="coupon" property="coupon"/>
+        <result column="qmye" property="qmye"/>
+        <result column="totalDive" property="totalDive"/>
+        <result column="dealAmt" property="dealAmt"/>
+        <result column="diveAfterDeal" property="diveAfterDeal"/>
+        <result column="totalSumDive" property="totalSumDive"/>
+        <result column="dealStatus" property="dealStatus"/>
+        <result column="createTime" property="createTime"/>
+        <result column="isValid" property="isValid"/>
+        <result column="type" property="type"/>
+
+
+    </resultMap>
+    <resultMap id="fundsRunning" type="PlatformFundsRunning">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="dzDate" property="dzDate"/>
+        <result column="totalUnionAmt" property="totalUnionAmt"/>
+        <result column="totalDaysAmt" property="totalDaysAmt"/>
+        <result column="totalWechatAmt" property="totalWechatAmt"/>
+        <result column="totalAmt" property="totalAmt"/>
+        <result column="totalRunUnionAmt" property="totalRunUnionAmt"/>
+        <result column="totalRunDaysAmt" property="totalRunDaysAmt"/>
+        <result column="totalRunWechatAmt" property="totalRunWechatAmt"/>
+        <result column="totalRunAmt" property="totalRunAmt"/>
+        <result column="totalDive" property="totalDive"/>
+        <result column="dealAmt" property="dealAmt"/>
+        <result column="diveAfterDeal" property="diveAfterDeal"/>
+        <result column="totalSumDive" property="totalSumDive"/>
+        <result column="dealStatus" property="dealStatus"/>
+        <result column="createTime" property="createTime"/>
+        <result column="isValid" property="isValid"/>
+        <result column="insideRecharge" property="insideRecharge"/>
+
+    </resultMap>
+    <select id="findFundsListByPage" resultMap="platformFunds">
+        SELECT * FROM RP_TotalCapitalInfo
+        WHERE isValid=1
+        <if test="(startDate!=null and startDate!='') and (endDate!=null and endDate!='')">
+            AND dzDate BETWEEN #{startDate} AND #{endDate}
+        </if>
+        <if test="status!=-1">
+            AND dealStatus=#{status}
+        </if>
+        and type=#{type}
+        ORDER BY dzDate desc
+    </select>
+
+    <select id="findFundsListByDate" resultMap="platformFunds">
+        SELECT * FROM RP_TotalCapitalInfo
+        WHERE isValid=1
+        <if test="startDate!=null and startDate!=''">
+            AND dzDate=#{startDate}
+        </if>
+        <if test="status!=-1">
+            AND dealStatus=#{status}
+        </if>
+        and type=#{type}
+        ORDER BY dzDate desc
+    </select>
+
+    <select id="findFundsRunningListByPage" resultMap="fundsRunning">
+        SELECT * FROM RP_TotalPayment
+        WHERE isValid=1
+        <if test="(startDate!=null and startDate!='') and (endDate!=null and endDate!='')">
+            AND dzDate BETWEEN #{startDate} AND #{endDate}
+        </if>
+        <if test="status!=-1">
+            AND dealStatus=#{status}
+        </if>
+        ORDER BY dzDate desc
+    </select>
+    <select id="findFundsRunningListByDate" resultMap="fundsRunning">
+        SELECT * FROM RP_TotalPayment
+        WHERE isValid=1
+        <if test="startDate!=null and startDate!=''">
+            AND dzDate = #{startDate}
+        </if>
+        <if test="status!=-1">
+            AND dealStatus=#{status}
+        </if>
+        ORDER BY dzDate desc
+    </select>
+
+    <!--查询某日数据-->
+    <select id="find" resultMap="platformFunds">
+        SELECT * FROM RP_TotalCapitalInfo
+        WHERE isValid=1
+        <if test="dzDate!=null and dzDate!='' ">
+            AND dzDate =#{dzDate}
+        </if>
+
+        <if test="dealStatus!=-1">
+            AND dealStatus=#{dealStatus}
+        </if>
+        <if test="type!=null and type!='' ">
+            and type=#{type}
+        </if>
+
+        ORDER BY dzDate desc
+    </select>
+
+
+    <select id="findMonth" resultMap="platformFunds">
+        SELECT * FROM RP_TotalCapitalInfo
+        WHERE isValid=1
+        <if test="month!=null and month!='' ">
+            AND dzDate like CONCAT(CONCAT(#{month}), '%')
+        </if>
+        <if test="type!=null and type!='' ">
+            and type=#{type}
+        </if>
+        ORDER BY dzDate ASC
+    </select>
+
+    <insert id="insert" parameterType="platformFunds">
+        <![CDATA[
+	INSERT INTO RP_TotalCapitalInfo(
+	id,dzDate,qcye,recharge,internalDeposit,totalRecharge,totalBuyPick,totalBuyEntrust,totalBuyTrance,totalBuyCommon,totalBuy,totalPrizeAmt,withdraw
+	,internalExtraction,totalWithdraw
+	,totalRefund,totalRefundWithDraw,totalRefundTicketFail,commission,coupon,qmye,totalDive,dealAmt,diveAfterDeal,totalSumDive,dealStatus,createTime,isValid,type
+	) VALUES (
+	#{id},#{dzDate},#{qcye},#{recharge},#{internalDeposit},#{totalRecharge},#{totalBuyPick},#{totalBuyEntrust},#{totalBuyTrance},#{totalBuyCommon},#{totalBuy},
+	#{totalPrizeAmt},#{withdraw},#{internalExtraction},#{totalWithdraw},
+	#{totalRefund},#{totalRefundWithDraw},#{totalRefundTicketFail},#{commission},#{coupon},#{qmye},#{totalDive},#{dealAmt},#{diveAfterDeal},#{totalSumDive},#{dealStatus},
+	#{createTime},#{isValid},#{type}
+	)
+        ]]>
+    </insert>
+
+    <update id="update" parameterType="platformFunds">
+        <![CDATA[
+	update RP_TotalCapitalInfo set
+	dzDate=#{dzDate},qcye=#{qcye},recharge=#{recharge},internalDeposit=#{internalDeposit},totalRecharge=#{totalRecharge},
+	totalBuyPick=#{totalBuyPick},totalBuyEntrust=#{totalBuyEntrust},totalBuyTrance=#{totalBuyTrance},totalBuyCommon=#{totalBuyCommon},totalBuy=#{totalBuy},
+	totalPrizeAmt=#{totalPrizeAmt},withdraw=#{withdraw},internalExtraction=#{internalExtraction},totalWithdraw=#{totalWithdraw}
+	,totalRefund=#{totalRefund},totalRefundWithDraw=#{totalRefundWithDraw},totalRefundTicketFail=#{totalRefundTicketFail},#{commission}=commission,#{coupon}=coupon,qmye=#{qmye},totalDive=#{totalDive},dealAmt=#{dealAmt},
+	diveAfterDeal=#{diveAfterDeal},totalSumDive=#{totalSumDive},
+	dealStatus=#{dealStatus},createTime=#{createTime},isValid=#{isValid},type=#{type}
+	WHERE id=#{id}
+        ]]>
+    </update>
+
+    <delete id="deleteList" parameterType="platformFunds">
+        delete from RP_TotalCapitalInfo
+        WHERE id in
+        <foreach collection="list" item="item" index="index" separator="," open="(" close=")">
+            #{item.id}
+        </foreach>
+    </delete>
+
+    <resultMap id="money" type="Double">
+        <id column="money" property="money"/>
+    </resultMap>
+
+    <resultMap id="count" type="Integer">
+        <id column="count" property="count"/>
+    </resultMap>
+    <!--某日期初余额-->
+    <select id="findQcyeByDate" resultMap="money">
+        SELECT sum(ub.funds) as money from DC_UserBalance ub
+        LEFT join DC_UserInfo u on ub.userId=u.userId
+        where ub.isValid=1
+        <if test="type==1">
+            and u.isMerchant!=1
+        </if>
+        <if test="type!=1">
+            and ub.userId=(
+            select cpUserId from MP_MerchantExtend
+            where schemeType=#{type}
+            and type=1
+            )
+            and u.isMerchant=1
+        </if>
+        and ub.sycDate BETWEEN #{0} and #{1}
+    </select>
+
+    <!--&lt;!&ndash;某日期初余额(渠道商户)&ndash;&gt;-->
+    <!--<select id="findActivityQcyeByDate" resultMap="money">-->
+    <!--SELECT sum(funds) as money  from DC_UserBalance ub-->
+    <!--LEFT join DC_UserInfo u on ub.userId=u.userId-->
+    <!--where   ub.isValid=1-->
+    <!--and u.isMerchant=1-->
+    <!--and ub.qcDate BETWEEN #{0} and #{1}-->
+    <!--</select>-->
+
+    <!--获取某日充值金额-->
+    <select id="findRechargeMoney" resultMap="money">
+        SELECT sum(money) as money from DC_UserTransInfo ub
+        LEFT join DC_UserInfo u on ub.userId=u.userId
+        where ub.isValid=1
+        <if test="type==1">
+            and u.isMerchant=0
+        </if>
+        <if test="type!=1">
+            and ub.userId =(
+            select cpUserId from MP_MerchantExtend
+            where schemeType=#{type}
+            and type=1
+            )
+            and u.isMerchant=1
+        </if>
+        and ub.tranType=1
+        and tranChannel in (1,2,3)
+        and ub.tranTime BETWEEN #{1} and #{2}
+    </select>
+
+
+    <select id="findInternalDeposit" resultMap="money">
+        SELECT sum(money) as money from DC_UserTransInfo ub
+        LEFT join DC_UserInfo u on ub.userId=u.userId
+        where ub.isValid=1
+        <if test="type==1">
+            and u.isMerchant=0
+        </if>
+        <if test="type!=1">
+            and ub.userId =(
+            select cpUserId from MP_MerchantExtend
+            where schemeType=#{type}
+            and type=1
+            )
+            and u.isMerchant=1
+        </if>
+        and ub.tranType=1
+        and tranChannel=7
+        and ub.tranTime BETWEEN #{1} and #{2}
+    </select>
+
+    <!--获取某日提现金额-->
+    <select id="findWithDrawMoney" resultMap="money">
+        SELECT sum(money) as money from DC_UserTransInfo ub
+        LEFT join DC_UserInfo u on ub.userId=u.userId
+        where ub.isValid=1
+        <if test="type==1">
+            and u.isMerchant!=1
+        </if>
+        <if test="type!=1">
+            and ub.userId =(
+            select cpUserId from MP_MerchantExtend
+            where schemeType=#{type}
+            and type=1
+            )
+            and u.isMerchant=1
+        </if>
+        and ub.tranType=3
+        and tranChannel=8
+        and ub.tranTime BETWEEN #{1} and #{2}
+    </select>
+
+    <select id="findInternalExtraction" resultMap="money">
+        SELECT sum(money) as money from DC_UserTransInfo ub
+        LEFT join DC_UserInfo u on ub.userId=u.userId
+        where ub.isValid=1
+        <if test="type==1">
+            and u.isMerchant!=1
+        </if>
+        <if test="type!=1">
+            and ub.userId =(
+            select cpUserId from MP_MerchantExtend
+            where schemeType=#{type}
+            and type=1
+            )
+            and u.isMerchant=1
+        </if>
+        and ub.tranType=3
+        and tranChannel=9
+        and ub.tranTime BETWEEN #{1} and #{2}
+    </select>
+    <select id="getActivityRecharge" resultMap="money">
+        SELECT sum(money) as money  from DC_UserTransInfo ut
+        LEFT join DC_UserInfo u on ut.userId=u.userId
+        where   ut.isValid=1
+        and u.isMerchant=1
+        and ut.tranType=1
+        and ut.tranTime BETWEEN #{0} and #{1}
+    </select>
+
+
+    <!--出票退款，提现退款,5：出票失败退款 6：提现失败退款）-->
+
+    <select id="findRefundDrawOrTicket" resultMap="money">
+        SELECT sum(ub.money) as money  from DC_UserTransInfo ub
+        LEFT join DC_UserInfo u on ub.userId=u.userId
+        where   ub.isValid=1
+        <if test="commonOrMerchantNo==1">
+            and u.isMerchant!=1
+        </if>
+        <if test="commonOrMerchantNo!=1">
+            and ub.userId =(
+            select cpUserId from MP_MerchantExtend
+            where schemeType=#{commonOrMerchantNo}
+            and type=1
+            )
+            and u.isMerchant=1
+        </if>
+        and ub.tranType=4
+        and ub.tranChannel=#{1}
+        and ub.tranTime BETWEEN #{2} and #{3}
+
+    </select>
+
+
+    <select id="getMoneyByTypeOrChannel" resultMap="money">
+        SELECT sum(money) as money  from DC_UserTransInfo
+        where   isValid=1
+        and tranType=#{0}
+        and tranTime BETWEEN #{1} and #{2}
+
+    </select>
+
+    <!--委托购彩金额 schemeType:1=正常订单;orderType1=普通订单（非追期）；2：追期订单-->
+    <select id="findBuyTranceOrCommon" resultMap="money">
+        SELECT sum(money) as money  from DC_CP_OrderInfo
+        where   isValid=1
+        and buyWay=1
+            AND schemeType=#{isCommon}
+            and orderType=#{isTrance}
+        and buyTime  BETWEEN #{2} and #{3}
+        and status in(2,3,4)
+         and sycDate=#{4}
+    </select>
+
+
+    <!--获取某日委托购买总金额.正常订单（排除活动订单）-->
+    <select id="findTotalBuyEntrust" resultMap="money">
+       SELECT sum(money) as money  from DC_CP_OrderInfo
+       where   isValid=1
+       and buyWay=1
+       AND schemeType=1
+        and buyTime  BETWEEN #{0} and #{1}
+         and status in(2,3,4)
+          and sycDate=#{2}
+    </select>
+
+
+    <!--获取XX活动委托购买金额-->
+    <select id="findActivityTotalBuyEntrust" resultMap="money">
+        SELECT sum(money) as money  from DC_CP_OrderInfo
+        where   isValid=1
+        and buyWay=1
+        AND schemeType=#{2}
+        and buyTime  BETWEEN #{0} and #{1}
+         and status in(2,3,4)
+          and sycDate=#{3}
+    </select>
+
+    <!--获取301,501,601活动委托购买金额-->
+    <select id="find356TotalBuy" resultMap="money">
+        SELECT sum(money) as money  from DC_CP_OrderInfo
+        where   isValid=1
+        and buyWay=1
+        AND schemeType in (301,601,501)
+        and buyTime  BETWEEN #{0} and #{1}
+        and status in(2,3,4)
+        and sycDate=#{2}
+    </select>
+
+    <!--活动委托购买总额-->
+    <select id="findActivityTotalBuy" resultMap="money">
+        SELECT sum(money) as money  from DC_CP_OrderInfo
+        where   isValid=1
+        and buyWay=1
+        AND schemeType !=1
+        and buyTime  BETWEEN #{0} and #{1}
+         and status in(2,3,4)
+         and sycDate=#{0}
+    </select>
+
+    <!--获取某日2:自己取票购买金额-->
+    <select id="findTotalBuyPick" resultMap="money">
+        SELECT sum(money) as money  from DC_CP_OrderInfo
+        where   isValid=1
+        and buyWay=2
+        and buyTime  BETWEEN #{0} and #{1}
+        and schemeType=#{2}
+        and status in(2,3,4)
+        and sycDate=#{3}
+
+    </select>
+    <!--获取某日派奖金额-->
+    <select id="findPrizeByDate" resultMap="money">
+      SELECT sum(prize) as money  from DC_PrizeInfo ub
+        LEFT join DC_UserInfo u on ub.userId=u.userId
+          where   ub.isValid=1
+        <if test="commonOrMerchantNo==1">
+            and u.isMerchant!=1
+        </if>
+        <if test="commonOrMerchantNo!=1">
+            and ub.userId =(
+            select cpUserId from MP_MerchantExtend
+            where schemeType=#{commonOrMerchantNo}
+            and type=1
+            )
+            and u.isMerchant=1
+        </if>
+          and ub.prizeTime  BETWEEN #{1} and #{2}
+
+    </select>
+
+    <!-- +++++++++++++++++++++++++++++第三方流水对账++++++++++++++++++++++++++++++++++++++++++   -->
+
+
+    <!--查询某日数据-->
+    <select id="findRunning" resultMap="fundsRunning">
+        SELECT * FROM RP_TotalPayment
+        WHERE isValid=1
+        <if test="dzDate!=null and dzDate!='' ">
+            AND dzDate =#{dzDate}
+        </if>
+        ORDER BY dzDate desc
+    </select>
+
+
+    <select id="findMonthRunning" resultMap="fundsRunning">
+        SELECT * FROM RP_TotalPayment
+        WHERE isValid=1
+        <if test="month!=null and month!='' ">
+            AND dzDate like CONCAT(CONCAT(#{month}), '%')
+        </if>
+        ORDER BY dzDate ASC
+    </select>
+    <!--删除数据-->
+    <delete id="deleteRunList" parameterType="com.jy.entity.system.finance.reconciliation.lottery.PlatformFundsRunning">
+        delete from RP_TotalPayment
+        WHERE id in
+        <foreach collection="list" item="item" index="index" separator="," open="(" close=")">
+            #{item.id}
+        </foreach>
+    </delete>
+
+    <!--插入数据-->
+    <insert id="insertRun" parameterType="com.jy.entity.system.finance.reconciliation.lottery.PlatformFundsRunning">
+        <![CDATA[
+	INSERT INTO RP_TotalPayment(
+	id,dzDate,totalUnionAmt,totalDaysAmt,totalWechatAmt,totalAmt,
+	totalRunUnionAmt,totalRunDaysAmt,totalRunWechatAmt
+	,totalRunAmt,totalDive,dealAmt,diveAfterDeal,totalSumDive,dealStatus,createTime,isValid,insideRecharge
+	) VALUES (
+	#{id},#{dzDate},#{totalUnionAmt},#{totalDaysAmt},#{totalWechatAmt},#{totalAmt},
+	#{totalRunUnionAmt},#{totalRunDaysAmt},
+	#{totalRunWechatAmt},#{totalRunAmt},#{totalDive},#{dealAmt},#{diveAfterDeal},#{totalSumDive},#{dealStatus},
+	#{createTime},#{isValid},#{insideRecharge}
+	)
+        ]]>
+    </insert>
+
+    <update id="updateRunning" parameterType="com.jy.entity.system.finance.reconciliation.lottery.PlatformFundsRunning">
+      <![CDATA[
+	UPDATE RP_TotalPayment
+	 set dzDate=#{dzDate},totalUnionAmt=#{totalUnionAmt},totalDaysAmt=#{totalDaysAmt},
+	 totalWechatAmt=#{totalWechatAmt},totalAmt=#{totalAmt},
+	totalRunUnionAmt=#{totalRunUnionAmt},totalRunDaysAmt=#{totalRunDaysAmt},totalRunWechatAmt=#{totalRunWechatAmt}
+	,totalRunAmt=#{totalRunAmt},totalDive=#{totalDive},dealAmt=#{dealAmt},
+	diveAfterDeal=#{diveAfterDeal},totalSumDive=#{totalSumDive},dealStatus=#{dealStatus},
+	createTime=#{createTime},isValid=#{isValid},insideRecharge=#{insideRecharge}
+	where id=#{id}
+        ]]>
+    </update>
+
+
+    <!--投注系统的各渠道充值金额-->
+    <select id="findCpMoneyByType" resultMap="money">
+        SELECT sum(money) as money from DC_UserTransInfo
+        where tranType=1
+        and isValid=1
+        and tranChannel=#{0}
+        and tranTime BETWEEN #{1} and #{2}
+    </select>
+
+
+    <!--投注系统的各渠道记录条数-->
+    <select id="findCpTotalCountByTypeAndDate" resultMap="count">
+        SELECT count(id) as count from DC_UserTransInfo
+        where tranType=1
+        and isValid=1
+        and tranChannel=#{0}
+        and tranTime BETWEEN #{1} and #{2}
+    </select>
+
+
+    <!--第三方的各渠道充值金额-->
+    <select id="findThirdMoneyByType" resultMap="money">
+       SELECT sum(TransMoney) as money from TS_PaymentInfo
+       where  PayWay=#{0}
+       and TradeTime BETWEEN #{1} and #{2}
+    </select>
+
+
+    <!--第三方的各渠道记录条数-->
+    <select id="findThirdCountByTypeAndDate" resultMap="count">
+        SELECT count(TP_ID) as count from TS_PaymentInfo
+        where  PayWay=#{0}
+        and TradeTime BETWEEN #{1} and #{2}
+    </select>
+
+    <!--=========================平台资金差异处理结果以及原因================================ -->
+    <resultMap id="fundsDiveVo" type="com.jy.entity.system.finance.vo.FundsDiveVo">
+        <id column="payNo" property="payNo"/>
+        <id column="payWay" property="payWay"/>
+        <id column="payMoney" property="payMoney"/>
+        <id column="payTime" property="payTime"/>
+        <id column="type" property="type"/>
+        <id column="typeExplain" property="typeExplain"/>
+
+    </resultMap>
+
+    <select id="findDiveVoListBetweenCpAndThird" resultMap="fundsDiveVo">
+
+SELECT
+	payFlowNo as  payNo ,
+	IFNULL(dmoney - tmoney, 0) as payMoney,
+	tranChannel as payWay,
+	tranTime as payTime,
+'流水号相同，金额差' as typeExplain,
+3 as TYPE
+FROM
+	(
+		SELECT
+			payFlowNo,
+			tranChannel,
+			tranTime,
+			sum(money) AS dmoney
+		FROM
+			DC_UserTransInfo
+		WHERE
+			tranTime BETWEEN #{0}
+            AND #{1}
+		AND tranType = 1
+		AND tranChannel IN (1, 2, 3)
+		GROUP BY
+			payFlowNo
+	) AS a
+LEFT JOIN (
+	SELECT
+		PayNo,
+		PayWay,
+		SUM(transMoney) AS tmoney
+	FROM
+		TS_PaymentInfo
+where TradeTime  BETWEEN #{0}
+            AND #{1}
+	GROUP BY
+		PayNo
+) AS b ON a.payFlowNo = b.PayNo
+WHERE
+	a.tranChannel = b.PayWay
+and IFNULL(dmoney - tmoney, 0) != 0
+GROUP BY
+	a.payFlowNo
+
+UNION
+
+SELECT
+
+  payFlowNo as  payNo ,
+	dmoney as payMoney,
+	tranChannel as payWay,
+	tranTime as payTime,
+'彩票系统有，第三方无' as typeExplain,
+1 as TYPE
+FROM
+	(
+		SELECT
+			payFlowNo,
+			tranChannel,
+			tranTime,
+			sum(money) AS dmoney
+		FROM
+			DC_UserTransInfo
+		WHERE
+			tranTime BETWEEN #{0}
+            AND #{1}
+		AND tranType = 1
+		AND tranChannel IN (1, 2, 3)
+		GROUP BY
+			payFlowNo
+	) AS a
+LEFT JOIN (
+	SELECT
+		PayNo,
+		PayWay,
+		SUM(transMoney) AS tmoney
+	FROM
+		TS_PaymentInfo
+WHERE TradeTime  BETWEEN #{0}
+            AND #{1}
+	GROUP BY
+		PayNo
+) AS b ON a.payFlowNo = b.PayNo
+and
+	a.tranChannel = b.PayWay
+ where b.PayNo is null
+GROUP BY
+	a.payFlowNo
+
+UNION
+
+SELECT
+  payFlowNo as  payNo ,
+	dmoney as payMoney,
+	tranChannel as payWay,
+	tranTime as payTime,
+'流水号相同（彩票系统为左表），时间差' as typeExplain,
+4 as TYPE
+
+
+FROM
+	(
+		SELECT
+			payFlowNo,
+			tranChannel,
+			tranTime,
+			sum(money) AS dmoney
+		FROM
+			DC_UserTransInfo
+		WHERE
+			tranTime BETWEEN #{0}
+            AND #{1}
+		AND tranType = 1
+		AND tranChannel IN (1, 2, 3)
+		GROUP BY
+			payFlowNo
+	) AS a
+LEFT JOIN (
+	SELECT
+		PayNo,
+		PayWay,
+		tradeTime,
+		SUM(transMoney) AS tmoney
+	FROM
+		TS_PaymentInfo
+	GROUP BY
+		PayNo
+) AS b ON a.payFlowNo = b.PayNo
+and
+	a.tranChannel = b.PayWay
+ where DATEDIFF(a.tranTime,b.tradeTime)!=0
+GROUP BY
+	a.payFlowNo
+    </select>
+
+
+    <select id="findTotalDealMoney" resultMap="money">
+        SELECT sum(payMoney) as money from (SELECT
+	payFlowNo as  payNo ,
+	IFNULL(dmoney - tmoney, 0) as payMoney,
+	tranChannel as payWay,
+	tranTime as payTime,
+'流水号相同，金额差' as typeExplain,
+3 as TYPE
+FROM
+	(
+		SELECT
+			payFlowNo,
+			tranChannel,
+			tranTime,
+			sum(money) AS dmoney
+		FROM
+			DC_UserTransInfo
+		WHERE
+			tranTime BETWEEN #{0}
+            AND #{1}
+		AND tranType = 1
+		AND tranChannel IN (1, 2, 3)
+		GROUP BY
+			payFlowNo
+	) AS a
+LEFT JOIN (
+	SELECT
+		PayNo,
+		PayWay,
+		SUM(transMoney) AS tmoney
+	FROM
+		TS_PaymentInfo
+where TradeTime  BETWEEN #{0}
+            AND #{1}
+	GROUP BY
+		PayNo
+) AS b ON a.payFlowNo = b.PayNo
+WHERE
+	a.tranChannel = b.PayWay
+and IFNULL(dmoney - tmoney, 0) != 0
+GROUP BY
+	a.payFlowNo
+
+UNION
+
+SELECT
+
+  payFlowNo as  payNo ,
+	dmoney as payMoney,
+	tranChannel as payWay,
+	tranTime as payTime,
+'彩票系统有，第三方无' as typeExplain,
+1 as TYPE
+FROM
+	(
+		SELECT
+			payFlowNo,
+			tranChannel,
+			tranTime,
+			sum(money) AS dmoney
+		FROM
+			DC_UserTransInfo
+		WHERE
+			tranTime BETWEEN #{0}
+            AND #{1}
+		AND tranType = 1
+		AND tranChannel IN (1, 2, 3)
+		GROUP BY
+			payFlowNo
+	) AS a
+LEFT JOIN (
+	SELECT
+		PayNo,
+		PayWay,
+		SUM(transMoney) AS tmoney
+	FROM
+		TS_PaymentInfo
+WHERE TradeTime  BETWEEN #{0}
+            AND #{1}
+	GROUP BY
+		PayNo
+) AS b ON a.payFlowNo = b.PayNo
+and
+	a.tranChannel = b.PayWay
+ where b.PayNo is null
+GROUP BY
+	a.payFlowNo
+
+UNION
+
+SELECT
+  payFlowNo as  payNo ,
+	dmoney as payMoney,
+	tranChannel as payWay,
+	tranTime as payTime,
+'流水号相同（彩票系统为左表），时间差' as typeExplain,
+4 as TYPE
+FROM
+	(
+		SELECT
+			payFlowNo,
+			tranChannel,
+			tranTime,
+			sum(money) AS dmoney
+		FROM
+			DC_UserTransInfo
+		WHERE
+			tranTime BETWEEN #{0}
+            AND #{1}
+		AND tranType = 1
+		AND tranChannel IN (1, 2, 3)
+		GROUP BY
+			payFlowNo
+	) AS a
+LEFT JOIN (
+	SELECT
+		PayNo,
+		PayWay,
+		tradeTime,
+		SUM(transMoney) AS tmoney
+	FROM
+		TS_PaymentInfo
+	GROUP BY
+		PayNo
+) AS b ON a.payFlowNo = b.PayNo
+and
+	a.tranChannel = b.PayWay
+ where DATEDIFF(a.tranTime,b.tradeTime)!=0
+GROUP BY
+	a.payFlowNo
+
+) m
+    </select>
+
+
+    <select id="findCommonFundsDiff" resultMap="platformFunds">
+      SELECT
+	*
+FROM
+	(
+		SELECT
+			a.userId as id,
+			IfNULL(a.qcye, 0) AS qcye,
+			IfNULL(b.totalRecharge, 0) AS totalRecharge,
+			IfNULL(c.totalBuy, 0) AS totalBuy,
+			IfNULL(d.totalPrizeAmt, 0) AS totalPrizeAmt,
+			IfNULL(e.totalWithdraw, 0) AS totalWithdraw,
+			IfNULL(f.totalRefund, 0) AS totalRefund,
+			IfNULL(g.commission, 0) AS commission,
+			IfNULL(h.coupon, 0) AS coupon,
+			IfNULL(i.qmye, 0) AS qmye,
+			qmye - (qcye + IFNULL(totalRecharge,0) - IFNULL(totalBuy,0) + IFNULL(totalPrizeAmt,0) - IFNULL(totalWithdraw,0) + IFNULL(totalRefund,0) + IFNULL(commission,0) + IFNULL(coupon,0)) AS totalDive,
+			1 as TYPE
+		FROM
+			(
+				SELECT
+					u.userId,
+					sum(ub.funds) AS qcye
+				FROM
+					DC_UserInfo u
+				LEFT JOIN DC_UserBalance ub ON ub.userId = u.userId
+				AND ub.isValid = 1
+				AND u.isMerchant = 0
+				AND ub.sycDate =#{0}
+				GROUP BY
+					u.userId
+				ORDER BY
+					u.userId
+			) a
+		LEFT JOIN (
+			SELECT
+				u.userId,
+				sum(ub.money) AS totalRecharge
+			FROM
+			    DC_UserInfo u
+			LEFT JOIN DC_UserTransInfo ub ON u.userId = ub.userId
+			where
+				ub.isValid = 1
+			AND u.isMerchant = 0
+			AND ub.tranType = 1
+			AND ub.tranTime BETWEEN #{0}
+			AND #{1}
+			GROUP BY
+				u.userId
+			ORDER BY
+				u.userId
+		) b ON a.userId = b.userId
+		LEFT JOIN (
+			SELECT
+				cp.userId,
+				sum(cp.money) AS totalBuy
+			FROM
+				DC_CP_OrderInfo cp
+			WHERE
+				isValid = 1
+			AND buyTime BETWEEN #{0}
+			AND #{1}
+			AND STATUS IN (2, 3, 4)
+			AND sycDate =#{2}
+			AND schemeType = 1
+			GROUP BY
+				cp.userId
+			ORDER BY
+				cp.userId
+		) c ON c.userId = a.userId
+		LEFT JOIN (
+			SELECT
+				p.userId,
+				sum(p.prize) AS totalPrizeAmt
+			FROM
+				DC_PrizeInfo p
+			WHERE
+				isValid = 1
+			AND prizeTime BETWEEN #{0}
+			AND #{1}
+			GROUP BY
+				p.userId
+			ORDER BY
+				p.userId
+		) d ON a.userId = d.userId
+		LEFT JOIN (
+			SELECT
+				ub.userId,
+				sum(ub.money) AS totalWithdraw
+			FROM
+				DC_UserTransInfo ub
+			WHERE
+				ub.tranType = 3
+			AND ub.tranTime BETWEEN #{0}
+			AND #{1}
+			GROUP BY
+				ub.userId
+			ORDER BY
+				ub.userId
+		) e ON e.userId = a.userId
+		LEFT JOIN (
+			SELECT
+				ub.userId,
+				sum(ub.money) AS totalRefund
+			FROM
+				DC_UserTransInfo ub
+			WHERE
+				ub.tranType = 4
+			AND ub.tranTime BETWEEN #{0}
+			AND #{1}
+			GROUP BY
+				ub.userId
+			ORDER BY
+				ub.userId
+		) f ON a.userId = f.userId
+		LEFT JOIN (
+			SELECT
+				ub.userId,
+				sum(ub.money) AS commission
+			FROM
+				DC_UserTransInfo ub
+			WHERE
+				ub.tranType = 7
+			AND ub.tranTime BETWEEN #{0}
+			AND #{1}
+			GROUP BY
+				ub.userId
+			ORDER BY
+				ub.userId
+		) g ON g.userId = a.userId
+		LEFT JOIN (
+			SELECT
+				ub.userId,
+				sum(ub.money) AS coupon
+			FROM
+				DC_UserTransInfo ub
+			WHERE
+				ub.tranType = 6
+			AND ub.tranTime BETWEEN #{0}
+			AND #{1}
+			GROUP BY
+				ub.userId
+			ORDER BY
+				ub.userId
+		) h ON a.userId = h.userId
+		LEFT JOIN (
+			SELECT
+				u.userId,
+				sum(ub.funds) AS qmye
+			FROM
+				DC_UserInfo u
+			LEFT JOIN DC_UserBalance ub ON ub.userId = u.userId
+			AND ub.isValid = 1
+			AND u.isMerchant = 0
+			AND ub.sycDate =#{2}
+			GROUP BY
+				u.userId
+			ORDER BY
+				u.userId
+		) i ON i.userId = a.userId
+	) k
+WHERE
+	k.totalDive !=0
+    </select>
+
+
+    <resultMap id="MerchantExtend" type="MerchantExtend">
+        <result column="cpUserId" property="cpUserId"/>
+        <result column="schemeType" property="schemeType"/>
+        <result column="vaildDate" property="vaildDate"/>
+        <result column="merchantName" property="merchantName"/>
+        <result column="createTime" property="createTime"/>
+        <result column="isValid" property="isValid"/>
+    </resultMap>
+    <select id="findValidMerchantList" resultMap="MerchantExtend">
+        SELECT * FROM MP_MerchantExtend
+        WHERE isValid=1
+        and type=1
+    </select>
+</mapper>

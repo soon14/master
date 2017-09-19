@@ -1,0 +1,110 @@
+$(function () {
+    getbaseList();
+});
+
+
+function download1() {
+    var date = $("#beginTime").val();
+    var date1 = $("#endTime").val();
+    JY.Ajax.doRequest("baseForm", jypath + '/backstage/bettingDifference/download', {fileName: date, fileName1: date1});
+
+}
+
+function getbaseList(init) {
+    if (init == 1)$("#baseForm .pageNum").val(1);
+    JY.Model.loading();
+    JY.Ajax.doRequest("baseForm", jypath + '/backstage/bettingDifference/findByPage', null, function (data) {
+        $("#baseTable tbody").empty();
+        var obj = data.obj;
+        var list = obj.list;
+        var results = list.results;
+        var permitBtn = obj.permitBtn;
+        var pageNum = list.pageNum, pageSize = list.pageSize, totalRecord = list.totalRecord;
+        var html = "";
+        if (results != null && results.length > 0) {
+            var leng = (pageNum - 1) * pageSize;//计算序号
+            for (var i = 0; i < results.length; i++) {
+                var l = results[i];
+                html += "<tr>";
+                html += "<td id = 'builDates+" + i + "+ 'class='center '>" + JY.Date.Format(l.statisticsDate, 'yyyy-MM-dd') + "</td>";
+                html += "<td class='center '>" + JY.Object.notEmpty(l.bettingAmount) + "</td>";
+                html += "<td class='center' >" + JY.Object.notEmpty(l.ticketAmount) + "</td>";
+                html += "<td id='" + l.id + "' ondblclick='changeInput(" + l.id + "," + l.offlineVolume + "," + l.totalAumone + ")' class='center'>" + JY.Object.notEmpty(l.offlineVolume) + "</td>";
+                html += "<td class='center '>" + JY.Object.notEmpty(l.totalAumone) + "</td>";
+                html += "<td class='center ' ><a id='' onclick='saleNumberDifference(" + l.id + ",\"" + l.statisticsDate + "\")'>" + JY.Object.notEmpty(l.numberDifference) + "</a></td>";
+                html += "<td class='center '><a id='' onclick='saleNumberDifference(" + l.id + ",\"" + l.statisticsDate + "\")'>" + JY.Object.notEmpty(l.amountDifference) + "</a></td>";
+                html += "</tr>";
+            }
+            $("#baseTable tbody").append(html);
+            JY.Page.setPage("baseForm", "pageing", pageSize, pageNum, totalRecord, "getbaseList");
+        } else {
+            html += "<tr><td colspan='10' class='center'>没有相关数据</td></tr>";
+            $("#baseTable tbody").append(html);
+            $("#pageing ul").empty();//清空分页
+        }
+
+        JY.Model.loadingClose();
+    });
+}
+
+
+function saleNumberDifference(ids, date) {
+    var builDate = date;
+    var index = jeBox.open({
+        cell: "jbx",
+        padding: "0",
+        title: "销售差异明细",
+        maxBtn: true,
+        area: ["80%", "80%"],
+        type: 2,
+        maskClose: true,
+        content: "buillIndex?billDate=" + builDate + "&ids=" + ids,
+        button: [{name: '取消'},
+        ],
+    });
+}
+
+
+$('#resetData').bind('click', function () {
+    var index = jeBox.open({
+        cell: "jbx",
+        padding: "0",
+        title: "报表数据重新统计",
+        maxBtn: true,
+        area: ["40%", "80%"],
+        type: 2,
+        maskClose: true,
+        content: "resetData",
+        button: [{name: '取消'},
+        ],
+    });
+})
+
+
+function changeInput(id, offline, totalAumone) {
+    var offlineVolume = offline != null ? offline : 0;
+    var html = "<input class='date-picker' id='edit' onblur='edit(" + id + "," + totalAumone + ")' type='text' value='" + offlineVolume + "'/>"
+    $("#" + id).html(html).find('#edit').focus();
+}
+
+function edit(id, totalAumone) {
+    var offline = $("#edit").val() != 'null' ? $("#edit").val() : 0;
+    checknum(offline);
+    $("#edit").parent().html(offline);
+    $.ajax({
+        url: jypath + '/backstage/bettingDifference/countAumone',
+        type: 'POST',
+        data: 'id=' + id + '&offlineVolume=' + offline + '&totalAumone=' + totalAumone,
+        dataType: 'json'
+    })
+}
+
+function checknum(obj) {
+    if (/^(\+|-)?\d+($|\.\d+$)/.test(obj)) {
+        return true;
+    } else {
+        alert("请输入实数");
+        obj.focus();
+        return false;
+    }
+}

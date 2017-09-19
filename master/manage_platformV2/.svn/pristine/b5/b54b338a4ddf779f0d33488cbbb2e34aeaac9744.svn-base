@@ -1,0 +1,21 @@
+package com.jy.repository.system.channels;
+
+import com.jy.entity.system.channels.CpVoucherInfo;
+import com.jy.repository.base.BaseDao;
+import com.jy.repository.base.JYBatis;
+import org.nutz.mvc.annotation.Param;
+
+import java.util.List;
+
+
+@JYBatis
+public interface CpVoucherInfoDao extends BaseDao<CpVoucherInfo> {
+
+	/**
+	 * 兑换券接口
+	 * @param cpVoucherInfo
+     */
+	int voucherSave(@Param("list")List<CpVoucherInfo> cpVoucherInfo);
+
+	void voucherClean(@Param("date")String date);
+}

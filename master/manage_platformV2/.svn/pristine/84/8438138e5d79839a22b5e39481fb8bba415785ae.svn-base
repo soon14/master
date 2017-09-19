@@ -1,0 +1,261 @@
+package com.jy.service.impl.system.channels;
+
+import com.jy.mybatis.Page;
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.channels.Prepayment;
+import com.jy.repository.system.channels.BaseCommissionDao;
+import com.jy.repository.system.channels.MerchantDao;
+import com.jy.repository.system.channels.PrepaymentDao;
+import com.jy.repository.system.finance.statistics.lottery.SalesCommissionReportDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.system.channels.PrepaymentService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 渠道商户预收款
+ */
+@Service("PrePayMentService")
+public class PrepaymentServiceImpl extends BaseServiceImp<Prepayment> implements PrepaymentService {
+
+    @Autowired
+    private PrepaymentDao prepaymentDao;
+    @Autowired
+    private MerchantDao merchantDao;
+    @Autowired
+    private SalesCommissionReportDao dao;
+    @Autowired
+    private BaseCommissionDao bcDao;
+
+    public Page findByPages(Map map,Page page){
+        page.setResults(prepaymentDao.findByPage(map));
+        return page;
+    }
+
+    /**
+     * 查询一级商户信息
+     *
+     */
+    public List<Prepayment> findMerchants(){
+        return prepaymentDao.findMerchants();
+    }
+
+
+    /**
+     * 查询预存款商户
+     *
+     */
+    public List<Prepayment> findMerchantPre(){
+        return prepaymentDao.findMerchantPre();
+    };
+
+    /**
+     *  同步预收款信息
+     *
+     */
+    public Integer synchroPrepayment(List<Prepayment> list){
+        /** 同步预收款信息.线上*/
+        for(Prepayment page:list){
+            page.setDataType(1);
+            page.setBalance(0.00);
+            page.setPayMoney(0.00);
+            page.setWarningMoney(0.00);
+        }
+        prepaymentDao.synchroPrepayment(list);
+        for(Prepayment page:list){
+            page.setDataType(2);
+        }
+        /** 同步预收款信息.线下*/
+        prepaymentDao.synchroPrepayment(list);
+        return 1;
+    }
+
+    /**
+     *  同步预收款信息.线上
+     *
+     */
+    public Integer synchroOnline(List<Prepayment> list){
+        return prepaymentDao.synchroOnline(list);
+    };
+
+
+    /**
+     * 统计
+     *
+     */
+    public Integer counts(Map map){
+        return prepaymentDao.counts(map);
+    };
+
+    /**
+     * 修改商户的预收款的状态
+     *
+     * @param prepayment
+     */
+    public void updateBC(Prepayment prepayment){
+        prepaymentDao.updateBC(prepayment);
+    }
+    /**
+     * 更新预付款信息
+     *
+     */
+    public void updatePre() throws  Exception{
+        List<Merchant> merchantList=merchantDao.findMerchantListPre();
+        int limit = 1000;
+        int size = merchantList.size()/limit;
+        if (merchantList.size() % limit > 0) {// 分包，一千条为一包
+            size++;
+        }
+        List<Prepayment> scrList = new ArrayList<Prepayment>();
+        for(int i=0;i<size;i++) {
+            for (Merchant m : merchantList) {
+                Prepayment scr = new Prepayment();
+                scr.setMerchantId(m.getmId());
+                List<Merchant> list;// 获取对应商户的下线id
+                list = _getChildListByMerchant(m.getmId());
+                Double sumSales = 0.0;
+                List idListParamOne = new ArrayList();
+                List idListParamTwo = new ArrayList();
+                List idListParamThree = new ArrayList();
+                List yjQdList = new ArrayList();
+                List yjMarkeList = new ArrayList();
+                List ejQdList = new ArrayList();
+                List ejMarkeList = new ArrayList();
+                List sjQdList = new ArrayList();
+                List sjMarkeList = new ArrayList();
+
+                if (m.getmLevel() == 1) {
+                    idListParamOne.add(m.getmId());
+                    idListParamTwo.add(m.getmCpUserId());
+                    ejQdList = findQdIdList(idListParamOne);//二级渠道用户idList
+                    yjMarkeList = findMarketIdList(idListParamTwo);//一级标签idList
+                    if(ejQdList.size()>0) {
+                        sjQdList = findChildQdIdList(ejQdList);//三渠道用户idList
+                        ejMarkeList = findMarketIdList(ejQdList);//二级标签idList
+                        if (ejMarkeList.size() > 0) {
+                            sjMarkeList = findMarketIdList(sjQdList);//三级标签idList
+                        }
+                    }
+                    idListParamThree.addAll(ejQdList);//二级渠道用户idList
+                    idListParamThree.addAll(yjMarkeList); //一级标签idList
+                    idListParamThree.addAll(sjQdList);//三渠道用户idList
+                    idListParamThree.addAll(ejMarkeList);//二级标签idList
+                    idListParamThree.addAll(sjMarkeList);//三级标签idList
+                    if (idListParamThree.size() > 0) {
+                        sumSales = sumSales(idListParamThree)+sumSalesTz(idListParamThree);// 总销售额
+                    }
+                } else if (m.getmLevel() == 2) {
+                    idListParamOne.add(m.getmId());
+                    idListParamTwo.add(m.getmCpUserId());
+                    sjQdList = findQdIdList(idListParamOne);//二级子渠道用户idList
+                    ejMarkeList = findMarketIdList(idListParamTwo);//二级标签idList
+                    if(sjQdList.size()>0){
+                        sjMarkeList = findMarketIdList(sjQdList);//三级标签idList
+                    }
+                    //二级渠道总销售额
+                    idListParamThree.addAll(sjQdList);
+                    idListParamThree.addAll(ejMarkeList);
+                    idListParamThree.addAll(sjMarkeList);
+                    if(idListParamThree.size()>0){
+                        sumSales = sumSales(idListParamThree)+sumSalesTz(idListParamThree);// 总销售额
+                    }
+                } else {
+                    idListParamTwo.add(m.getmCpUserId());
+                    sjMarkeList = findMarketIdList(idListParamTwo);//三级标签idList
+                    idListParamThree.addAll(sjMarkeList);
+                    if(idListParamThree.size()>0){
+                        sumSales = sumSales(idListParamThree)+sumSalesTz(idListParamThree);// 总销售额
+                    }
+                }
+                if (sumSales == null) {
+                    sumSales = 0.0;
+                }
+                scr.setBalance(sumSales);
+                scrList.add(scr);
+            }
+        }
+        prepaymentDao.updatePre(scrList);
+    }
+
+    /**
+     * 获取该渠道商户发展的子渠道商户
+     *
+     * @param parentMerchantId
+     * @return
+     */
+    private List<Merchant> _getChildListByMerchant(Integer parentMerchantId) {
+        List<Merchant> list=new ArrayList<>();
+        list=merchantDao.findByParentMerchantId(parentMerchantId);
+        return  list;
+    }
+
+    /**
+     * 1级子渠道idList
+     *
+     * @param pareIdList
+     * @param pareIdList
+     * @return
+     */
+    public List findQdIdList(List pareIdList) throws Exception{
+        Map map = new HashMap();
+        map.put("list",pareIdList);
+        List idList = dao.findQdIdList(map);
+        return idList;
+    }
+
+    /**
+     * 要统计销售额的标签idList
+     *
+     * @param pareMarketIdList
+     * @return
+     */
+    public List findMarketIdList(List pareMarketIdList) throws Exception{
+        Map map = new HashMap();
+        map.put("list",pareMarketIdList);
+        List idList = dao.findMarketIdListPre(map);
+        return idList;
+    }
+
+    /**
+     * 2级子渠道idList
+     * @param pareIdList
+     * @return
+     */
+    public List findChildQdIdList(List pareIdList) throws Exception{
+        Map map = new HashMap();
+        map.put("list",pareIdList);
+        List idList = dao.findChildQdIdList(map);
+        return idList;
+    }
+
+    /**
+     * 统计线上销售额
+     *
+     * @param marketIdList
+     * @return
+     */
+    public Double sumSales(List marketIdList) throws Exception{
+        Map map = new HashMap();
+        map.put("list",marketIdList);
+        Double sales = dao.sumSalesPre(map);
+        return sales;
+    }
+    /**
+     * 统计线下销售额
+     *
+     * @param marketIdList
+     * @return
+     */
+    public Double sumSalesTz(List marketIdList) throws Exception{
+        Map map = new HashMap();
+        map.put("list",marketIdList);
+        Double sales = dao.sumSalesPreTz(map);
+        return sales;
+    }
+
+}

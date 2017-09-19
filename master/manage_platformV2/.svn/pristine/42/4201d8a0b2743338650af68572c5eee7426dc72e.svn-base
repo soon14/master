@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.CpVoucherInfoDao">
+    <resultMap id="CpVoucherInfo" type="CpVoucherInfo">
+		<result column="BatchNo" property="batchNo"/>
+		<result column="SchemeID" property="schemeID"/>
+		<result column="UsedDate" property="usedDate"/>
+		<result column="UsedMachine" property="usedMachine"/>
+		<result column="UserID" property="userID"/>
+		<result column="VEnd" property="vEnd"/>
+		<result column="VStart" property="vStart"/>
+		<result column="VMoney" property="vMoney"/>
+		<result column="VStatus" property="vStatus"/>
+		<result column="VRecordUser" property="vRecordUser"/>
+		<result column="VRecordDate" property="vRecordDate"/>
+		<result column="VNo" property="vNo"/>
+		<result column="SycDate" property="sycDate"/>
+    </resultMap>
+
+	<!--兑换券信息导入 -->
+	<insert id="voucherSave" parameterType="java.util.List">
+		REPLACE INTO DC_VoucherInfo(
+		BatchNo,
+		SchemeID,
+		UsedDate,
+		UsedMachine,
+		UserID,
+		VEnd,
+		VStart,
+		VMoney,
+		VStatus,
+		VRecordUser,
+		VRecordDate,
+		VNo,
+		buyWay,
+		SycDate
+		) VALUES
+		<foreach collection="list" item="item" index="index"
+				 separator=",">
+			(#{item.batchNo},
+			#{item.schemeID},
+			#{item.usedDate},
+			#{item.usedMachine},
+			#{item.userID},
+			#{item.vEnd},
+			#{item.vStart},
+			#{item.vMoney},
+			#{item.vStatus},
+			#{item.vRecordUser},
+			#{item.vRecordDate},
+			#{item.vNo},
+			#{item.buyWay},
+			#{item.sycDate})
+		</foreach>
+	</insert>
+
+	<!--清空兑换券表-->
+	<delete id="voucherClean" >
+		DELETE FROM DC_VoucherInfo
+	</delete>
+
+    
+</mapper>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.MerchantExtendDao">
+    <resultMap id="MerchantExtend" type="MerchantExtend">
+		<id column="id"  property="id"/>
+		<result column="cpUserId" property="cpUserId"/>
+		<result column="schemeType" property="schemeType"/>
+		<result column="createTime" property="createTime"/>
+    </resultMap>
+
+	<!--商户扩展信息导入 -->
+	<insert id="save" parameterType="java.util.List">
+		REPLACE INTO MP_MerchantExtend(
+		cpUserId,
+		schemeType,
+		createTime
+		) VALUES
+		<foreach collection="list" item="item" index="index"
+				 separator=",">
+			(#{item.cpUserId},#{item.schemeType},#{item.createTime})
+		</foreach>
+	</insert>
+	<!--清空商户扩展信息表-->
+	<delete id="clean" >
+		DELETE FROM MP_MerchantExtend
+	</delete>
+</mapper>

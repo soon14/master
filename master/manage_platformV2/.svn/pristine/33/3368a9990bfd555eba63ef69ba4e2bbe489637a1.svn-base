@@ -1,0 +1,89 @@
+package com.jy.process.impl.system.request;
+
+import com.alibaba.fastjson.JSONArray;
+import com.jy.common.utils.DateUtils;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.entity.system.finance.reconciliation.lottery.NewTicketInfo;
+import com.jy.from.system.request.NewTicketInfoForm;
+import com.jy.from.system.request.RequestPageInfoForm;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.system.request.NewTicketInfoProcess;
+import com.jy.service.system.finance.reconciliation.lottery.NewTicketService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Created by lijunke on 2017/6/2.
+ */
+@Service("newTicketInfoProcess")
+public class NewTicketInfoProcessImpl extends ApiRequestProcessImpl<NewTicketInfoForm> implements NewTicketInfoProcess {
+
+
+    @Value("${newTicket.info}")
+    private String newTicketPath;
+
+    //同步数据错误次数
+    private static int errorCount = 0;
+
+    @Autowired
+    private NewTicketService newTicketService;
+
+    @Autowired
+    protected JobTaskStatisticsService jobTaskServiice;
+
+
+    @Override
+    public void synchronizeNewTicketData(RequestParamInfoForm infoForm) throws Exception {
+        int saveNum = 0;//入库数量
+        int interfaceNum = 0;//接口数量
+        try {
+            List<JSONArray> list = super.sendRequest(new RequestPageInfoForm<NewTicketInfoForm>(), infoForm, this.newTicketPath);
+            if (list.size() <= 0) {
+                super.LOGGER.error("新出票接口未返回任何数据！");
+                return;
+            }
+            this.DeleteByDate(infoForm);
+            for (JSONArray jsonArray : list) {
+                //所有分页数据
+                List<NewTicketInfoForm> ticket = JSONArray.parseArray(jsonArray.toString(), NewTicketInfoForm.class);
+                interfaceNum += ticket.size();
+                //分批保存
+                int num = this.transforPojoSave(ticket);
+                saveNum += num;
+            }
+
+            JobTaskStatistics jobTaskStatistics = new JobTaskStatistics();
+            jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));
+            jobTaskStatistics.setJobName("synchronizationNewTicketInfo");
+            jobTaskStatistics.setInterfaceNumber(interfaceNum);
+            jobTaskStatistics.setStorageNumber(saveNum);
+            jobTaskServiice.insertJobTaskStatistics(jobTaskStatistics);
+
+        } catch (Exception e) {
+            errorCount++;
+            if (errorCount < 4) {//小于4重新跑批
+                super.LOGGER.error("新出票接口同步数据失败,重试次数:" + errorCount, e.getCause());
+                Thread.sleep(2000L);
+                this.synchronizeNewTicketData(infoForm);
+            } else {
+                super.LOGGER.error("新出票接口同步数据" + errorCount + "次都失败，请查明原因，手动同步", e.getCause());
+            }
+        }
+    }
+
+    private void DeleteByDate(RequestParamInfoForm infoForm) {
+        NewTicketInfo newTicketIno = new NewTicketInfo();
+        Date dateQuery = infoForm.getQueryTime() == null ? DateUtils.parseDate(new Date()): DateUtils.parseDate(infoForm.getQueryTime());
+        newTicketIno.setTicketTime(dateQuery);
+        newTicketService.delete(newTicketIno);
+    }
+
+    public int transforPojoSave(List<NewTicketInfoForm> ticket) {
+        return this.newTicketService.transforPojoSave(ticket);
+    }
+}

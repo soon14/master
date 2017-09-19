@@ -1,0 +1,22 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-war" name="quartz:war exploded">
+    <output-path>$PROJECT_DIR$/out/artifacts/quartz_war_exploded</output-path>
+    <root id="root">
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="classes">
+          <element id="module-output" name="quartz" />
+          <element id="module-output" name="dao" />
+          <element id="module-output" name="service" />
+          <element id="module-output" name="common" />
+          <element id="module-output" name="pojo" />
+          <element id="module-output" name="process" />
+          <element id="module-output" name="vo" />
+        </element>
+        <element id="directory" name="lib">
+          <element id="library" level="module" name="jsch-0.1.42.jar" module-name="quartz" />
+        </element>
+      </element>
+      <element id="javaee-facet-resources" facet="quartz/web/Web" />
+    </root>
+  </artifact>
+</component>

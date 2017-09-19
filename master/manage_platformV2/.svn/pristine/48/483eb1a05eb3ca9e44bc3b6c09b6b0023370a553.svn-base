@@ -1,0 +1,73 @@
+$(function () {
+	//下拉框
+	JY.Dict.setSelect("selectisValid", "isValid", 2, "全部");
+	getbaseList();
+	//增加回车事件
+	$("#baseForm").keydown(function (e) {
+		keycode = e.which || e.keyCode;
+		if (keycode == 13) {
+			search();
+		}
+	});
+});
+
+
+
+	function getbaseList(init) {
+		if (init == 1)$("#baseForm .pageNum").val(1);
+		JY.Model.loading();
+		JY.Ajax.doRequest("baseForm", jypath + '/statistics/qrCodeDailyReport/findByPage', null, function (data) {
+			$("#baseTable tbody").empty();
+			var obj = data.obj;
+			var list = obj.list;
+			var results = list.results;
+			var permitBtn = obj.permitBtn;
+			var pageNum = list.pageNum, pageSize = list.pageSize, totalRecord = list.totalRecord;
+			var html = "";
+			if (results != null && results.length > 0) {
+				var leng = (pageNum - 1) * pageSize;//计算序号
+				for (var i = 0; i < results.length; i++) {
+					var l = results[i];
+					html += "<tr>";
+					html += "<td class='center hidden-480'  >" + JY.Object.notEmpty(l.batchId)
+							+"<br/>"
+						+"("+JY.Date.Format(l.batchStartTime,'yyyy-MM-dd mm:hh:ss')
+						+"<br/>"
+						+"~~"+JY.Date.Format(l.batchEndTime,'yyyy-MM-dd mm:hh:ss')+")"+ "</td>";
+					html += "<td class='center hidden-480''>" +JY.Date.Format(l.date,'yyyy-MM-dd')+ "</td>";
+					html += "<td class='center hidden-480' >" + JY.Object.notEmpty(l.startNum) + "</td>";
+					html += "<td class='center hidden-480'>" + JY.Object.notEmpty(l.saleMoney) + "</td>";
+					html += "<td class='center hidden-480'>" + JY.Object.notEmpty(l.diffNum) + "</td>";
+					html += "<td class='center hidden-480'>" + JY.Object.notEmpty(l.endNum) + "</td>";
+					// html+=JY.Tags.setFunction(l.accountId,permitBtn);
+					html += "</tr>";
+				}
+				$("#baseTable tbody").append(html);
+				JY.Page.setPage("baseForm", "pageing", pageSize, pageNum, totalRecord, "getbaseList");
+			} else {
+				html += "<tr><td colspan='10' class='center'>没有相关数据</td></tr>";
+				$("#baseTable tbody").append(html);
+				$("#pageing ul").empty();//清空分页
+			}
+
+			JY.Model.loadingClose();
+		});
+	}
+
+$('#resetData').bind('click', function() {
+	var index = jeBox.open({
+		cell:"jbx",
+		padding:"0",
+		title:"报表数据重新统计",
+		maxBtn:true,
+		area:["40%","80%"],
+		type:2,
+		maskClose:true,
+		content:"resetData",
+		button: [ {name: '取消'},
+		],
+	});
+})
+function exportReport(url){
+	window.location.href=url+"?date="+$('#beginTime').val();
+}

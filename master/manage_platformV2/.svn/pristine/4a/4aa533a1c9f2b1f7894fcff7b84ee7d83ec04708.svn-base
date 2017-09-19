@@ -1,0 +1,54 @@
+package com.jy.task.job.request.lottery;
+
+
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.SpringWebContextUtil;
+import com.jy.process.impl.system.request.lottery.TaskPrizeProcessImpl;
+import com.jy.task.job.request.base.BaseTask;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.springframework.context.ApplicationContext;
+
+import java.util.List;
+
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+public class PrizeInfoJob extends BaseTask implements Job {
+
+    public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+        saveData();
+    }
+
+    @Override
+    public void saveData() {
+        log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " 同步用户派奖开始运行");
+        ApplicationContext ac = SpringWebContextUtil.getApplicationContext();
+        TaskPrizeProcessImpl process = (TaskPrizeProcessImpl) ac.getBean("taskPrizeProcess");
+
+        try {
+            String queryTime = super.getParam()[2];
+
+            if (!"default".equals(queryTime)) {
+                if (queryTime.contains("-")) {
+                    String[] byDate = queryTime.split("-");
+                    List<String> strings = DateUtils.findDatesFormat(byDate[0], byDate[1]);
+                    for (String string : strings) {
+                        process.saveTaskPrizeInfoList(string);
+                    }
+                } else {
+                    process.saveTaskPrizeInfoList(queryTime);
+                }
+            } else {
+                queryTime = DateUtils.getDate("yyyyMMdd");
+                process.saveTaskPrizeInfoList(queryTime);
+            }
+        } catch (Exception e) {
+            log.error("同步用户派奖JOB失败！", e);
+            e.printStackTrace();
+        }
+        log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " 同步用户派奖结束");
+    }
+}

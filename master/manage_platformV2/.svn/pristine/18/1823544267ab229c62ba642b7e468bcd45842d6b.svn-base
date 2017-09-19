@@ -1,0 +1,91 @@
+package com.jy.process.impl.system.request;
+
+
+import com.alibaba.fastjson.JSONArray;
+import com.jy.common.utils.DateUtils;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.from.system.request.OrderInfoForm;
+import com.jy.from.system.request.RequestPageInfoForm;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.system.request.TranceRequestProcess;
+import com.jy.service.system.channels.CpOrderInfoService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * Created by Matthew on 2017/4/26.
+ */
+@Service("tranceRequestProcess")
+public class TranceRequestProcessImpl extends ApiRequestProcessImpl<OrderInfoForm> implements TranceRequestProcess {
+
+
+    @Autowired
+    protected CpOrderInfoService cpOrderInfoService;
+    @Autowired
+    private JobTaskStatisticsService jobTaskService;
+
+    @Value("${trance.into}")
+    private String trancePath;
+    //同步数据重连次数
+    private static int errorCount=0;
+
+    @Override
+    public void synchronizeTranceData(RequestParamInfoForm infoForm) throws Exception {
+        try {
+            List<JSONArray> list = super.sendRequest(new RequestPageInfoForm<OrderInfoForm>(), infoForm,this.trancePath);
+            if(list.size() < 0) {
+                super.LOGGER.info("追期明细接口未返回任何数据！");
+                return;
+            }
+            //先删除要查询的数据
+            if("true".equals(infoForm.getQueryAll())){
+                cpOrderInfoService.tranceClean(null,String.valueOf(infoForm.getType()));
+            }else{
+                String date=DateUtils.getSpecifiedDayBefore(infoForm.getQueryTime(),1);
+                if(infoForm.getType()==1){//type为1是期初，
+                    date=infoForm.getQueryTime();
+                }
+            int count=cpOrderInfoService.findByTypeAndTime(date,String.valueOf(infoForm.getType()));
+            if(count>0){
+                cpOrderInfoService.tranceClean(date,String.valueOf(infoForm.getType()));
+            }
+            }
+            int saveNum=0;//入库数量
+            int interfaceNum=0;//接口数量
+            for (JSONArray jsonArray : list) {//所有页数的数据
+                if (jsonArray.size()>0){
+                    List<OrderInfoForm> TranceList = JSONArray.parseArray(jsonArray.toString(), OrderInfoForm.class);
+                    interfaceNum+=TranceList.size();
+                    saveNum+=this.TranceforPojoSave(TranceList);//分页保存
+                }
+            }
+            //保存job日志
+            JobTaskStatistics jobTaskStatistics=new JobTaskStatistics();
+            jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));
+            jobTaskStatistics.setJobName("TranceInfoTask-"+infoForm.getType());
+            jobTaskStatistics.setInterfaceNumber(interfaceNum);
+            jobTaskStatistics.setStorageNumber(saveNum);
+            jobTaskService.insertJobTaskStatistics(jobTaskStatistics);
+        } catch (Exception e) {
+            errorCount++;
+            if(errorCount<4){//小于4重新跑批
+                super.LOGGER.info("追期明细同步数据失败,连接次数:"+errorCount);
+                e.printStackTrace();
+                Thread.sleep(2000L);
+                this.synchronizeTranceData(infoForm);
+            }else{
+                super.LOGGER.info("追期明细接口同步数据"+errorCount+"次都失败，请查明原因，手动同步");
+                e.printStackTrace();
+            }
+
+        }
+    }
+    public int TranceforPojoSave(List<OrderInfoForm> listAll) throws Exception {
+        return cpOrderInfoService.tranceSave(listAll);
+    }
+
+}

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.game.DiamondBalanceDao">
+    <resultMap id="DiamondBalance" type="DiamondBalance">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="date"  property="date"/>
+        <result column="qcDiamond"  property="qcDiamond"/>
+        <result column="qcMoney"  property="qcMoney"/>
+        <result column="addDiamond"  property="addDiamond"/>
+        <result column="addMoney"  property="addMoney"/>
+        <result column="averageDiamond"  property="averageDiamond"/>
+        <result column="consumeDiamond"  property="consumeDiamond"/>
+        <result column="addDiamondToMoney"  property="addDiamondToMoney"/>
+        <result column="qmDiamond"  property="qmDiamond"/>
+        <result column="qmMoney"  property="qmMoney"/>
+        <result column="qmAverageDiamond"  property="qmAverageDiamond"/>
+    </resultMap>
+
+
+    <resultMap id="money" type="Double">
+        <id column="money"  property="money"/>
+    </resultMap>
+    <resultMap id="count" type="Integer">
+        <id column="count"  property="count"/>
+    </resultMap>
+
+
+    <select id="findByPage" resultMap="DiamondBalance">
+        SELECT * FROM RT_GM_DiamondBalance
+        WHERE 1=1
+        <if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')" >
+          and   date  BETWEEN #{param.beginTime} and #{param.endTime}
+        </if>
+        ORDER BY date desc
+    </select>
+
+
+
+    <insert id="insert"  parameterType="DiamondBalance">
+        <![CDATA[
+	INSERT INTO RT_GM_DiamondBalance(
+	id,date,qcDiamond,qcMoney,addDiamond,addMoney,consumeDiamond,averageDiamond
+	,addDiamondToMoney,qmDiamond,qmMoney,qmAverageDiamond
+	) VALUES (
+	#{id},#{date},#{qcDiamond},#{qcMoney},#{addDiamond},#{addMoney},#{consumeDiamond},
+	#{averageDiamond},
+	#{addDiamondToMoney},#{qmDiamond},#{qmMoney},#{qmAverageDiamond}
+	)
+	]]>
+    </insert>
+
+    <update id="update"  parameterType="DiamondBalance">
+        <![CDATA[
+	update RT_GM_DiamondBalance set
+	date=#{date},qcDiamond=#{qcDiamond},qcMoney=#{qcMoney},
+	addDiamond=#{addDiamond},addMoney=#{addMoney},consumeDiamond=#{consumeDiamond},
+	averageDiamond=#{averageDiamond}
+	,addDiamondToMoney=#{addDiamondToMoney},qmDiamond=#{qmDiamond},qmMoney=#{qmMoney},qmAverageDiamond=#{qmAverageDiamond},
+	WHERE id=#{id}
+	]]>
+    </update>
+
+    <delete id="deleteList" parameterType="DiamondBalance">
+        delete from RT_GM_DiamondBalance
+        WHERE id  in
+        <foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+            #{item.id}
+        </foreach>
+    </delete>
+
+
+    <select id="findIsExitByDate"  resultMap="DiamondBalance" parameterType="DiamondBalance">
+        SELECT t.* FROM RT_GM_DiamondBalance t
+        <where>
+            t.date = #{0}
+        </where>
+        ORDER BY t.date desc
+    </select>
+
+    <select id="findQcDiamondBetweenDate"  resultMap="count" >
+        select sum(DiamondBalance) as count
+        from DC_GM_UserBalance
+        <where>
+            QcDate BETWEEN #{0} and #{1}
+        </where>
+    </select>
+
+
+
+    <select id="findMonth"  resultMap="DiamondBalance" >
+        SELECT t.*   FROM RT_GM_DiamondBalance t
+        <where>
+            t.date LIKE '%${month}%'
+        </where>
+        ORDER by t.date ASC
+    </select>
+
+<!--消耗钻石-->
+    <select id="findConsumeDiamondBetweenDate"  resultMap="money" >
+        <![CDATA[ select sum(-1*value_diamonds) as money
+		from DC_GM_UserTransInfo
+		where trans_time between #{0} and #{1}
+        and trans_status=1
+            and trans_type  =  1
+            AND value_diamonds <0
+            and batch_id = (SELECT batch_id
+	    FROM DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_status=1
+            and trans_type  =  1
+            AND value_diamonds <0
+        ORDER BY trans_id desc LIMIT 0,1)
+
+]]>
+    </select>
+
+<!--充值钻石数-->
+    <select id="findAddDiamondBetweenDate"  resultMap="money" >
+        select sum(value_diamonds) as money
+        from DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_status=1
+        and trans_type  =  1
+        AND value_diamonds >0
+        and batch_id = (SELECT batch_id
+        FROM DC_GM_UserTransInfo
+         where trans_time between #{0} and #{1}
+        and trans_status=1
+        and trans_type  =  1
+        AND value_diamonds >0
+        ORDER BY trans_id desc LIMIT 0,1)
+
+
+    </select>
+
+
+
+
+</mapper>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.commom.UserBalanceDao">
+    <resultMap id="userBalance" type="UserBalancePO">
+    </resultMap>
+
+    <insert id="save">
+        LOAD DATA LOCAL INFILE #{fileName}
+        into table DC_UserBalance  character set utf8mb4 lines terminated by "\r\n" IGNORE 3 LINES
+        (UserId,funds,transTime) SET sycDate=#{sycDate}
+    </insert>
+    <delete id="deleteByAll" parameterType="String">
+        DELETE  FROM  DC_UserBalance WHERE DATE_FORMAT(sycDate,'%Y%m%d') = #{sycDate}
+    </delete>
+</mapper>

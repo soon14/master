@@ -1,0 +1,125 @@
+package com.jy.common.utils.excel;
+import net.sf.json.JSONArray;
+
+/** 
+ * @文件名:excelReport.java 
+ * @功能描述：
+ * @创建日期:2017年3月31日下午4:30:27 
+ * @创建人：duanshxi
+ * @Copyright（c） 2017,all rights reserved by days 
+ */
+public class ExcelReport {	
+	private String [] header;           //标题头
+	private String [] attrs;            //header的对应属性名称。
+    private JSONArray data;             //数据
+    private String [] totalCountAttrs;   //总计的属性
+
+    private String fileName;            //文件名
+	private String title; 
+	private String checkAttr;           //要查询的属性
+	private int columnNo=-1;            //要查询属性对应的单元格下标
+	private int headerType;             //header的类型。1为复杂型，0或者空位简单型
+	private String suffix=".xls";       //文件后缀,默认为.xls
+    private String process;             //流程，prop==道具
+	
+    public ExcelReport() {
+	    super();
+    }
+	
+	public String[] getAttrs() {
+    	return attrs;
+    }
+	
+    public void setAttrs(String[] attrs) {
+    	this.attrs = attrs;
+    }
+	
+    public JSONArray getData() {
+    	return data;
+    }
+	
+    public void setData(JSONArray data) {
+    	this.data = data;
+    }
+
+    public String getFileName() {
+    	return fileName;
+    }
+	
+    public void setFileName(String fileName) {
+    	this.fileName = fileName;
+    }
+	
+    public String getCheckAttr() {
+    	return checkAttr;
+    }
+	
+    public void setCheckAttr(String checkAttr) {
+    	this.checkAttr = checkAttr;
+    }
+	
+    public int getColumnNo() {
+    	return columnNo;
+    }
+	
+    public void setColumnNo(int columnNo) {
+    	this.columnNo = columnNo;
+    }
+	
+    public String[] getHeader() {
+    	return header;
+    }
+
+	
+    public void setHeader(String[] header) {
+    	this.header = header;
+    }
+
+	public int getHeaderType() {
+    	return headerType;
+    }
+	
+    public void setHeaderType(int headerType) {
+    	this.headerType = headerType;
+    }
+	
+    public String getSuffix() {
+    	return suffix;
+    }
+
+	
+    public void setSuffix(String suffix) {
+    	this.suffix = suffix;
+    }
+
+	
+    public String getTitle() {
+    	return title;
+    }
+
+	
+    public void setTitle(String title) {
+    	this.title = title;
+    }
+
+
+    public String getProcess()
+    {
+        return process;
+    }
+
+    public void setProcess(String process)
+    {
+        this.process = process;
+    }
+
+    public String[] getTotalCountAttrs()
+    {
+        return totalCountAttrs;
+    }
+
+    public void setTotalCountAttrs(String[] totalCountAttrs)
+    {
+        this.totalCountAttrs = totalCountAttrs;
+    }
+}

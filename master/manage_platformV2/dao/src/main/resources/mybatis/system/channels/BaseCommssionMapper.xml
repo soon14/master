@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.BaseCommissionDao">
+	<resultMap id="base" type="BaseAccount">
+	</resultMap>
+	<resultMap id="list" type="BaseCommission">
+      <id column="BC_ID" jdbcType="BIGINT" property="id"/>
+		<result column="M_Id" property="merchantId" />
+		<result column="BC_Name" property="name" />
+		<result column="BC_Type" property="type" />
+		<result column="BC_ID" property="bcId" />
+		<result column="BC_OneRankMin" property="oneRankMin" />
+		<result column="BC_OneRankMax" property="oneRankMax" />
+		<result column="BC_OnePercent" property="onePercent" />
+
+		<result column="BC_TwoRankMin" property="twoRankMin" />
+		<result column="BC_TwoRankMax" property="twoRankMax" />
+		<result column="BC_TwoPercent" property="twoPercent" />
+
+		<result column="BC_ThreeRankMin" property="threeRankMin" />
+		<result column="BC_ThreeRankMax" property="threeRankMax" />
+		<result column="BC_ThreePercent" property="threePercent" />
+
+		<result column="BC_IsEnable" property="isEnable" />
+		<result column="BC_CreateUser" property="createUser" />
+		<result column="BC_CreateDate" property="changeDate" />
+    </resultMap>
+	<select id="findListByParam"  resultType="BaseCommission"  resultMap="list">
+		SELECT t.* FROM MP_BaseCommission t  WHERE 1=1 and t.M_Id=#{0}
+		and t.BC_Type=#{1} and t.BC_IsEnable=#{2}
+	</select>
+	<select id="findBaseCommissionByParam"  resultType="com.jy.entity.system.channels.BaseCommission" resultMap="list">
+		SELECT t.* FROM MP_BaseCommission t WHERE t.BC_ID = (SELECT qd.BC_ID FROM MP_MerchantInfo qd WHERE qd.M_ID=#{0})
+	</select>
+	<select id="findBaseCommissionByParamId"  resultType="com.jy.entity.system.channels.BaseCommission" resultMap="list">
+		SELECT t.* FROM MP_BaseCommission t WHERE t.BC_ID = (SELECT qd.BC_ID FROM MP_MerchantInfo qd WHERE qd.M_CPUserid=#{0})
+	</select>
+	<!--佣金配置记录-->
+	<select id="findByPage" parameterType="Map"  resultMap="list">
+		select * from MP_BaseCommission 
+		where 1=1
+		<if test="param.name != null and param.name!=''">
+			and BC_Name=#{param.name}
+		</if>
+	</select>
+	<!-- 佣金列表 -->
+	<select id="findByUserName" parameterType="Map"   resultMap="list">
+		select * from MP_BaseCommission 
+		where 1=1
+		<if test="userName != 'admin' and userName!='admin'">
+			and BC_CreateUser in
+			<foreach collection="userIds" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test="name != null and name!=''">
+			and BC_Name like '%${name}%'
+		</if>
+		<if test="bcId != null and bcId!=''">
+			and BC_ID=#{bcId}
+		</if>
+	</select>
+
+	<select id="findUserName" resultMap="base" parameterType="Map">
+		select a.loginName from JY_BASE_ACCOUNT a where a.id in
+		<foreach collection="userIds" index="index" item="item" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</select>
+
+
+	<select id="findAllCommission" parameterType="Map"   resultMap="list">
+		select DISTINCT * from(
+			select * from MP_BaseCommission
+			where 1=1
+			<if test="userName != 'admin' and userName!='admin'">
+				and BC_CreateUser in
+				<foreach collection="userIds" index="index" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			union all
+			select * from MP_BaseCommission where BC_ID=#{bcId} or BC_ID=#{bcIdLine}
+		)s
+	</select>
+	<select id="findById" parameterType="Map"   resultMap="list">
+		select * from MP_BaseCommission where BC_ID=#{bcId} or BC_ID=#{bcIdLine}
+	</select>
+
+	<!--清除对应的佣金记录 -->
+	<update id="update" parameterType="BaseCommission">
+		UPDATE MP_BaseCommission t
+		SET BC_IsEnable =#{isEnable}
+		WHERE t.BC_ID=#{id}
+	</update>
+	<!--更新商户表的佣金分配状态 -->
+	<delete id="deleteBaseCommission" parameterType="BaseCommission">
+		DELETE FROM MP_BaseCommission WHERE BC_ID=#{id}
+	</delete>
+	<update id="updateBaseCommission" parameterType="BaseCommission">
+		UPDATE MP_BaseCommission A  
+		SET A.BC_Name=#{name},A.BC_Type=#{type},A.BC_OneRankMin=#{oneRankMin},
+			A.BC_OneRankMax=#{oneRankMax},A.BC_OnePercent=#{onePercent},
+			A.BC_TwoRankMin=#{twoRankMin},A.BC_TwoRankMax=#{twoRankMax},
+			A.BC_TwoPercent=#{twoPercent},A.BC_ThreeRankMin=#{threeRankMin},
+			A.BC_ThreeRankMax=#{threeRankMax},A.BC_ThreePercent=#{threePercent}
+		WHERE A.BC_ID =#{id}
+	</update>
+	
+	<insert id="insertBaseCommission" parameterType="BaseCommission">
+		INSERT INTO MP_BaseCommission  (BC_Name,BC_Type,BC_OneRankMin,BC_OneRankMax,BC_OnePercent,
+			BC_IsEnable,BC_CreateUser,BC_CreateDate,BC_TwoRankMin,BC_TwoRankMax,BC_TwoPercent,
+			BC_ThreeRankMin,BC_ThreeRankMax,BC_ThreePercent
+		) VALUES (#{name},#{type},#{oneRankMin},#{oneRankMax},#{onePercent},#{isEnable},#{createUser},#{changeDate},
+			  #{twoRankMin},#{twoRankMax},#{twoPercent},#{threeRankMin},#{threeRankMax},#{threePercent})
+	</insert>
+	
+	
+	
+	<!--新增商户佣金分配方式 -->
+	<insert id="insert"  parameterType="BaseCommission">
+		INSERT INTO MP_BaseCommission(
+		M_Id,BC_Type,
+		BC_OneRankMin,BC_OneRankMax,BC_OnePercent,
+		BC_TwoRankMin,BC_TwoRankMax,BC_TwoPercent,
+		BC_ThreeRankMin,BC_ThreeRankMax,BC_ThreePercent,
+		BC_IsEnable,BC_CreateUser,BC_CreateDate
+		) VALUES (#{merchantId},#{type},
+		#{oneRankMin},#{oneRankMax},#{onePercent},
+		#{twoRankMin},#{twoRankMax},#{twoPercent},
+		#{threeRankMin},#{threeRankMax},#{threePercent},
+		#{isEnable},#{createUser},#{changeDate})
+	</insert>
+	<!-- -->
+	<select id="findListByMerchant"  resultType="BaseCommission"  resultMap="list">
+		SELECT t.* FROM MP_BaseCommission t  WHERE 1=1 and t.M_Id=#{param.mId}
+		and t.BC_Type=#{param.mType} and t.BC_IsEnable=1
+	</select>
+</mapper>

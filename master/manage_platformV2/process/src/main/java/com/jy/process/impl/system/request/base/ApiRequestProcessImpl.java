@@ -1,0 +1,125 @@
+package com.jy.process.impl.system.request.base;
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.jy.common.utils.HttpClientUtil;
+import com.jy.from.system.request.RequestPageInfoForm;
+import com.jy.from.system.request.RequestParamInfoForm;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by lijunke on 2017/4/24.
+ */
+public abstract class ApiRequestProcessImpl<T> {
+
+    protected static final Logger LOGGER = LoggerFactory.getLogger(ApiRequestProcessImpl.class);
+
+    /**
+     * 分页请求数据
+     * @param requestPageInfoForm
+     * @param paramInfoForm
+     * @param urlStr
+     * @return
+     * @throws Exception
+     */
+    protected List<JSONArray> sendRequest(RequestPageInfoForm<T> requestPageInfoForm, RequestParamInfoForm paramInfoForm, String urlStr) throws Exception {
+        List<JSONArray> list = new ArrayList<>();
+        int countPage = 0;
+        String resourceContent = null;
+        int currentPage = paramInfoForm.getCurrentPage();
+        if (currentPage == 0) {
+            currentPage = 1;
+        }
+        do {
+            paramInfoForm.setCurrentPage(currentPage++);
+            String url = this.url(urlStr, paramInfoForm);
+
+            resourceContent = getString(resourceContent, url);
+            requestPageInfoForm = JSONObject.parseObject(resourceContent, RequestPageInfoForm.class);
+            list.add(JSONObject.parseArray(requestPageInfoForm.getList().toString()));
+            if (requestPageInfoForm.getList().size() > 0) {
+                countPage = (requestPageInfoForm.getCount() + paramInfoForm.getPageSize() - 1) / paramInfoForm.getPageSize();
+            } else {
+                LOGGER.info("接口调用成功,当前请求没有数据！url:{}", url);
+                return list;
+            }
+
+        } while (currentPage <= countPage && requestPageInfoForm.getCount() > 0);   //分完所有页
+
+        return list;
+    }
+
+    /**
+     * 不分页请求数据,返回json字符串
+     * 效率最高
+     * @param paramInfoForm
+     * @param urlStr
+     * @return
+     * @throws Exception
+     */
+    protected String sendRequestTranJson(RequestParamInfoForm paramInfoForm, String urlStr) throws Exception {
+        String resourceContent = null;
+        String url = this.url(urlStr, paramInfoForm);
+        resourceContent = getString(resourceContent, url);
+        return resourceContent;
+    }
+
+
+    /**
+     * 不分页请求数据
+     * @param requestPageInfoForm
+     * @param paramInfoForm
+     * @param urlStr
+     * @return
+     * @throws Exception
+     */
+    protected RequestPageInfoForm<T> sendRequestAll(RequestPageInfoForm<T> requestPageInfoForm, RequestParamInfoForm paramInfoForm, String urlStr) throws Exception {
+        String resourceContent = null;
+        String url = this.url(urlStr, paramInfoForm);
+        resourceContent = getString(resourceContent, url);
+        requestPageInfoForm = JSONObject.parseObject(resourceContent, RequestPageInfoForm.class);
+        return requestPageInfoForm;
+    }
+
+    private String getString(String resourceContent, String url) {
+        try {
+            Thread.sleep(5000L);
+            resourceContent = HttpClientUtil.httpRequest(url);
+            LOGGER.info("接口调用成功,url:{}", url);
+        } catch (Exception e) {
+            e.printStackTrace();
+            LOGGER.info("接口请求失败,url:{}", url);
+        }
+        return resourceContent;
+    }
+
+
+    /**
+     * 拼接参数，返回url
+     *
+     * @param req
+     * @return
+     * @throws Exception
+     */
+    private String url(String url, RequestParamInfoForm req) throws Exception {
+        StringBuffer sb = new StringBuffer();
+        sb.append(url);
+        Map<String, Object> param = req.objectToMap(req);
+        if (param != null) {
+            sb.append("?");
+            for (Map.Entry entry : param.entrySet()) {
+                if (null != entry.getValue()) {
+                    sb.append(entry.getKey() + "=" + entry.getValue());
+                    sb.append("&");
+                }
+            }
+        }
+        return StringUtils.substringBeforeLast(sb.toString(), "&");
+    }
+}

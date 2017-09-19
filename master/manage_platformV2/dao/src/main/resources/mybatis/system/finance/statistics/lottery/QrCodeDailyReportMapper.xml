@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.statistics.lottery.QrCodeDailyReportDao">
+	<resultMap id="list" type="QrCodeDailyReport">
+		<id column="QR_ID" jdbcType="BIGINT" property="id"/>
+		<result column="QR_BATCHID" property="batchId" />
+		<result column="QR_BATCHSTARTTIME" property="batchStartTime" />
+		<result column="QR_BATCHENDTIME" property="batchEndTime" />
+		<result column="QR_DATE" property="date" />
+		<result column="QR_STARTNUM" property="startNum" />
+		<result column="QR_ENDNUM" property="endNum" />
+		<result column="QR_SALEMONEY" property="saleMoney" />
+		<result column="QR_DIFFNUM" property="diffNum" />
+	</resultMap>
+
+	<resultMap id="saleMoney" type="Double">
+	<result column="saleMoney" property="saleMoney" />
+	</resultMap>
+
+<!--分页多参数查询数据-->
+	<select id="findByPage"  resultMap="list" parameterType="QrCodeDailyReport">
+		SELECT t.QR_ID,
+		t.QR_BATCHID,
+		t.QR_BATCHSTARTTIME,
+		t.QR_BATCHENDTIME,
+		t.QR_DATE,
+		QR_STARTNUM,
+		QR_ENDNUM,
+		QR_SALEMONEY,
+		QR_DIFFNUM FROM TJ_QRCODEDAILYREPORT t
+		<where>
+			<if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')">
+				t.QR_DATE BETWEEN #{param.beginTime} and #{param.endTime}
+			</if>
+		</where>
+		ORDER BY t.QR_DATE desc
+	</select>
+	<!--兑换券批次，批次起始结束时间-->
+	<select id="findQrCodeInfo" resultMap="list" parameterType="QrCodeDailyReport">
+		select
+		VStart  as QR_BATCHSTARTTIME,
+		VEnd as QR_BATCHENDTIME
+		from DC_VoucherInfo
+		GROUP BY VStart,VEnd
+		ORDER BY VStart,VEnd
+	</select>
+
+	<!--获得批次券总额-->
+	<select id="findAllNumByBatch" resultMap="saleMoney" resultType="Double">
+		<![CDATA[select sum(vMoney) as saleMoney
+		from DC_VoucherInfo
+		where 1=1
+		and  VStart = #{0}
+		AND VEnd=#{1}
+	]]>
+	</select>
+
+
+	<select id="findQcMoney" resultMap="saleMoney" resultType="Double">
+		<![CDATA[
+SELECT
+	SUM(CASE WHEN UsedDate<#{0} then 0 ELSE VMoney end) as saleMoney
+FROM
+	DC_VoucherInfo
+WHERE
+	1 = 1
+AND VStart = #{1}
+AND VEnd = #{2}
+	]]>
+	</select>
+
+
+	<!--日售出总额-->
+	<select id="findSaleMoney" resultMap="saleMoney"  resultType="Double">
+		<![CDATA[select sum(vMoney) as saleMoney
+		from DC_VoucherInfo
+		where UsedDate between #{0} and #{1} -- and VStatus=1
+		]]>
+	</select>
+
+	<!--查询某日数据-->
+	<select id="findReportIsExitByDate"  resultMap="list" parameterType="QrCodeDailyReport">
+		SELECT t.* FROM TJ_QRCODEDAILYREPORT t
+		<where>
+				t.QR_DATE = #{0}
+		</where>
+		ORDER BY t.QR_DATE desc
+	</select>
+
+<!--插入数据-->
+	<insert id="insert"  parameterType="QrCodeSoldDailyReport">
+		<![CDATA[
+	INSERT INTO TJ_QRCODEDAILYREPORT(
+	QR_ID,
+		QR_BATCHID,
+		QR_BATCHSTARTTIME,
+		QR_BATCHENDTIME,
+		QR_DATE,
+		QR_STARTNUM,
+		QR_ENDNUM,
+		QR_SALEMONEY,
+		QR_DIFFNUM
+	) VALUES (#{id},#{batchId},#{batchStartTime},#{batchEndTime},#{date},#{startNum},#{endNum},#{saleMoney}
+	,#{diffNum}
+	)
+	]]>
+	</insert>
+
+	<delete id="deleteList" parameterType="QrCodeDailyReport">
+		delete from TJ_QRCODEDAILYREPORT
+		WHERE QR_ID  in
+		<foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+			#{item.id}
+		</foreach>
+	</delete>
+
+
+	<select id="find"  resultMap="list" parameterType="QrCodeDailyReport">
+		SELECT t.QR_ID,
+		t.QR_BATCHID,
+		t.QR_BATCHSTARTTIME,
+		t.QR_BATCHENDTIME,
+		t.QR_DATE,
+		QR_STARTNUM,
+		QR_ENDNUM,
+		QR_SALEMONEY,
+		QR_DIFFNUM FROM TJ_QRCODEDAILYREPORT t
+		<where>
+			<if test="date!=null and date!=''">
+				t.QR_DATE = #{date}
+			</if>
+		</where>
+		ORDER BY t.QR_DATE desc
+	</select>
+
+
+	<select id="findMonth"  resultMap="list" parameterType="QrCodeDailyReport">
+		SELECT t.QR_ID,
+		t.QR_BATCHID,
+		t.QR_BATCHSTARTTIME,
+		t.QR_BATCHENDTIME,
+		t.QR_DATE,
+		QR_STARTNUM,
+		QR_ENDNUM,
+		QR_SALEMONEY,
+		QR_DIFFNUM FROM TJ_QRCODEDAILYREPORT t
+		<where>
+			<if test="date!=null and date!=''">
+				t.QR_DATE LIKE '%${date}%'
+			</if>
+		</where>
+		ORDER BY t.QR_DATE ASC
+	</select>
+</mapper>

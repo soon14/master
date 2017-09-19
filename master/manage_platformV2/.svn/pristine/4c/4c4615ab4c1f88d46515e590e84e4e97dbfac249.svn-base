@@ -1,0 +1,104 @@
+package com.jy.process.impl.system.task.ticket;
+
+
+import com.alibaba.fastjson.JSONObject;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.task.ContPageUtil;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.entity.task.prize.TaskPrizeInfo;
+import com.jy.entity.task.ticket.TaskTicketInfo;
+import com.jy.from.system.request.RequestPageInfoForm;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.impl.system.request.ApiRequestProcessImpl;
+import com.jy.process.inter.system.task.ticket.TaskTicketProcess;
+import com.jy.service.inter.task.prize.TaskPrizeService;
+import com.jy.service.inter.task.ticket.TaskTicketService;
+
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import net.sf.json.JSONArray;
+import org.apache.poi.ss.formula.functions.T;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by huangshifei on 2017/4/27.
+ */
+@Service("taskTicketProcess")
+public class TaskTicketProcessImpl extends ApiRequestProcessImpl<TaskTicketInfo>  implements TaskTicketProcess {
+
+    @Value("${ticket.info}")
+    private String ticketInfoPath;
+    @Autowired
+    private TaskTicketService taskTicketService;
+    private int b=0;
+    private int k=0;
+    @Autowired
+    private JobTaskStatisticsService jobTaskStatisticsService;
+    public void saveTaskTicketInfoList(RequestParamInfoForm infoForm) throws Exception {
+        //        日志参数
+        int count = 0;
+        int countSuccess = 0;//成功条数
+        int currentPage = 1;
+        if(infoForm.getQueryTime()==null || infoForm.getQueryTime() ==""){
+            infoForm.setQueryTime(DateUtils.getThisDay().replaceAll("-", ""));
+        }
+            deleteTicketInfo(infoForm);
+        for (int i = 1; i < currentPage + 1; i++) {
+
+            if(b!=0){
+                i=b;//出现异常则i的值不变
+                b=0;
+            }else{
+                k=0;//如果没有出现异常，k为0，表示没有重复请求
+            }
+            try {
+                infoForm.setCurrentPage(i);
+                String JsonArray = super.sendRequestTranJson(infoForm, this.ticketInfoPath);
+                RequestPageInfoForm<T> requestPageInfoForm = JSONObject.parseObject(JsonArray, RequestPageInfoForm.class);
+                if (currentPage == 1) {
+                    currentPage = ContPageUtil.countPage(requestPageInfoForm, infoForm);
+                    count =requestPageInfoForm.getCount();
+                }
+                JSONArray array = JSONArray.fromObject(requestPageInfoForm.getList().toString());
+                List<Map> list = (List<Map>) JSONArray.toCollection(array, Map.class);
+                Map map = new HashMap();
+                map.put("list", list);
+                map.put("yestoday", DateUtils.getAfterDayDate("-1").substring(0, 10));
+                map.put("thisDay", DateUtils.getThisDay());
+                taskTicketService.saveTaskTicketInfoList(map);
+                countSuccess = countSuccess+list.size();//成保存添加
+            } catch (Exception e) {
+                e.printStackTrace();
+                if(i==1 && currentPage ==1){
+                    currentPage++;//如果是第一页发生异常，则必须增加长度。确保能重复执行第二次
+                }
+                if(k<3){
+                    b=i;//如果当页请求失败，下次继续从当页开始请求，而不是从第一页开始
+                    k++;
+                }
+            }
+        }
+        //保存日志
+        JobTaskStatistics jobTaskStatistics = new JobTaskStatistics();
+        jobTaskStatistics.setDate(DateUtils.getThisDate());
+        jobTaskStatistics.setInterfaceNumber(count);
+        jobTaskStatistics.setJobName("TaskTicketJob");
+        jobTaskStatistics.setStorageNumber(countSuccess);
+        jobTaskStatisticsService.insertJobTaskStatistics(jobTaskStatistics);
+    }
+    public void deleteTicketInfo(RequestParamInfoForm infoForm){
+        Map map = new HashMap();
+        if(!"true".equals(infoForm.getQueryAll())){
+            map.put("yesDay",DateUtils.getSpecifiedDayBefore(infoForm.getQueryTime()));
+        }else{
+            map.put("yesDay","");
+        }
+        taskTicketService.deleteTicketInfo(map);
+    }
+}

@@ -1,0 +1,196 @@
+package com.jy.common.utils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import sun.net.ftp.FtpClient;
+import sun.net.ftp.FtpProtocolException;
+
+import java.io.*;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+
+/**
+ * Java自带的API对FTP的操作
+ */
+public class FtpUtil {
+
+    private static final Logger LOG = LoggerFactory.getLogger(FtpUtil.class);
+   /* private static final String ERROR_DATA = "error";   //检查数据失败后返回值
+    private static final String SUCCESS_DATA = "success";   //检查数据成功后返回值*/
+
+    static String columnNumber = null;
+
+    /**
+     * 连接ftp服务器 JDK 1.7
+     *
+     * @param url
+     * @param port
+     * @param username
+     * @param password
+     * @return FtpClient
+     * @throws FtpProtocolException
+     * @throws IOException
+     */
+    public static FtpClient connectFTP(String url, int port, String username, String password) { //创建ftp
+        FtpClient ftp = null;
+        try {
+            //创建地址
+            SocketAddress addr = new InetSocketAddress(url, port);
+            //连接
+            ftp = FtpClient.create();
+            ftp.connect(addr);
+            //登陆
+            ftp.login(username, password.toCharArray());
+            ftp.setBinaryType();
+            System.out.println(ftp.getWelcomeMsg());
+        } catch (FtpProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return ftp;
+    }
+
+    /**
+     * 文件下载
+     *
+     * @param localFile
+     * @param ftpFile
+     * @param ftp
+     */
+    public static boolean downloadAndChekData(String localFile, String ftpFile, FtpClient ftp) {
+        InputStream is = null;
+        FileOutputStream fos = null;
+        BufferedReader bufferedReader = null;
+        String txtConent = null;
+        int i = 0;
+        String rowsNumber = null;
+        boolean results = true;
+        try {
+            //获取ftp上的文件
+            is = ftp.getFileStream(ftpFile);
+            File file = new File(localFile);
+            bufferedReader = new BufferedReader(new InputStreamReader(is, "utf-8"));
+            byte[] bytes = new byte[1024];
+            fos = new FileOutputStream(file);
+            String lineTxt;
+            for (i = 0; (lineTxt = bufferedReader.readLine()) != null; i++) {
+                //文本第一行为总行数
+                if (i == 0) {
+                    rowsNumber = lineTxt;
+                }
+                if (results) {
+                    results = checkTxtDataComplete(i, lineTxt, ftpFile);
+                }
+                lineTxt += "\r\n";
+                if (txtConent == null) {
+                    txtConent = lineTxt;
+                } else {
+                    txtConent += lineTxt;
+                }
+                fos.write(lineTxt.getBytes());
+            }
+            bufferedReader.close();
+            LOG.info("file download success!!");
+        } catch (FtpProtocolException e) {
+            LOG.info("file download fail!!");
+            e.printStackTrace();
+        } catch (IOException e) {
+            LOG.info("file download fail!!");
+            e.printStackTrace();
+        } finally {
+            try {
+                if (bufferedReader != null) {
+                    bufferedReader.close();
+                }
+                if (fos != null)
+                    fos.close();
+
+                if (is != null) {
+                    is.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        //i从0开始  i是文本的总行数，减前2行 拿到的结果为全部内容的行数
+        if ((i - 3) == Integer.parseInt(rowsNumber) && results) {
+            LOG.info("Available file!!");
+            return true;
+        } else {
+            LOG.info("Unavailable file!!");
+            return false;
+        }
+    }
+
+
+    public static boolean checkTxtDataComplete(int i, String lineTxt, String fileNmae) {
+        //文本第1行为每行总列数
+        if (i == 1) {
+            columnNumber = lineTxt;
+        }
+        /**
+         *  从第2行开始验证数据
+         *  根据TAB键进行分割文本，拿到分割后的结果总数。
+         *  第1行是总列数，总列数-两者相等则给出的数据格式没有问题
+         */
+        if (i > 2) {
+            String[] txtObject = lineTxt.split("\t");
+            if (Integer.parseInt(columnNumber) - txtObject.length != 0) {
+                LOG.info("文件名为：" + fileNmae + "的第" + (i + 1) + "行数据不正确，投注系统给到的列数为" + columnNumber + "列,检查列数为" + txtObject.length + "列");
+                System.out.println("文件名为：" + fileNmae + "的第" + (i + 1) + "行数据不正确，投注系统给到的列数为" + columnNumber + "列,检查列数为" + txtObject.length + "列");
+                return false;
+            }
+        }
+        return true;
+    }
+
+
+   /* public static void main(String[] args) {
+        try {
+            InetAddress addr = InetAddress.getLocalHost();
+            System.out.println(addr.getHostAddress());
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        String ip = "192.168.192.211";
+        int port = 21;
+        String username = "admin";
+        String password = "admin";
+        //连接ftp
+        FtpClient ftp = FtpUtil.connectFTP(ip, port, username, password);
+        System.out.println(ftp.getWelcomeMsg());
+        // FtpUtil.download("E:/localhsot/HL_SG_20160901_15_1_confirm.txt", "/HL_SG_20160901_15_1_confirm.txt", ftp);
+        boolean result = FtpUtil.downloadAndChekData("E:/localhsot/11.txt", "/CS_WDI_20170608_6.txt", ftp);
+        System.out.print(result);
+        System.exit(0);
+    }*/
+
+    public static void main(String[] args){
+        try{
+
+            File read = new File("E:/localhsot/11.txt");
+            File write = new File("E:/localhsot/11_ok.txt");
+
+            BufferedReader br = new BufferedReader(new FileReader(read));
+            BufferedWriter bw = new BufferedWriter(new FileWriter(write));
+            String temp = null;
+            temp = br.readLine();
+            while(temp != null){
+                //写文件
+                 bw.write(temp + "/r/n"); //只适用Windows系统
+
+                //继续读文件
+                temp = br.readLine();
+            }
+
+            bw.close();
+            br.close();
+
+        }catch(FileNotFoundException e){ //文件未找到
+            System.out.println (e);
+        }catch(IOException e){
+            System.out.println (e);
+        }
+    }
+}

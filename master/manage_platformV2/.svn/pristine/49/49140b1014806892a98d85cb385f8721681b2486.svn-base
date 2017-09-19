@@ -1,0 +1,68 @@
+package com.jy.process.impl.system.request.lottery;
+
+import com.jy.common.utils.DateUtils;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.process.impl.system.request.base.ApiRequestTxtProcessImpl;
+import com.jy.process.system.request.lottery.UserInfoRequestProcess;
+import com.jy.service.system.channels.CPUserInfoService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+
+/**
+ * Created by lijunke on 2017/4/24.
+ */
+@Service("userInfoRequestProcess")
+public class UserInfoRequestProcessImpl extends ApiRequestTxtProcessImpl implements UserInfoRequestProcess {
+
+    protected static final Logger log = LoggerFactory.getLogger(UserInfoRequestProcessImpl.class);
+
+    @Value("${user.list}")
+    private String ftpFileName;         //下载文件的名称
+    @Autowired
+    protected CPUserInfoService uerInfoService;
+    @Autowired
+    private JobTaskStatisticsService jobTaskStatisticsService;
+
+
+    @Override
+    public void synchronizationUserData(String date) throws Exception {
+        super.ftpCommonsFunction(ftpFileName, date);
+    }
+
+    //保存用户数据
+    @Override
+    public int saveFTPData(String filePath, String date) {
+        Date searchDate = DateUtils.stringToDate(date, "yyyyMMdd");
+        try {
+            this.uerInfoService.save(filePath, searchDate);
+        } catch (Exception e) {
+            log.info("用户信息接口保存数据失败！");
+            e.printStackTrace();
+        }
+        int count = this.uerInfoService.count(searchDate);
+        log.info("入库行数：{}", count);
+        return count;
+    }
+
+    @Override
+    public String byJobName() {
+        return "用户接口";
+    }
+
+    //保存log日志
+    @Override
+    public void saveJobLog(JobTaskStatistics jobTaskStatistics) {
+        try {
+            this.jobTaskStatisticsService.insertJobTaskStatistics(jobTaskStatistics);
+        } catch (Exception e) {
+            log.info("用户信息接口保存LOG数据失败！");
+            e.printStackTrace();
+        }
+    }
+}

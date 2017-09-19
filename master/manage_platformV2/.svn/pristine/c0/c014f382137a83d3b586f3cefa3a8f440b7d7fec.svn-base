@@ -1,0 +1,82 @@
+package com.jy.process.impl.system.request;
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.security.AccountShiroUtil;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.from.system.request.TradeOnlineDetailForm;
+import com.jy.from.system.request.RequestPageInfoForm;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.system.request.TradeOnlineDetailProcess;
+import com.jy.service.system.channels.TradeOnlineDetailService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.apache.poi.ss.formula.functions.T;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * Created by Matthew on 2017/5/22.
+ */
+@Service("tradeOnlineDetailProcess")
+public class TradeOnlineDetailProcessImpl extends ApiRequestProcessImpl<TradeOnlineDetailForm> implements TradeOnlineDetailProcess {
+
+
+    @Autowired
+    protected TradeOnlineDetailService tradeOnlineDetailService;
+    @Autowired
+    private JobTaskStatisticsService jobTaskService;
+
+    private final String path = "https://admin.daysluck.com/salesManage/CapitalDetailByUserId.do";
+
+    @Override
+    public void synchronizeData(RequestParamInfoForm infoForm) throws Exception {
+        String JsonArray = super.sendRequestTranJson(infoForm, this.path);
+        RequestPageInfoForm<T> requestPageInfoForm = JSONObject.parseObject(JsonArray, RequestPageInfoForm.class);
+
+        List<TradeOnlineDetailForm> list = JSONArray.parseArray(requestPageInfoForm.getList().toString(), TradeOnlineDetailForm.class);
+        if (list.size() < 0) {
+            super.LOGGER.info("线上交易明细接口未返回任何数据！");
+            return;
+        }
+        String date = "";
+        if (null != infoForm.getQueryTime() && "".equals(infoForm.getQueryTime())) {
+            int demo = Integer.parseInt(infoForm.getQueryTime()) - 1;
+            date = String.valueOf(demo);
+        }
+        int count = this.transforPojoSave(list, date);//分批保存
+        //保存job日志
+        JobTaskStatistics jobTaskStatistics = new JobTaskStatistics();
+        jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));
+        jobTaskStatistics.setJobName("TradeOnlineDetailTask");
+        jobTaskStatistics.setInterfaceNumber(list.size());
+        jobTaskStatistics.setStorageNumber(count);
+        jobTaskService.insertJobTaskStatistics(jobTaskStatistics);
+    }
+
+    public Integer transforPojoSave(List<TradeOnlineDetailForm> listAll, String date) {
+        /**统计入库条数*/
+        int count = 0;
+        final int pageSize = 500;
+        if (listAll.size() > pageSize) {
+            int limit = pageSize;
+            int size = listAll.size() / limit;
+            for (int i = 0; i < size; i++) {
+                List<TradeOnlineDetailForm> listPage = listAll.subList(0, limit - 1);
+                int countPage = this.tradeOnlineDetailService.transforPojoSave(listPage, date);
+                count += countPage;
+                listAll.subList(0, limit - 1).clear();
+                if (listAll.size() < pageSize) {
+                    int countX = this.tradeOnlineDetailService.transforPojoSave(listAll, date);
+                    count += countX;
+                }
+            }
+        } else {
+            count = this.tradeOnlineDetailService.transforPojoSave(listAll, date);
+        }
+        return count;
+    }
+
+}

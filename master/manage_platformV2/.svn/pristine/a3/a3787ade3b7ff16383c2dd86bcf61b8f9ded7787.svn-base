@@ -1,0 +1,78 @@
+package com.jy.repository.system.finance.statistics.lottery;
+
+import java.util.List;
+
+import com.jy.entity.system.finance.statistics.OrderTicketDiffReport;
+import com.jy.entity.system.finance.statistics.OrderTicketReport;
+import com.jy.mybatis.Page;
+import org.apache.ibatis.annotations.Param;
+
+import com.jy.entity.system.finance.LotteryWaySaleReport;
+import com.jy.repository.base.BaseDao;
+import com.jy.repository.base.JYBatis;
+
+
+/** 
+ * @文件名:LotteryWaySaleReportDao.java 
+ * @功能描述：
+ * @创建日期:2017年3月9日上午11:44:46 
+ * @创建人：lijunke
+ * @Copyright（c） 2017,all rights reserved by days 
+ */
+@JYBatis
+public interface LotteryWaySaleReportDao extends BaseDao<LotteryWaySaleReport>{
+	
+	public List<LotteryWaySaleReport> findByPage(@Param("param") LotteryWaySaleReport m);
+
+
+	LotteryWaySaleReport findReport(@Param("date")String date, @Param("commonOrTrance")int commonOrTrance);
+
+	List<LotteryWaySaleReport> findIsExitByDate(String date);
+
+	void insertOrderTicketReport(OrderTicketReport orderTicketReport);
+
+	void insertDiffReport(List<OrderTicketDiffReport> list);
+
+	void deleteList(List<LotteryWaySaleReport> isExit);
+
+	void deleteDiffList(List<OrderTicketDiffReport> result);
+
+	void deleteOrderTicketReportList(List<OrderTicketReport> isExit);
+
+	List<LotteryWaySaleReport> findMonth(@Param("month") String month);
+
+	List<OrderTicketReport> findOrderTicketForMonth(@Param("month") String month);
+
+	List<OrderTicketDiffReport> findDiffMonth(@Param("month")String month);
+
+	Double findCommonMoney(@Param("date")String date);
+
+	Double findTranceMoney(@Param("date")String date);
+
+	Double findActivityMoney(@Param("date")String date);
+
+	Double findTicketMoney(@Param("date")String date);
+
+	List<OrderTicketReport> findOrderTicketReportByDate(String date);
+
+
+
+
+
+	List<OrderTicketReport> findOrderTicketByPage(@Param("param")OrderTicketReport m, Page<OrderTicketReport> page);
+
+	List<OrderTicketDiffReport> findDiffByPage(@Param("param")OrderTicketDiffReport m, Page<OrderTicketDiffReport> page);
+
+	//追期类型，方案单边账
+	List<OrderTicketDiffReport>  findTranceDiffOrder(String beginTime,String endTime,String date2);
+	//追期类型，票单边账
+	List<OrderTicketDiffReport>  findTranceDiffTicket(String beginTime,String endTime,String date2);
+	//普通购彩类型，方案单边账
+	List<OrderTicketDiffReport>  findCommonDiffOrder(String beginTime,String endTime);
+
+	//普通购彩类型，票单边账
+	List<OrderTicketDiffReport>  findCommonDiffTicket(String beginTime,String endTime);
+
+
+
+}

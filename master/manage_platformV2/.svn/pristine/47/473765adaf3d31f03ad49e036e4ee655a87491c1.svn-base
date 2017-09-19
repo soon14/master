@@ -1,0 +1,14 @@
+package com.jy.service.inter.task.ticket;
+
+import com.jy.entity.task.ticket.TaskTicketInfo;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/26.
+ */
+public interface TaskTicketService {
+    public void saveTaskTicketInfoList(Map map);
+    public void deleteTicketInfo(Map map);
+}

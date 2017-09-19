@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.commom.UserTransDetailDao">
+    <resultMap id="userTransDetail" type="UserTransDetail">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <id column="sycDate" property="sycDate"/>
+        <id column="userId" property="userId"/>
+        <id column="money" property="money"/>
+        <id column="tranType" property="tranType"/>
+        <id column="tranChannel" property="tranChannel"/>
+        <id column="tranTime" property="tranTime"/>
+        <id column="createTime" property="createTime"/>
+        <id column="isValid" property="isValid"/>
+        <id column="payFlowNo" property="payFlowNo"/>
+    </resultMap>
+
+
+    <select id="findObjByPayFlowNo" resultMap="userTransDetail">
+        SELECT * FROM DC_UserTransInfo
+        WHERE isValid=1
+            AND payFlowNo=#{0}
+            and tranChannel=#{1}
+    </select>
+
+
+    <select id="findListByParam" resultMap="userTransDetail">
+        SELECT * FROM DC_UserTransInfo
+        WHERE isValid=1
+        and tranChannel in
+        <foreach item="item" index="index" collection="channelList" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        and
+        TradeTime BETWEEN #{beginTime} and #{endTime}
+    </select>
+
+    <resultMap id="money" type="Double">
+        <id column="money" property="money"/>
+    </resultMap>
+    <!--某日期初余额-->
+
+    <insert id="save">
+        <![CDATA[   INSERT INTO DC_UserTransInfo(userId,money,tranType,tranChannel,tranTime,createTime,sycDate,payFlowNo)
+        VALUES ]]>
+        <foreach item="o" collection="list" index="index" separator=",">
+            <![CDATA[  (#{o.userId},#{o.money},#{o.tranType},#{o.tranChannel},#{o.tranTime},#{o.createTime},#{o.sycDate},#{o.payFlowNo}) ]]>
+        </foreach>
+    </insert>
+
+    <delete id="deleteByAll" parameterType="String">
+        DELETE FROM DC_UserTransInfo WHERE 1=1
+        <if test="tranDate != null and tranDate != ''">
+            AND DATE_FORMAT(tranTime,"%Y%m%d") = #{tranDate}
+        </if>
+    </delete>
+</mapper>

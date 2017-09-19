@@ -1,0 +1,9 @@
+package com.jy.process.system.request;
+
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+public interface TaskWithdrawProcess {
+    public void saveTaskWithdrawInfoList(String date) throws Exception;
+}

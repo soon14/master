@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.BettingDifferenceDao">
+	<resultMap id="BettingDifference" type="BettingDifference" >
+		<id column="DF_ID"  property="id"/>
+		<result property="ticketNo" column="DF_TicketNo"/>
+		<result property="btTicketPrize" column="BT_TicketPrize"/>
+		<result property="ttTicketPrize" column="TT_TicketPrize"/>
+		<result property="dfDiffMoney" column="DF_DiffMoney"/>
+		<result property="dfInitDate" column="DF_InitDate"/>
+		<result property="dfNormalDate" column="DF_NormalDate"/>
+		<result property="dfProcessStauts" column="DF_ProcessStauts"/>
+		<result property="dfProcessInfo" column="DF_ProcessInfo"/>
+		<result property="dfReason" column="DF_Reason"/>
+		<result property="dfType" column="DF_Type"/>
+		<result property="dfReportID" column="DF_ReportID"/>
+	</resultMap>
+	
+    
+    <insert id="save" parameterType="java.util.List">
+       <![CDATA[   INSERT INTO RP_SaleDiffInfo(DF_ID,DF_TicketNo,BT_TicketPrize,TT_TicketPrize,DF_DiffMoney,
+        DF_InitDate,DF_ProcessStauts,DF_ProcessInfo,DF_ReportID,DF_Reason,DF_Type,DF_NormalDate)
+        VALUES ]]>
+        <foreach item="o" collection="list" open="" separator="," close="">
+           <![CDATA[  (#{o.id},#{o.ticketNo},#{o.btTicketPrize},#{o.ttTicketPrize},#{o.dfDiffMoney},#{o.dfInitDate},
+           #{o.dfProcessStauts},#{o.dfProcessInfo},#{o.dfReportID},#{o.dfReason},#{o.dfType},#{o.dfNormalDate}) ]]>
+        </foreach>
+    </insert>
+    
+    <select id="findByDate" resultType="BettingDifference" parameterType="java.util.Map">
+   <![CDATA[ select q.DF_NormalDate as dfNormalDate,q.DF_TicketNo as ticketNo, q.DF_DiffMoney as dfDiffMoney, q.DF_Reason as dfReason,
+   			q.DF_Type as dfType from RP_SaleDiffInfo q where 
+   	  date_format(q.DF_NormalDate,'%Y-%m-%d') = date_format(#{date},'%Y-%m-%d') and q.DF_ReportID = #{ids}]]>
+    </select>
+    
+    <delete id="delete" parameterType="String">
+   		 DELETE FROM RP_SaleDiffInfo WHERE DF_NormalDate = #{date}
+    </delete>
+    
+     <select id="queryDate" resultMap="BettingDifference">
+    <![CDATA[select * from RP_SaleDiffInfo r where  
+		date_format(r.DF_NormalDate,'%Y-%m-%d') >=  date_format(#{startDate},'%Y-%m-%d') and
+		date_format(r.DF_NormalDate,'%Y-%m-%d') <=  date_format(#{endDate},'%Y-%m-%d')
+    	ORDER BY r.DF_NormalDate DESC  ]]>
+    </select>
+
+		</mapper>

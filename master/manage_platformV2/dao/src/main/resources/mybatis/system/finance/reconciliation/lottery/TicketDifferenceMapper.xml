@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.TicketDifferenceDao">
+	<resultMap id="TicketDifference" type="TicketDifference" >
+
+	</resultMap>
+
+	 <select id="findDifference" resultType="TicketDifference" parameterType="String">
+		 select * from (
+			select a.vstart,a.vend, '体彩' as voucher, a.vstatus as status ,sum(a.vmoney) as money
+			from TS_VoucherInfo a ,DC_VoucherInfo b 
+			where a.vno=b.vno and a.vstart=b.vstart and a.vend=b.vend
+			GROUP BY a.vstatus,a.vstart,a.vend
+			union all
+			select DATE_FORMAT(a.vstart,'%Y-%m-%d')as vstart,DATE_FORMAT(a.vend,'%Y-%m-%d')as vend ,'投注'as voucher,a.vstatus as status,sum(a.vmoney) as money
+			from DC_VoucherInfo a ,TS_VoucherInfo b 
+			where a.vno=b.vno and a.vstart=b.vstart and a.vend=b.vend
+			GROUP BY a.vstatus,a.vstart,a.vend
+			UNION all
+			select s.vstart,s.vend, '差异'as voucher, count(*)as status, ''as money from(
+			select a.vstart,a.vend,a.vstatus,b.vstatus as status,a.vmoney,b.vmoney as money from TS_VoucherInfo a,DC_VoucherInfo b 
+			where a.vno=b.vno and (a.vstatus!=b.vstatus or a.vmoney!=b.vmoney) and a.vstart=b.vstart and a.vend=b.vend)s GROUP BY s.vstart,s.vend
+		)c where 1=1
+		<if test="vstart !=null and vstart!=''">
+			and c.vstart=#{vstart}
+		</if> 
+		<if test="vend !=null and vend!=''">
+			and c.vend=#{vend}
+		</if> 
+		ORDER BY c.vstart desc
+	 </select>
+
+    <select id="childDiffByBatchNo" resultType="TicketDifference" parameterType="String">
+		select a.vstart,a.vend,a.usedDate,a.vno,a.vstatus,b.vstatus as status,a.vmoney,b.vmoney as money 
+		from TS_VoucherInfo a,DC_VoucherInfo b 
+		where a.vno=b.vno and (a.vstatus!=b.vstatus or a.vmoney!=b.vmoney) 
+		and a.vstart=#{VStart} and a.vend=#{VEnd} and a.vend=b.vend and a.vstart=b.vstart 
+		<if test="usedDate !=null and usedDate!=''">
+			and a.usedDate like CONCAT(#{usedDate},'%')
+		</if> 
+		<if test="VNo !=null and VNo!=''">
+			and a.VNo=#{VNo}
+		</if> 
+    </select>
+    
+    
+    <select id="findTicketDifference" resultType="TicketDifference" parameterType="String">
+		select * from(
+			select  a.UsedDate , a.VNo , a.VStatus , b.VStatus as Status , a.VMoney,b.VMoney as Money
+			from TS_VoucherInfo a LEFT JOIN DC_VoucherInfo b on a.VNo=b.VNo
+			union
+			select  a.UsedDate , a.VNo , b.VStatus , a.VStatus as Status , b.VMoney,a.VMoney as Money
+			from DC_VoucherInfo a LEFT JOIN TS_VoucherInfo b on a.VNo=b.VNo
+		)a
+		where a.vno not in(
+				select  a.VNo from DC_VoucherInfo a ,TS_VoucherInfo b
+				where a.VNo=b.VNo and a.VStatus=b.VStatus and a.VMoney=b.VMoney
+		)
+		ORDER BY a.UsedDate desc
+    </select>
+    
+    <!-- 保存差异明细数据 -->
+	<insert id="insertTicketDifference" parameterType="java.util.List">
+	 INSERT INTO RP_VoucherDiffInfo 
+	 	(usedDate,
+		VNo,
+		VStatus,
+		status,
+		VMoney,
+		money)
+	  values
+	  <foreach collection="list" item="item" index="index" separator=",">
+	  (#{item.usedDate},
+	   #{item.VNo},
+	   #{item.VStatus},
+	   #{item.status},
+	   #{item.VMoney},
+	   #{item.money})
+	</foreach>
+	</insert>
+	
+	<delete id="deleteTicketDifference">
+		delete from RP_VoucherDiffInfo
+	</delete>
+	
+</mapper>

@@ -1,0 +1,28 @@
+package com.jy.service.impl.task.ticket;
+
+import com.jy.entity.task.ticket.TaskTicketInfo;
+import com.jy.repository.task.ticket.TaskTicketDao;
+import com.jy.service.inter.task.ticket.TaskTicketService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/26.
+ */
+@Service
+public class TaskTicketServiceImpl implements TaskTicketService {
+    @Autowired
+    private TaskTicketDao taskTicketDao;
+    @Override
+    public void saveTaskTicketInfoList(Map map) {
+        taskTicketDao.saveTaskTicketInfoList(map);
+    }
+
+    @Override
+    public void deleteTicketInfo(Map map) {
+        taskTicketDao.deleteTicketInfo(map);
+    }
+}

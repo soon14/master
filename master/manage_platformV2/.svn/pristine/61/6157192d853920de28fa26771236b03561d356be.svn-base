@@ -1,0 +1,149 @@
+package com.jy.service.impl.system.channels;
+
+import com.jy.common.ajax.AjaxRes;
+import com.jy.mybatis.Page;
+import com.jy.repository.system.channels.CommissionDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.jy.entity.system.channels.Commission;
+import com.jy.service.system.channels.CommissionService;
+
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+/**
+ * 渠道佣金明细
+ */
+@Service("commissionService")
+public class CommissionServiceImpl  extends BaseServiceImp<Commission> implements CommissionService {
+
+    @Autowired
+    private CommissionDao commissionDao;
+
+    public Page<Commission> findByPage(Map map, Page page) throws Exception{
+        page.setResults(commissionDao.findByPage(map));
+        return page;
+    }
+
+    /**
+     * 统计
+     *
+     */
+    public Integer counts(Map map){
+        return commissionDao.counts(map);
+    }
+
+    /**
+     * 合并查找
+     *
+     */
+    public List<Commission> findByIds(List<String> list){
+        return commissionDao.findByIds(list);
+    };
+
+    /**
+     * 更改返佣状态
+     *
+     */
+    public void updateStatus(List<String> list){
+        commissionDao.updateStatus(list);
+    }
+
+    public AjaxRes synchroCommison(String startDate, String endDate) throws  Exception{
+        AjaxRes ar= new AjaxRes();
+        List<Commission> scrList = new ArrayList<Commission>();
+        scrList = commissionDao.findAll(startDate,endDate);
+//        /**
+//         * 天返
+//         * */
+//        scrList = commissionDao.findByDay();
+//        /**
+//         * 周返
+//         * */
+//        SimpleDateFormat sdf = new SimpleDateFormat("EEEE");
+//        String week = sdf.format(new Date());
+//        if("星期六".equals(week)){
+//            List<Commission> listW = commissionDao.findByWeek();
+//            scrList.addAll(listW);
+//        }
+//        /**
+//         * 月返
+//         **/
+//        if(monthOver()){
+//            List<Commission> listM = commissionDao.findByMonth();
+//            scrList.addAll(listM);
+//        }
+//        /**
+//         * 季返
+//         * */
+//        if(quarterOver()){
+//            List<Commission> listQ = commissionDao.findByQuarter();
+//            scrList.addAll(listQ);
+//        }
+        if(0!=scrList.size()){
+            commissionDao.delete();
+            commissionDao.insertList(scrList);
+            ar.setSucceedMsg("数据同步成功！");
+        }else{
+            ar.setSucceedMsg("没有同步数据！");
+        }
+        return ar;
+    }
+
+    public AjaxRes synchroCommisonOffline() throws  Exception{
+        AjaxRes ar= new AjaxRes();
+        List<Commission> scrList = new ArrayList<Commission>();
+        scrList = commissionDao.findAllOffline();
+        if(0!=scrList.size()){
+            commissionDao.insertListOffline(scrList);
+            ar.setSucceedMsg("数据同步成功！");
+        }else{
+            ar.setSucceedMsg("没有同步数据！");
+        }
+        return ar;
+    }
+
+    /**
+     * 判断条件
+     * */
+    public boolean monthOver(){
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(new Date());
+        calendar.set(Calendar.DATE, (calendar.get(Calendar.DATE) + 1));
+        if (calendar.get(Calendar.DAY_OF_MONTH) == 1) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean quarterOver(){
+        int x;                  // 日期属性：年
+        int y;                  // 日期属性：月
+        Calendar localTime=Calendar.getInstance();// 当前日期
+
+        String dateString = "";
+        x = localTime.get(Calendar.YEAR);
+        y = localTime.get(Calendar.MONTH) + 1;
+        if (y >= 1 && y <= 3) {
+            dateString = x + "-" + "03" + "-" + "31";
+        }
+        if (y >= 4 && y <= 6) {
+            dateString = x + "-" + "06" + "-" + "30";
+        }
+        if (y >= 7 && y <= 9) {
+            dateString = x + "-" + "09" + "-" + "30";
+        }
+        if (y >= 10 && y <= 12) {
+            dateString = x + "-" + "12" + "-" + "31";
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String currentDate = sdf.format(new Date());
+        if(currentDate.equals(dateString)){
+            return true;
+        }
+        return false;
+    }
+
+}

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.commom.UserBalanceDao">
+    <resultMap id="userBalance" type="UserBalancePO">
+    </resultMap>
+
+    <insert id="save">
+        <![CDATA[   INSERT INTO DC_UserBalance(userId,funds,transTime,createTime,qcDate)
+        VALUES ]]>
+        <foreach item="o" collection="list" index="index" separator="," >
+            <![CDATA[  (#{o.userId},#{o.funds},#{o.transTime},#{o.createTime},#{o.qcDate}) ]]>
+        </foreach>
+    </insert>
+    <delete id="deleteByAll" parameterType="String">
+        DELETE  FROM  DC_UserBalance
+        <if test="qcDate!=null and qcDate!=''">
+            WHERE str_to_date(qcDate,'%Y-%m-%d') = #{qcDate}
+        </if>
+    </delete>
+</mapper>

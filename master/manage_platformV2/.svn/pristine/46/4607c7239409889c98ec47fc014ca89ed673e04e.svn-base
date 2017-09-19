@@ -1,0 +1,118 @@
+package com.jy.service.impl.system.channels;
+
+import com.jy.common.utils.DateUtils;
+import com.jy.entity.system.finance.CpOrderInfo;
+import com.jy.from.system.request.OrderInfoForm;
+import com.jy.repository.system.channels.CpOrderInfoDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.system.channels.CpOrderInfoService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Created by Matthew on 2017/4/26.
+ */
+@Service("cpOrderInfoService")
+public class CpOrderInfoServiceImpl extends BaseServiceImp<CpOrderInfo> implements CpOrderInfoService {
+
+    @Autowired
+    private CpOrderInfoDao cpOrderInfoDao;
+
+    @Override
+    public int orderSave(List<OrderInfoForm> listAll,String date) {
+        List<CpOrderInfo> CpOrderInfos = new ArrayList<>();
+        for (OrderInfoForm orderInfoForm : listAll) {
+            orderInfoForm.setTicketTime("".equals(orderInfoForm.getTicketTime())?null:orderInfoForm.getTicketTime());
+            CpOrderInfo CpOrderInfo = new CpOrderInfo();
+            BeanUtils.copyProperties(orderInfoForm, CpOrderInfo);
+            CpOrderInfo.setCreateTimeD(new Date());
+            //设置活动code
+            CpOrderInfo.setSchemeType(this.retrunSchemeType(orderInfoForm.getSchemeType()));
+            CpOrderInfo.setSycDate(DateUtils.getSpecifiedDayBefore(date,0,"yyyyMMdd"));
+            CpOrderInfo.setIsValid(1);
+            /**订单类型 1：普通订单 2：追期订单 */
+            if("10".equals(orderInfoForm.getSchemeExtendType())||"20".equals(orderInfoForm.getSchemeExtendType())){
+                CpOrderInfo.setOrderType("1");
+            }else{
+                CpOrderInfo.setOrderType("2");
+            }
+            CpOrderInfos.add(CpOrderInfo);
+        }
+        return this.cpOrderInfoDao.orderSave(CpOrderInfos);
+    }
+
+    @Override
+    public int tranceSave(List<OrderInfoForm> listAll) {
+        List<CpOrderInfo> CpOrderInfos = new ArrayList<>();
+        for (OrderInfoForm orderInfoForm : listAll) {
+            CpOrderInfo CpOrderInfo = new CpOrderInfo();
+            orderInfoForm.setTicketTime("".equals(orderInfoForm.getTicketTime())?null:orderInfoForm.getTicketTime());
+            BeanUtils.copyProperties(orderInfoForm, CpOrderInfo);
+            CpOrderInfo.setCreateTimeD(new Date());
+            //设置活动code
+            CpOrderInfo.setSchemeType(this.retrunSchemeType(orderInfoForm.getSchemeType()));
+            //设置出票时间
+            if(orderInfoForm.getType().equals("1")){
+                //CpOrderInfo.setQcDate(orderInfoForm.getTicketTime());
+                CpOrderInfo.setSycDate(orderInfoForm.getDayStr());
+            }else{
+                String date=DateUtils.getSpecifiedDayBefore(orderInfoForm.getDayStr(),1,"yyyyMMdd");//获取前一天
+                CpOrderInfo.setSycDate(date);
+            }
+            CpOrderInfo.setIsValid(1);
+           /**购彩状态设置--duanshixi--取消状态转换，使用接口状态*/
+         /*   if(10==orderInfoForm.getStatus()||13==orderInfoForm.getStatus()||15==orderInfoForm.getStatus()){
+                CpOrderInfo.setStatus(1);
+            }else if(17==orderInfoForm.getStatus()){
+                CpOrderInfo.setStatus(3);
+            }else if(14==orderInfoForm.getStatus()||16==orderInfoForm.getStatus()){
+                CpOrderInfo.setStatus(4);
+            }*/
+            CpOrderInfos.add(CpOrderInfo);
+        }
+        return this.cpOrderInfoDao.tranceSave(CpOrderInfos);
+    }
+
+    @Override
+    public void orderClean(String date){
+        cpOrderInfoDao.orderClean(date);
+    }
+
+    @Override
+    public void tranceClean(String date,String type){
+        cpOrderInfoDao.tranceClean(date,type);
+    }
+    //增加活动code转换
+    private String retrunSchemeType(String code){
+        //1，非活动，301：中国移动601：得仕捕鱼，501：得仕棋牌，401：欧建商户
+        String returnCode="1";//默认为非活动
+        switch (code) {
+            case "301":
+                returnCode= "301";
+                break;
+            case "601":
+                returnCode= "601";
+                break;
+            case "501":
+                returnCode= "501";
+                break;
+            case "401":
+                returnCode= "401";
+                break;
+            default:
+                returnCode = "1";
+                break;
+        }
+        return returnCode;
+
+    }
+    @Override
+    public int findByTypeAndTime(String date,String type){
+        return cpOrderInfoDao.findByTypeAndTime(date,type);
+    }
+}

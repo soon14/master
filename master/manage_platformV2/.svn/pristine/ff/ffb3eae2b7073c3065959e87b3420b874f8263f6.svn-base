@@ -1,0 +1,241 @@
+package com.jy.service.impl.system.finance.reconciliation.lottery;
+
+import com.jy.common.exception.DaysBaseException;
+import com.jy.common.mybatis.PageCalculation;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.excel.ExcelReport;
+import com.jy.entity.system.finance.reconciliation.lottery.BettingDifference;
+import com.jy.entity.system.finance.reconciliation.lottery.CountSale;
+import com.jy.mybatis.Page;
+import com.jy.repository.system.finance.reconciliation.lottery.BettingDifferenceDao;
+import com.jy.repository.system.finance.reconciliation.lottery.CountSaleDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.impl.help.ExcelUtil;
+import com.jy.service.system.finance.reconciliation.lottery.BettingDifferenceService;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * @文件名: 投注系统 出票系统对账服务
+ * @功能描述：
+ * @创建日期:2017年3月9日下午8:21:53
+ * @创建人：lijunke
+ * @Copyright（c） 2017, all rights reserved by days
+ */
+@Service("bettingDifferenceService")
+public class BettingDifferenceServiceImpl extends BaseServiceImp<BettingDifference> implements BettingDifferenceService {
+
+
+    @Value("${download.detail.filename}")
+    private String detailFileName;
+
+    @Value("${download.betting.filename}")
+    private String bettingFileName;
+
+    // 销售总表dao
+    @Autowired
+    private CountSaleDao countSaleDao;
+
+    // 差异表dao，用来保存数据
+    @Autowired
+    private BettingDifferenceDao bettingDifferenceDao;
+
+    @Autowired
+    private ExcelUtil excelutil;
+
+
+
+    /**
+     * @功能描述： 统计总页面
+     * @author lijunke
+     * @DATE 2017年3月15日下午4:00:10
+     */
+    @Override
+    public Page<CountSale> findAll(String startDate, String endDate, Page<CountSale> page) {
+        List<CountSale> list;
+        if (StringUtils.isNotBlank(startDate) && StringUtils.isNotBlank(endDate)) {
+            list = this.countSaleDao.findAll(DateUtils.StringToDate(startDate), DateUtils.StringToDate(endDate));
+        } else {
+            list = this.countSaleDao.findAll(null, null);
+        }
+        page.setResults(list);
+        page.setPageSize(page.getPageSize());
+        page.setPageNum(page.getPageNum());
+        page = (Page<CountSale>) PageCalculation.getPageCalculation(page);
+        if (null != page.getResults()) {
+            page.setTotalRecord(list.size());
+        }
+        return page;
+    }
+
+    /**
+     * @功能描述： 明细页面数据查询
+     * @author lijunke
+     * @DATE 2017年3月15日下午4:00:27
+     */
+    @Override
+    public Page<BettingDifference> differenceList(String date, Page<BettingDifference> page, String ids) {
+        List<BettingDifference> blist = this.bettingDifferenceDao.findByDate(date, ids);
+        page.setResults(blist);
+        page.setPageSize(page.getPageSize());
+        page.setPageNum(page.getPageNum());
+        page = (Page<BettingDifference>) PageCalculation.getPageCalculation(page);
+        if (null != page.getResults()) {
+            page.setTotalRecord(blist.size());
+        }
+        return page;
+    }
+
+    /**
+     * @功能描述： 手动重置
+     * @author lijunke
+     * @DATE 2017年3月15日下午4:00:10
+     */
+    @Override
+    public void restTask(Date startDate, Date endDate) throws DaysBaseException {
+        logger.info("执行手动重置方法，调用跑批程序，成生数据!");
+
+        List<Date> listDate = DateUtils.findDates(startDate, endDate);
+        for (Date date : listDate) {
+            this.runBetting(date, date);
+        }
+    }
+
+
+    /**
+     * 执行对账
+     */
+    public void runBetting(Date startTime, Date endTime) throws DaysBaseException {
+        logger.info("执行销售对账...");
+        startTime = DateUtils.getDateStart(startTime);
+        endTime = DateUtils.getDateEnd(endTime);
+
+        //删除上次生成的汇总数据
+        this.countSaleDao.delete(startTime);
+        //生成汇总数据,插入到汇总表
+        this.diffSummary(startTime, endTime);
+
+        //删除上次生成的明细数据
+        this.bettingDifferenceDao.delete(startTime);
+        //生成明细差异数据，插入到差异表
+        this.diffDetail(startTime, endTime);
+
+        //生成excel
+        this.createExcel(startTime, endTime);
+        logger.info("生成excel...");
+    }
+
+    /**
+     * 保存销售汇总数据
+     *
+     * @param startTime
+     * @param endTime
+     */
+    private void diffSummary(Date startTime, Date endTime) {
+        logger.info("保存销售汇总数据！");
+        try {
+            this.countSaleDao.insert(startTime, endTime);
+        } catch (Exception e) {
+            logger.info("保存销售汇总数据失败！");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 保存差异明细数据
+     *
+     * @param startTime
+     * @param endTime
+     */
+    private void diffDetail(Date startTime, Date endTime) {
+        logger.info("保存销售明细数据！");
+        try {
+            this.bettingDifferenceDao.insert(startTime, endTime);
+        } catch (Exception e) {
+            logger.info("保存销售明细数据失败！");
+            e.printStackTrace();
+        }
+    }
+
+    private void createExcel(Date startTime, Date endTime) throws DaysBaseException {
+        this.generateMainReport(startTime, endTime);
+        this.generateDetailReport(startTime, endTime);
+    }
+
+    //总报表生成
+    public void generateMainReport(Date startTime, Date endTime) throws DaysBaseException {
+        ExcelReport ep = this.fullMainData();
+        List<CountSale> list = this.countSaleDao.findAll(startTime, endTime);
+        net.sf.json.JSONArray data = net.sf.json.JSONArray.fromObject(list);
+        ep.setData(data);
+        ep.setCheckAttr("statisticsDate");
+        ep.setColumnNo(0);
+        try {
+            excelutil.replaceData(ep);
+        } catch (Exception e) {
+            logger.info("生成销售汇总excel失败！");
+            e.printStackTrace();
+        }
+    }
+
+    //总报表属性赋值
+    private ExcelReport fullMainData() {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        ep.setTitle(bettingFileName);
+        String fileName = bettingFileName;
+        String date = DateUtils.format(new Date(), "yyyy-MM");
+        ep.setFileName(sbf.append(fileName).append(date).toString());
+        String headers[] = new String[]{
+                "日期", "投注系统销售总笔数", "投注系统销售总金额", "出票系统销售总笔数", "出票系统销售总金额", "线下销量", "销售总额", "投注系统-出票系统(差异总笔数)", "投注系统-出票系统(差异总金额)"};
+        String attrs[] = new String[]{
+                "statisticsDate", "bettingNumber", "bettingAmount", "ticketNumber", "ticketAmount", "offlineVolume", "totalAumone", "numberDifference", "amountDifference"};
+
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        return ep;
+    }
+
+    //明细报表生成
+    public void generateDetailReport(Date startTime, Date endTime) {
+        ExcelReport ep = this.fullDetailData();
+
+        List<BettingDifference> bettingDifference = this.bettingDifferenceDao.findAll(startTime);
+        net.sf.json.JSONArray data = net.sf.json.JSONArray.fromObject(bettingDifference);
+        ep.setData(data);
+        ep.setCheckAttr("ticketNo");
+        ep.setColumnNo(0);
+        try {
+            excelutil.replaceData(ep);
+        } catch (Exception e) {
+            logger.info("生成销售明细excel失败！");
+            e.printStackTrace();
+        }
+    }
+
+
+    //明细报表属性赋值
+    private ExcelReport fullDetailData() {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        ep.setTitle(detailFileName);
+        String fileName = detailFileName;
+        String date = DateUtils.format(new Date(), "yyyy-MM");
+        ep.setFileName(sbf.append(fileName).append(date).toString());
+        String headers[] = new String[]{
+                "日期", "编号", "差异金额", "差异类型", "差异产生的具体原因", "是否需要处理", "建议处理意见", "处理人", "预计完成时间", "处理状态"};
+        String attrs[] = new String[]{
+                "dfInitDate", "ticketNo", "dfDiffMoney", "dfType", "dfReason"};
+
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        return ep;
+    }
+
+}

@@ -1,0 +1,23 @@
+package com.jy.process.system.channels;
+
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.channels.OutLineDataInfo;
+import com.jy.entity.system.channels.Prepayment;
+import com.jy.entity.system.channels.PrepaymentExtend;
+import com.jy.from.system.request.OutLineDataForm;
+import com.jy.from.system.request.TerminalForm;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/5/17.
+ */
+public interface TerminalProcess {
+    public void addTerminal(TerminalForm terminalForm) throws Exception;
+    public void delTerminal(TerminalForm terminalForm) throws Exception;
+    public void updateTerminal(TerminalForm terminalForm) throws Exception;
+    public List<TerminalForm> findTerminalForm(Map map) throws  Exception;
+    public TerminalForm findTerminal(Map map) throws  Exception;
+    public List<TerminalForm> findTerminalForm(Map map,int a) throws  Exception;
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.statistics.jobTask.JobTaskStatisticsDao">
+	<resultMap id="JobTaskStatistics" type="JobTaskStatistics" >
+
+	</resultMap>
+	
+   <select id="fundJobTaskStatistics"  resultMap="JobTaskStatistics" parameterType="JobTaskStatistics">
+		SELECT * FROM   RP_JOBTASKSTATISTICS where 1=1
+		<if test="param.date !=null and param.date!='' and param.endDate ==''">
+			and date like '%${param.date}%'
+		</if>
+		<if test="param.date !=null and param.date!='' and param.endDate != null and param.endDate !=''">
+			and date BETWEEN #{param.date} AND #{param.endDate} 
+		</if>
+		<if test="param.jobName !=null and param.jobName!=''">
+			and jobName like '%${param.jobName}%'
+		</if>
+	    ORDER BY Date desc
+	</select>
+   
+   <insert id="insertJobTaskStatistics" parameterType="JobTaskStatistics">
+   		insert into RP_JOBTASKSTATISTICS(Date,JobName,InterfaceNumber,InterfaceMoney,StorageNumber,StorageMoney,Description)
+   		values(#{date},#{jobName},#{interfaceNumber},#{interfaceMoney},#{storageNumber},#{storageMoney},#{description});
+   </insert>
+   
+</mapper>

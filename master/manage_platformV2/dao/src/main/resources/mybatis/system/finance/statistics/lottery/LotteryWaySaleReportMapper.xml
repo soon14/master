@@ -1,0 +1,458 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.statistics.lottery.LotteryWaySaleReportDao">
+	<resultMap id="list" type="LotteryWaySaleReport">
+		<id column="id" jdbcType="BIGINT" property="id"/>
+		<result column="date" property="date" />
+		<result column="lottery10023" property="lottery10023" />
+		<result column="lottery10024" property="lottery10024" />
+		<result column="lottery100234" property="lottery100234" />
+		<result column="lottery10026" property="lottery10026" />
+		<result column="lottery10030" property="lottery10030" />
+		<result column="lottery10039" property="lottery10039" />
+		<result column="lottery10040" property="lottery10040" />
+		<result column="lottery10041" property="lottery10041" />
+		<result column="lottery10042" property="lottery10042" />
+		<result column="lottery10058" property="lottery10058" />
+		<result column="lottery10059" property="lottery10059" />
+		<result column="lottery10066" property="lottery10066" />
+		<result column="lotteryAll" property="lotteryAll" />
+	</resultMap>
+	<resultMap id="OrderTicketReport" type="OrderTicketReport">
+		<id column="id" jdbcType="BIGINT" property="id"/>
+		<result column="date" property="date" />
+		<result column="commonOrderMoney" property="commonOrderMoney" />
+		<result column="tranceOrderMoney" property="tranceOrderMoney" />
+		<result column="activityOrderMoney" property="activityOrderMoney" />
+		<result column="orderMoney" property="orderMoney" />
+		<result column="ticketMoney" property="ticketMoney" />
+		<result column="diff" property="diff" />
+	</resultMap>
+
+	<resultMap id="OrderTicketDiffReport" type="OrderTicketDiffReport">
+		<id column="id" jdbcType="BIGINT" property="id"/>
+		<result column="date" property="date" />
+		<result column="schemeExtendId" property="schemeExtendId" />
+		<result column="extendMoney" property="extendMoney" />
+		<result column="ticket" property="ticket" />
+		<result column="ticketMoney" property="ticketMoney" />
+		<result column="diffMoney" property="diffMoney" />
+		<result column="diffType" property="diffType" />
+		<result column="diffReason" property="diffReason" />
+		<result column="status" property="status" />
+		<result column="handler" property="handler" />
+		<result column="handleTime" property="handleTime" />
+	</resultMap>
+
+	<resultMap id="money" type="Double">
+		<id column="money"  property="money"/>
+	</resultMap>
+	<insert id="insert"  parameterType="LotteryWaySaleReport">
+		<![CDATA[
+	INSERT INTO RP_LotteryWaySaleReport(
+	id,date,lottery10023,lottery10024,lottery100234,lottery10026,lottery10030,lottery10039
+	,lottery10040,lottery10041,lottery10042,lottery10058,lottery10059,lottery10066,lotteryAll
+	) VALUES (
+	#{id},#{date},#{lottery10023},#{lottery10024},#{lottery100234},#{lottery10026},#{lottery10030},
+	#{lottery10039},
+	#{lottery10040},#{lottery10041},#{lottery10042},#{lottery10058},#{lottery10059},#{lottery10066},#{lotteryAll}
+	)
+	]]>
+	</insert>
+
+	<insert id="insertOrderTicketReport"  parameterType="OrderTicketReport">
+		<![CDATA[
+	INSERT INTO RP_OrderTicketReport(
+	id,date,orderMoney,ticketMoney,diff,commonOrderMoney,tranceOrderMoney,activityOrderMoney
+	) VALUES (
+	#{id},#{date},#{orderMoney},#{ticketMoney},#{diff},#{commonOrderMoney},#{tranceOrderMoney},#{activityOrderMoney}
+	)
+	]]>
+	</insert>
+	<insert id="insertDiffReport"  parameterType="OrderTicketDiffReport">
+	INSERT INTO RP_OrderTicketDiffReport(
+	id,date,schemeExtendId,extendMoney,ticket,ticketMoney,diffMoney,diffType,diffReason,status
+	,handler,handleTime
+	) VALUES
+	<foreach collection="list" item="item" index="index" separator="," >
+		(#{item.id},#{item.date},#{item.schemeExtendId},#{item.extendMoney},#{item.ticket},#{item.ticketMoney},#{item.diffMoney},#{item.diffType},#{item.diffReason},
+	#{item.status},
+	#{item.handler},#{item.handleTime}
+	)
+	</foreach>
+	</insert>
+
+
+	<update id="update"  parameterType="LotteryWaySaleReport">
+		<![CDATA[
+	update RP_LotteryWaySaleReport set
+	date=#{date},lottery10023=#{lottery10023},lottery10024=#{lottery10024},
+	lottery100234=#{lottery100234},lottery10026=#{lottery10026},lottery10030=#{lottery10030},
+	lottery10039=#{lottery10039}
+	,lottery10040=#{lottery10040},lottery10041=#{lottery10041},lottery10042=#{lottery10042},lottery10058=#{lottery10058},lottery10059=#{lottery10059},lottery10066=#{lottery10066},lotteryAll=#{lotteryAll},
+	WHERE id=#{id}
+	]]>
+	</update>
+
+	<delete id="deleteList" parameterType="LotteryWaySaleReport">
+		delete from RP_LotteryWaySaleReport
+		WHERE id  in
+		<foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+			#{item.id}
+		</foreach>
+	</delete>
+
+
+
+	<delete id="deleteOrderTicketReportList" parameterType="OrderTicketReport">
+		delete from RP_OrderTicketReport
+		WHERE id  in
+		<foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+			#{item.id}
+		</foreach>
+	</delete>
+	<delete id="deleteDiffList" parameterType="OrderTicketDiffReport">
+		delete from RP_OrderTicketDiffReport
+		WHERE id  in
+		<foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+			#{item.id}
+		</foreach>
+	</delete>
+	<select id="findMonth"  resultMap="list" >
+		SELECT t.*   FROM RP_LotteryWaySaleReport t
+		<where>
+			t.date LIKE '%${month}%'
+		</where>
+		ORDER by t.date ASC
+	</select>
+
+
+
+	<select id="findOrderTicketForMonth"  resultMap="OrderTicketReport" >
+		SELECT t.*   FROM RP_OrderTicketReport t
+		<where>
+			t.date LIKE '%${month}%'
+		</where>
+		ORDER by t.date ASC
+	</select>
+	<select id="findDiffMonth"  resultMap="OrderTicketDiffReport" >
+		SELECT t.*   FROM RP_OrderTicketDiffReport t
+		<where>
+			t.date LIKE '%${month}%'
+		</where>
+		ORDER by t.date ASC
+	</select>
+	<select id="findIsExitByDate"  resultMap="list" parameterType="LotteryWaySaleReport">
+		SELECT t.* FROM RP_LotteryWaySaleReport t
+		<where>
+			t.date = #{0}
+		</where>
+		ORDER BY t.date desc
+	</select>
+
+	<select id="findOrderTicketReportByDate"  resultMap="OrderTicketReport" parameterType="OrderTicketReport">
+		SELECT t.* FROM RP_OrderTicketReport t
+		<where>
+			t.date = #{0}
+		</where>
+		ORDER BY t.date desc
+	</select>
+
+	<select id="findOrderTicketReportDiffByDate"  resultMap="OrderTicketReport" parameterType="OrderTicketReport">
+		SELECT t.* FROM RP_OrderTicketDiffReport t
+		<where>
+			t.date = #{0}
+		</where>
+		ORDER BY t.date desc
+	</select>
+
+	<select id="findReport"  resultMap="list" parameterType="LotteryWaySaleReport">
+	SELECT *, (lottery100234 + lottery10026 + lottery10030 + lottery10039 + lottery10040+ lottery10041+ lottery10042 + lottery10058 + lottery10059 + lottery10066) as lotteryAll FROM(
+	select
+		<if test="commonOrTrance==1">
+			date_format(a.ticketTime,'%Y-%m-%d') as date,
+		</if>
+		<if test="commonOrTrance==2">
+			date_format(a.sycDate,'%Y-%m-%d') as date,
+		</if>
+		sum(case when a.lotteryId in ('10023','10024') 	 then a.money else 0 end ) as lottery100234,
+		sum(case when a.lotteryId ='10026' then a.money else 0 end ) as lottery10026,
+		sum(case when a.lotteryId ='10030' then a.money else 0 end ) as lottery10030,
+		sum(case when a.lotteryId ='10039' then a.money else 0 end ) as lottery10039,
+		sum(case when a.lotteryId ='10040'    then a.money else 0 end ) as lottery10040,
+		sum(case when a.lotteryId ='10058' then a.money else 0 end ) as lottery10058,
+		sum(case when a.lotteryId ='10059'    then a.money else 0 end ) as lottery10059,
+		sum(case when a.lotteryId ='10041'    then a.money else 0 end ) as lottery10041,
+		sum(case when a.lotteryId ='10042'    then a.money else 0 end ) as lottery10042,
+		sum(case when a.lotteryId ='10066'   then a.money else 0 end ) as  lottery10066
+		from
+		<if test="commonOrTrance==1">
+		DC_CP_OrderInfo a
+		</if>
+		<if test="commonOrTrance==2">
+			DC_CP_TraceOrderInfo a
+		</if>
+
+		where 1 = 1
+		and isValid=1
+		<if test="commonOrTrance==1">
+			AND orderType = 1
+			AND status =3
+			-- and a.ticketTime like '%${date}%'
+			and a.sycDate=#{date}
+		</if>
+		<if test="commonOrTrance==2">
+			and dtype=2
+			and a.sycDate =#{date}
+		</if>
+		) as cp
+	</select>
+
+
+	<select id="findCommonMoney"  resultMap="money" >
+		SELECT sum(money) as money
+		from
+			DC_CP_OrderInfo
+		where 1 = 1
+		and isValid=1
+		and ticketTime like '%${date}%'
+		AND orderType = 1
+		and schemeType=1
+	    AND status=3
+	</select>
+
+	<select id="findTranceMoney"  resultMap="money" >
+		SELECT sum(money) as money
+		from
+		DC_CP_TraceOrderInfo
+		where 1 = 1
+		and isValid=1
+		and dtype=2
+		and sycDate like '%${date}%'
+	</select>
+
+
+	<select id="findActivityMoney"  resultMap="money" >
+		SELECT sum(money) as money
+		from
+			DC_CP_OrderInfo
+		where 1 = 1
+		and isValid=1
+		and ticketTime like '%${date}%'
+		AND orderType = 1
+		and schemeType!=1
+	   AND status=3
+	</select>
+
+	<select id="findTicketMoney"  resultMap="money" >
+		SELECT sum(money) as money
+		from
+		DC_TicketInfo
+		where 1 = 1
+		and ticketTime like '%${date}%'
+		and castStatus in (2,3)
+
+	</select>
+
+
+	<!--分页多参数查询数据-->
+	<select id="findByPage"  resultMap="list" parameterType="LotteryWaySaleReport">
+		SELECT * FROM RP_LotteryWaySaleReport
+		WHERE 1=1
+		<if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')" >
+			and   date  BETWEEN #{param.beginTime} and #{param.endTime}
+		</if>
+		ORDER BY date desc
+	</select>
+
+
+
+	<select id="findOrderTicketByPage"  resultMap="OrderTicketReport" parameterType="OrderTicketReport">
+		SELECT * FROM RP_OrderTicketReport
+			WHERE 1=1
+		<if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')" >
+			and   date  BETWEEN #{param.beginTime} and #{param.endTime}
+		</if>
+		ORDER BY date desc
+	</select>
+
+
+	<select id="findDiffByPage"  resultMap="OrderTicketDiffReport" parameterType="OrderTicketDiffReport">
+		SELECT * FROM RP_OrderTicketDiffReport
+			WHERE 1=1
+		<if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')" >
+			and   date  BETWEEN #{param.beginTime} and #{param.endTime}
+		</if>
+		ORDER BY date desc
+	</select>
+
+	<select id="findCommonDiffOrder"  resultMap="OrderTicketDiffReport" parameterType="OrderTicketDiffReport">
+	SELECT orderList.orderId  as schemeExtendId,(orderList.money - tList.tmoney) as diffMoney, '方案相同的 金额差' as diffType,
+	 0 as status ,#{0} as date FROM
+			(select cporder.schemeExtendId as orderId,cporder.money
+				from DC_CP_OrderInfo cporder
+				WHERE  cporder.ticketTime BETWEEN #{0} and #{1}
+				AND cporder.orderType = 1
+				AND cporder.status=3
+			) orderList
+		INNER JOIN
+	        (select t.schemeExtendId as tId,sum(t.money) as tmoney
+				FROM  DC_TicketInfo t
+				WHERE t.ticketTime BETWEEN #{0} and #{1}
+				and t.castStatus in (2,3)
+				and t.isChaseNum=0
+				GROUP BY t.schemeExtendId
+			) tList
+		ON(orderList.orderId = tList.tId)
+		WHERE (orderList.money - tList.tmoney) != 0
+	UNION
+
+
+	--  方案表有，票表无单边账数据
+	  SELECT orderList.orderId as schemeExtendId,orderList.money as diffMoney,'方案表有，票表无单边账数据' as diffType,
+	 0 as status ,#{0}  as date FROM
+			(select cporder.schemeExtendId as orderId,cporder.money
+				from DC_CP_OrderInfo cporder
+				WHERE  cporder.ticketTime BETWEEN #{0} and #{1}
+				AND cporder.orderType = 1
+				AND cporder.status=3
+			) orderList
+	LEFT JOIN
+			(select t.schemeExtendId as tId,sum(t.money) as tmoney
+				FROM  DC_TicketInfo t
+				WHERE t.ticketTime BETWEEN #{0} and #{1}
+				and t.isChaseNum=0
+				GROUP BY t.schemeExtendId
+			) tList
+	ON(orderList.orderId = tList.tId)
+	WHERE tList.tId is NULL
+
+	</select>
+
+	<select id="findTranceDiffOrder"  resultMap="OrderTicketDiffReport" parameterType="OrderTicketDiffReport">
+	SELECT orderList.orderId  as schemeExtendId,(orderList.money - tList.tmoney) as diffMoney, '方案相同的 金额差' as diffType,
+	 0 as status ,#{0} as date FROM
+			(select cporder.schemeExtendId as orderId,cporder.money
+				from DC_CP_TraceOrderInfo cporder
+				WHERE  cporder.sycDate =#{2}
+				and cporder.dtype=2
+			) orderList
+		INNER JOIN
+			(select t.schemeExtendId as tId,sum(t.money) as tmoney
+				FROM  DC_TicketInfo t
+				WHERE t.ticketTime BETWEEN #{0} and #{1}
+				and t.castStatus in (2,3)
+				and t.isChaseNum=1
+				GROUP BY t.schemeExtendId
+			) tList
+		ON(orderList.orderId = tList.tId)
+		WHERE (orderList.money - tList.tmoney) != 0
+	UNION
+
+
+	--  方案表有，票表无单边账数据
+	SELECT orderList.orderId as schemeExtendId,orderList.money as diffMoney,'方案表有，票表无单边账数据' as diffType,
+	 0 as status ,#{0}  as date FROM
+			  (select cporder.schemeExtendId as orderId,cporder.money
+					from DC_CP_TraceOrderInfo cporder
+					WHERE  cporder.sycDate = #{2}
+					and cporder.dtype=2
+			  ) orderList
+			LEFT JOIN
+			  (select t.schemeExtendId as tId,sum(t.money) as tmoney
+					FROM  DC_TicketInfo t
+					WHERE t.ticketTime BETWEEN #{0} and #{1}
+					and t.isChaseNum=1
+					GROUP BY t.schemeExtendId
+			  ) tList
+	ON(orderList.orderId = tList.tId)
+	WHERE tList.tId is NULL
+
+	</select>
+
+	<select id="findCommonDiffTicket"  resultMap="OrderTicketDiffReport" parameterType="OrderTicketDiffReport">
+		SELECT dc.tid as schemeExtendId,-1*dc.money as diffMoney,0 as status , diffType,#{0} as date
+		from(
+			SELECT tList.tId as schemeExtendId,tList.tmoney as diffMoney,'方案表无，票表有单边账数据' as diffType FROM
+				(select cporder.schemeExtendId as orderId,cporder.money
+					from DC_CP_OrderInfo cporder
+					WHERE  cporder.ticketTime BETWEEN #{0} and #{1}
+					AND cporder.orderType = 1
+				) orderList
+		  RIGHT JOIN
+			(select t.schemeExtendId as tId,sum(t.money) as tmoney
+				FROM  DC_TicketInfo t
+				WHERE t.ticketTime BETWEEN #{0} and #{1}
+				and t.castStatus in (2,3)
+				and t.isChaseNum=0
+				GROUP BY t.schemeExtendId
+			) tList
+		  ON(orderList.orderId = tList.tId)
+		  WHERE orderList.orderId is NULL
+	UNION
+		  SELECT orderList.orderId  as schemeExtendId,-1*tList.tmoney as diffMoney,'方案表撤单，票表出票成功' as diffType FROM
+			(select cporder.schemeExtendId as orderId,cporder.money
+				from DC_CP_OrderInfo cporder
+				WHERE  cporder.ticketTime BETWEEN #{0} and #{1}
+				AND cporder.orderType = 1
+				AND cporder.status=4
+			) orderList
+		  INNER JOIN
+				(select t.schemeExtendId as tId,sum(t.money) as tmoney
+					FROM  DC_TicketInfo t
+					WHERE t.ticketTime BETWEEN #{0} and #{1}
+					and t.castStatus in (2,3)
+					and t.isChaseNum=0
+					GROUP BY t.schemeExtendId
+				) tList
+			ON(orderList.orderId = tList.tId))list
+		  INNER JOIN
+				(SELECT t.voteTicketId as tid,t.money as money,t.schemeExtendId as sid
+					FROM DC_TicketInfo t
+					WHERE t.ticketTime  BETWEEN #{0} and #{1} and t.castStatus in (2,3)
+					and t.isChaseNum=0
+		)dc
+	  ON (list.schemeExtendId = dc.sid)
+	</select>
+	<select id="findTranceDiffTicket"  resultMap="OrderTicketDiffReport" parameterType="OrderTicketDiffReport">
+		SELECT dc.tid as schemeExtendId,-1*dc.money as diffMoney,0 as status , diffType,#{0} as date from(
+			SELECT tList.tId as schemeExtendId,tList.tmoney as diffMoney,'方案表无，票表有单边账数据' as diffType FROM
+				(select cporder.schemeExtendId as orderId,cporder.money
+					from DC_CP_TraceOrderInfo cporder
+					WHERE  cporder.sycDate=#{2}
+				) orderList
+			RIGHT    JOIN
+				(select t.schemeExtendId as tId,sum(t.money) as tmoney
+				FROM  DC_TicketInfo t
+				WHERE t.ticketTime BETWEEN #{0}  AND  #{1}
+				and t.castStatus in (2,3)
+				and t.isChaseNum=1
+				GROUP BY t.schemeExtendId
+				) tList
+			ON(orderList.orderId = tList.tId)
+			WHERE orderList.orderId is NULL
+		UNION
+			  SELECT orderList.orderId  as schemeExtendId,-1*tList.tmoney as diffMoney,'方案表撤单，票表出票成功' as diffType FROM
+				(select cporder.schemeExtendId as orderId,cporder.money
+					from DC_CP_TraceOrderInfo cporder
+					WHERE  cporder.sycDate=#{2}
+					AND cporder.dtype=3
+				) orderList
+			INNER JOIN
+				(select t.schemeExtendId as tId,sum(t.money) as tmoney
+					FROM  DC_TicketInfo t
+					WHERE t.ticketTime BETWEEN #{0}  AND  #{1}
+					and t.castStatus in (2,3)
+					and t.isChaseNum=1
+					GROUP BY t.schemeExtendId
+				) tList
+			ON(orderList.orderId = tList.tId))list
+	  INNER JOIN
+			(SELECT t.voteTicketId as tid,t.money as money,t.schemeExtendId as sid
+				FROM DC_TicketInfo t
+				WHERE t.ticketTime  BETWEEN #{0}  AND  #{1}
+ 				and t.castStatus in (2,3)
+				and t.isChaseNum=1
+	)dc  ON (list.schemeExtendId = dc.sid)
+	</select>
+</mapper>

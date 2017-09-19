@@ -1,0 +1,89 @@
+package com.jy.process.impl.system.request;
+
+import com.jy.common.enumerate.TxtDataEnum;
+import com.jy.common.utils.DateUtils;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.process.system.request.UserInfoRequestProcess;
+import com.jy.service.system.channels.CPUserInfoService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+/**
+ * Created by lijunke on 2017/4/24.
+ */
+@Service("userInfoRequestProcess")
+public class UserInfoRequestProcessImpl extends ApiRequestTxtProcessImpl implements UserInfoRequestProcess {
+
+    protected static final Logger log = LoggerFactory.getLogger(UserInfoRequestProcessImpl.class);
+
+    @Value("${ftpAddress}")
+    private String ftpAddress;          //ftp登录信息
+    @Value("${ftpDownLoad}")
+    private String ftpDownLoad;         //ftp文件的路径
+    @Value("${user.list}")
+    private String ftpFileName;         //下载文件的名称
+    @Value("${localhostAddr}")
+    private String localhostAdd;       //下载到本地的路径
+    @Autowired
+    protected CPUserInfoService uerInfoService;
+    @Autowired
+    private JobTaskStatisticsService jobTaskStatisticsService;
+
+
+    @Override
+    public void synchronizationUserData(String date) throws Exception {
+        String[] ftpAddr = ftpAddress.split("/");   //ip,端口、账户、密码
+        String ftpPath = super.stringBuffer(ftpDownLoad, date, "/");
+        String ftpFileNames = super.stringBuffer(ftpFileName, date, "_");
+        int status = super.byFTPData(ftpAddr[0], ftpAddr[1], ftpAddr[2], ftpAddr[3], ftpPath, ftpFileNames, localhostAdd);
+        if (status != 0) {
+            if (status == TxtDataEnum.LOGIN_FAIL.getValue()) {
+                this.saveLog(TxtDataEnum.getName(status));
+            } else {
+                this.saveLog(TxtDataEnum.getName(status));
+            }
+        } else {
+            log.info("数据解析成功，文件生成成功，数据保存入库成功！");
+        }
+    }
+
+    //只有所有都成功的情况下，才会调用这个保存方法
+    @Override
+    public void saveFTPData(String lineCount, String filePath) {
+        try {
+            log.info("获取到的文本数据:{}", lineCount);
+            int count = uerInfoService.save(filePath);
+            this.saveLog(String.valueOf(count), DateUtils.getDate("yyyy-MM-dd HH:mm:ss"), lineCount);
+            log.info("入库成功，受影响行数：{}", count);
+        } catch (Exception e) {
+            log.info("用户信息接口保存数据失败！");
+            e.printStackTrace();
+        }
+    }
+
+    //保存log日志
+    public void saveLog(String... logs) {
+        try {
+            JobTaskStatistics jobTaskStatistics = new JobTaskStatistics();
+            jobTaskStatistics.setJobName("用户信息");//日志名称
+            if (logs.length < 1) {
+                jobTaskStatistics.setDescription(logs[0]);
+            } else {
+                jobTaskStatistics.setStorageNumber(Integer.valueOf(logs[0]));
+                jobTaskStatistics.setDate(logs[1]);
+                jobTaskStatistics.setInterfaceNumber(Integer.valueOf(logs[2]));
+            }
+            jobTaskStatisticsService.insertJobTaskStatistics(jobTaskStatistics);
+        } catch (NumberFormatException e) {
+            log.info("用户信息接口类型装换错误！");
+            e.printStackTrace();
+        } catch (Exception e) {
+            log.info("用户信息接口保存LOG数据失败！");
+            e.printStackTrace();
+        }
+    }
+}

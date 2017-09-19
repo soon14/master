@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.TerminalDao">
+	<resultMap type="com.jy.from.system.request.TerminalForm" id="terminalResult">
+		<id column="id"  property="id"/>
+		<result column="machineNum" property="machineNum"/>
+		<result column="merchantName" property="merchantName"/>
+		<result column="merchantId" property="merchantId"/>
+		<result column="phone" property="phone"/>
+		<result column="createTime" property="createTime"/>
+	</resultMap>
+<select id="findTerminal" resultMap="terminalResult" parameterType="java.util.Map">
+	SELECT
+		t.id,
+		t.machineNum,
+		t.merchantName,
+		m.M_Mobile as phone,
+	date_format(t.createTime,'%Y-%m-%d %H:%i:%s') AS createTime
+	FROM MP_Terminal t LEFT JOIN MP_MerchantInfo m ON t.merchantId=m.M_ID
+	WHERE 1=1
+	<if test="machineNum!=null and machineNum!=''">
+		AND t.machineNum LIKE CONCAT('%',#{machineNum},'%')
+	</if>
+	<if test="merchantName!=null and merchantName!=''">
+		AND t.merchantName LIKE CONCAT('%',#{merchantName},'%')
+	</if>
+	<if test="phone!=null and phone!=''">
+		AND m.M_Mobile LIKE CONCAT('%',#{phone},'%')
+	</if>
+	<if test="beginTime!=null and beginTime!=''">
+		AND t.createTime BETWEEN #{beginTime} AND #{endTime}
+	</if>
+	ORDER BY t.createTime DESC
+	LIMIT #{pageNum},#{pageSize}
+</select>
+	<select id="findTerminalTotal" resultMap="terminalResult" parameterType="java.util.Map">
+		SELECT
+		t.machineNum,
+		t.merchantName,
+		m.M_Mobile as phone,
+		t.createTime
+		FROM MP_Terminal t LEFT JOIN MP_MerchantInfo m ON t.merchantId=m.M_ID
+	WHERE 1=1
+	<if test="machineNum!=null and machineNum!=''">
+		AND t.machineNum LIKE CONCAT('%',#{machineNum},'%')
+	</if>
+	<if test="merchantName!=null and merchantName!=''">
+		AND t.merchantName LIKE CONCAT('%',#{merchantName},'%')
+	</if>
+	<if test="phone!=null and phone!=''">
+		AND m.M_Mobile LIKE CONCAT('%',#{phone},'%')
+	</if>
+		<if test="beginTime!=null and beginTime!=''">
+			AND t.createTime BETWEEN #{beginTime} AND #{endTime}
+		</if>
+	ORDER BY t.createTime DESC
+</select>
+	<insert id="addTerminal" parameterType="com.jy.from.system.request.TerminalForm">
+		INSERT INTO MP_Terminal (machineNum,merchantName,merchantId,createTime) VALUE
+		(#{machineNum},#{merchantName},#{merchantId},now())
+	</insert>
+	<delete id="delTerminal" parameterType="com.jy.from.system.request.TerminalForm">
+		DELETE FROM MP_Terminal  WHERE id=#{id}
+	</delete>
+	<update id="updateTerminal" parameterType="com.jy.from.system.request.TerminalForm">
+		UPDATE  MP_Terminal  SET machineNum =#{machineNum},merchantName=#{merchantName},merchantId=#{merchantId}  WHERE id=#{id}
+	</update>
+	<select id="findTerminals" parameterType="java.util.Map" resultType="com.jy.from.system.request.TerminalForm">
+		SELECT
+		*
+		FROM MP_Terminal t where t.id=#{id}
+	</select>
+</mapper>

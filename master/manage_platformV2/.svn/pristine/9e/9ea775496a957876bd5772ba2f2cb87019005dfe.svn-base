@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.SalesVolumeDao">
+	<resultMap type="com.jy.entity.system.channels.SalesVolume" id="salesVolumeResult">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+		<result column="userId" property="userId" />
+		<result column="phone" property="phone" />
+		<result column="name" property="name" />
+		<result column="userName" property="userName" />
+		<result column="isSeller" property="isSeller" />
+		<result column="marketer" property="marketer" />
+		<result column="marketTime" property="marketTime" />
+		<result column="userType" property="userType" />
+		<result column="isUse" property="isUse" />
+		<result column="createTime" property="createTime" />
+		<result column="updateTime" property="updateTime" />
+		<result column="salesVolume" property="salesVolume" />
+		<result column="records" property="records" />
+		<result column="orderTime" property="orderTime" />
+    </resultMap>
+	<resultMap id="customerSales" type="com.jy.from.system.request.UserInfoForm">
+		<id column="userId"  property="userId"/>
+		<result column="userName" property="userName" />
+		<result column="phone" property="phone" />
+		<result column="money" property="money" />
+	</resultMap>
+	<resultMap id="countCustomer" type="com.jy.from.system.request.UserInfoForm">
+		<id column="userId"  property="userId"/>
+		<result column="userName" property="userName" />
+		<result column="phone" property="phone" />
+		<result column="isSeller" property="isSeller" />
+		<result column="marketTime" property="marketTime" />
+		<result column="createTime" property="createTime" />
+
+
+	</resultMap>
+	<resultMap id="cpOrderInfoList" type="com.jy.entity.system.finance.CpOrderInfo">
+		<id column="id"  property="id"/>
+		<result column="sycDate" property="sycDate"/>
+		<result column="userId" property="userId"/>
+		<result column="lotteryName" property="lotteryName"/>
+		<result column="playType" property="playType"/>
+		<result column="issue" property="issue"/>
+		<result column="schemeId" property="schemeId"/>
+		<result column="schemeExtendId" property="schemeExtendId"/>
+		<result column="money" property="money"/>
+		<result column="buyTime" property="buyTime"/>
+		<result column="buyWay" property="buyWay"/>
+		<result column="online" property="online"/>
+		<result column="status" property="status"/>
+		<result column="orderNo" property="orderNo"/>
+		<result column="transNo" property="transNo"/>
+		<result column="createTime" property="createTime"/>
+		<result column="isValid" property="isValid"/>
+	</resultMap>
+	<!--商户销量展示-->
+	<select id="findByPage"  resultType="com.jy.entity.system.channels.SalesVolume"  resultMap="salesVolumeResult">
+		SELECT
+		u.username,
+		u.userid,
+		u.usertype,
+		u.phone,
+		count(g.id) AS records,
+		g. STATUS,
+		sum(g.money) AS salesVolume,
+		max(g.buytime) AS orderTime
+		FROM
+		MP_MerchantInfo m
+		JOIN DC_UserInfo u ON m.M_CPUserid = u.marketer
+		LEFT JOIN DC_CP_OrderInfo g ON g.userId = u.userId
+		JOIN JY_BASE_ACCOUNT ba ON ba.id = m.M_AccountId
+		WHERE
+		ba.id = #{param.accountId}
+		<if test="param.beginTimes != null and param.beginTimes!='' ">
+			and u.createTime>=#{param.beginTimes}
+		</if>
+		<if test="param.endTimes != null and param.endTimes!=''">
+			<![CDATA[
+        	and u.createTime<=#{param.endTimes}
+        	]]>
+		</if>
+		GROUP BY
+		u.userid,
+		u.usertype,
+		u.phone,
+		u.username
+		ORDER BY salesVolume desc,orderTime desc
+	</select>
+	<!--商户销量明细展示-->
+	<select id="findDetailByPage"  resultType="com.jy.entity.system.channels.SalesVolume"  resultMap="salesVolumeResult">
+		select AA.M_Name,sum(AA.totalMoney) as salesVolume,count(AA.record),count(ua.userId) AS users,ua.* from(
+		select m.M_Name,m.M_CPUserid,count(1) as record,sum(g.money) as totalMoney
+		from MP_MerchantInfo m
+		join DC_UserInfo u on m.M_CPUserid=u.userId
+		join DC_CP_OrderInfo g on g.userId=u.userId
+		where m.M_ParentMerchant in(
+		select mt.m_id from MP_MerchantInfo mt
+		where mt.M_CPUserid=#{param.userId}
+		)
+		GROUP BY m.M_Name,m.M_CPUserid) AA
+		JOIN DC_UserInfo ua on ua.userId=AA.M_CPUserid
+
+		group by AA.M_Name,ua.userName,ua.userType
+	</select>
+
+
+
+	<resultMap type="String" id="orderTime">
+		<result column="orderTime" property="orderTime" />
+	</resultMap>
+
+
+	<select id="findLastOrderTime"  resultType="String"  resultMap="orderTime">
+		SELECT buyTime as  orderTime from DC_CP_OrderInfo
+		where userId=#{0}
+		ORDER BY buyTime desc LIMIT 1
+	</select>
+	<select id="customerSales"  parameterType="java.util.Map"  resultMap="customerSales">
+		SELECT
+		tab.money,tab.userId,s.createTime,s.userName,s.phone
+		FROM  (
+					SELECT
+						d.userId,SUM(d.money) as money
+					FROM
+						DC_CP_OrderInfo d
+					WHERE
+						d.userId IN (
+							SELECT
+								u.userId
+							FROM
+								DC_UserInfo u
+							WHERE
+								(
+									u.marketer = #{userId}
+									AND u.isUse = 0
+								)
+							AND d.schemeType = 1
+							OR d.schemeType = (
+								SELECT
+									t.schemeType
+								FROM
+									MP_MerchantExtend t
+								WHERE
+									t.cpUserId = #{userId}
+							)
+						)
+		<if test="beginTime != null and beginTime!='' ">
+					AND d.buyTime BETWEEN #{beginTime}
+					AND #{endTime}
+		</if>
+			GROUP BY d.userId
+				) tab
+			JOIN DC_UserInfo s ON s.userId = tab.userId
+		<if test="userName!=null and userName!=''">
+			and	s.userName=#{userName}
+		</if>
+		<if test="phone!=null and phone!=''">
+			and	s.phone like '%${phone}%'
+		</if>
+		  limit #{pageNum},#{pageSize}
+	</select>
+	<select id="sumCustomerSales"  parameterType="java.util.Map"  resultMap="customerSales">
+		SELECT
+		IFNULL(sum(tab.money),0) AS money
+		FROM  (
+					SELECT
+						d.userId,SUM(d.money) as money
+					FROM
+						DC_CP_OrderInfo d
+					WHERE
+						d.userId IN (
+							SELECT
+								u.userId
+							FROM
+								DC_UserInfo u
+							WHERE
+								(
+									u.marketer = #{userId}
+									AND u.isUse = 0
+								)
+							AND d.schemeType = 1
+							OR d.schemeType = (
+								SELECT
+									t.schemeType
+								FROM
+									MP_MerchantExtend t
+								WHERE
+									t.cpUserId = #{userId}
+							)
+						)
+		<if test="beginTime != null and beginTime!='' ">
+					AND d.buyTime BETWEEN #{beginTime}
+					AND #{endTime}
+		</if>
+			GROUP BY d.userId
+				) tab
+			JOIN DC_UserInfo s ON s.userId = tab.userId
+		<if test="userName!=null and userName!=''">
+			and	s.userName=#{userName}
+		</if>
+		<if test="phone!=null and phone!=''">
+			and	s.phone like '%${phone}%'
+		</if>
+	</select>
+	<select id="countCustomerSales"  parameterType="java.util.Map"  resultMap="customerSales">
+		SELECT
+		tab.money,tab.userId,s.createTime,s.userName,s.phone
+		FROM  (
+					SELECT
+						d.userId,SUM(d.money) as money
+					FROM
+						DC_CP_OrderInfo d
+					WHERE
+						d.userId IN (
+							SELECT
+								u.userId
+							FROM
+								DC_UserInfo u
+							WHERE
+								(
+									u.marketer = #{userId}
+									AND u.isUse = 0
+								)
+							AND d.schemeType = 1
+							OR d.schemeType = (
+								SELECT
+									t.schemeType
+								FROM
+									MP_MerchantExtend t
+								WHERE
+									t.cpUserId = #{userId}
+							)
+						)
+		<if test="beginTime != null and beginTime!='' ">
+					AND d.buyTime BETWEEN #{beginTime}
+					AND #{endTime}
+		</if>
+			GROUP BY d.userId
+				) tab
+			JOIN DC_UserInfo s ON s.userId = tab.userId
+		<if test="userName!=null and userName!=''">
+			and	s.userName like '%${userName}%'
+		</if>
+		<if test="phone!=null and phone!=''">
+			and	s.phone like '%${phone}%'
+		</if>
+	</select>
+	<select id="findSaleList" parameterType="java.util.Map" resultMap="cpOrderInfoList">
+	SELECT
+		d.money,
+		d.lotteryName,
+		date_format(d.buyTime,'%Y-%m-%d %H:%i:%s') AS buyTime,
+		d.orderNo,
+		dc.userName AS transNo
+			FROM
+				DC_CP_OrderInfo d LEFT JOIN DC_UserInfo dc ON  d.userId=dc.userId
+			WHERE
+				d.userId IN (
+					SELECT
+						u.userId
+					FROM
+						DC_UserInfo u
+					WHERE
+						(
+							u.marketer = #{preUserId}
+							AND u.isUse = 0
+						)
+					AND d.schemeType = 1
+					OR d.schemeType = (
+						SELECT
+							t.schemeType
+						FROM
+							MP_MerchantExtend t
+						WHERE
+							t.cpUserId = #{preUserId}
+					)
+				)
+			<if test="beginTime != null and beginTime!='' ">
+				AND d.buyTime BETWEEN #{beginTime}
+				AND #{endTime}
+			</if>
+		 and d.userId = #{userId}
+	limit #{pageNum},#{pageSize}
+	</select>
+	<select id="countSaleList" parameterType="java.util.Map" resultMap="cpOrderInfoList">
+		SELECT
+		*
+		FROM
+		DC_CP_OrderInfo d
+		WHERE
+		d.userId IN (
+		SELECT
+		u.userId
+		FROM
+		DC_UserInfo u
+		WHERE
+		(
+		u.marketer = #{preUserId}
+		AND u.isUse = 0
+		)
+		AND d.schemeType = 1
+		OR d.schemeType = (
+		SELECT
+		t.schemeType
+		FROM
+		MP_MerchantExtend t
+		WHERE
+		t.cpUserId = #{preUserId}
+		)
+		)
+		<if test="beginTime != null and beginTime!='' ">
+			AND d.buyTime BETWEEN #{beginTime}
+			AND #{endTime}
+		</if>
+		and d.userId = #{userId}
+	</select>
+	<select id="sumSaleList" parameterType="java.util.Map" resultMap="cpOrderInfoList">
+		SELECT
+		IFNULL(sum(d.money),0) AS money
+		FROM
+		DC_CP_OrderInfo d
+		WHERE
+		d.userId IN (
+		SELECT
+		u.userId
+		FROM
+		DC_UserInfo u
+		WHERE
+		(
+		u.marketer = #{preUserId}
+		AND u.isUse = 0
+		)
+		AND d.schemeType = 1
+		OR d.schemeType = (
+		SELECT
+		t.schemeType
+		FROM
+		MP_MerchantExtend t
+		WHERE
+		t.cpUserId = #{preUserId}
+		)
+		)
+		<if test="beginTime != null and beginTime!='' ">
+			AND d.buyTime BETWEEN #{beginTime}
+			AND #{endTime}
+		</if>
+		and d.userId = #{userId}
+	</select>
+	<select id="countCustomer" resultMap="countCustomer" parameterType="java.util.Map">
+		SELECT
+			t.userId,
+			t.userName,
+			t.isSeller,
+			t.createTime,
+			t.marketTime,
+			t.phone
+		FROM
+			DC_UserInfo t
+		WHERE 1=1 AND
+			t.marketer = #{userId}
+		<if test="userName!=null and userName!=''">
+			and	t.userName like '%${userName}%'
+		</if>
+		<if test="phone!=null and phone!=''">
+			and	t.phone like '%${phone}%'
+		</if>
+	</select>
+</mapper>

@@ -1,0 +1,17 @@
+#config
+\ufffd\ufffd
+ImageSavePath=D:/images/
+#ImageSavePath=/appj/movie/imageserver/images/
+ClearFilePath=quartz/clear/
+BackupFilePath=quartz/clear/bak/
+#ClearFilePath=D:/clear/
+#BackupFilePath=D:/clear/bak/
+
+#ftpServer
+ftp.host=192.168.99.101
+ftp.port=21
+ftp.username=crm
+ftp.password=DaysCrm2016
+ftp.directory=E:\CRM\
+
+warningDays=5

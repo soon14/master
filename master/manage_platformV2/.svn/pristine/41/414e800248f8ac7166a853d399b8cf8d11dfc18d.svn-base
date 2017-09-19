@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.AuditDao">
+    <resultMap id="Merchant" type="Merchant">
+		<id column="M_ID"  property="mId"/>
+		<result column="BC_ID" property="bcId" />
+		<result column="BC_ID_Line" property="bcIdLine" />
+		<result column="M_CPUserid" property="mCpUserId" />
+		<result column="M_Name" property="mName" />
+		<result column="M_ParentMerchant" property="mParentMerchant" />
+		<result column="M_Type" property="mType" />
+		<result column="M_Level" property="mLevel" />
+		<result column="M_Status" property="mStatus" />
+		<result column="M_BarCode" property="mBarcode" />
+		<result column="M_Mobile" property="mMobile" />
+		<result column="M_Address" property="mAddress" />
+		<result column="M_ContactUser" property="mContactUser" />
+		<result column="M_ContactMobile" property="mContactMobile"/>
+		<result column="M_License" property="mLicense" />
+		<result column="M_IdCard" property="mIdCard" />
+		<result column="M_Introduce" property="mIntroduce" />
+		<result column="M_AccountId" property="mAccountId" />
+		<result column="M_Info2" property="mInfo2" />
+		<result column="M_Info3" property="mInfo3" />
+		<result column="createTime" property="mCreateTime"/>
+		<result column="M_CommionType" property="mCommionType"/>
+    </resultMap>
+	<!--查询需要审核用户-->
+	<select id="findOneExamineMerchant"  resultMap="Merchant" parameterType="Map">
+		SELECT * from MP_MerchantInfo t where
+		((case  when 'admin'=#{mContactUser} then t.M_ParentMerchant in (SELECT M_ParentMerchant from MP_MerchantInfo)
+		ELSE t.M_ParentMerchant in (SELECT M_ID from MP_MerchantInfo where M_AccountId IN
+		<foreach collection="userIds" index="index" item="item" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		union
+		select m_id from MP_MerchantInfo a where a.M_ParentMerchant in(
+		SELECT M_ID from MP_MerchantInfo where M_AccountId IN
+		<foreach collection="userIds" index="index" item="item" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		)
+		) or t.M_ID in (SELECT M_ID from MP_MerchantInfo where M_AccountId IN
+		<foreach collection="userIds" index="index" item="item" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		) end)) and t.M_Status='0' and t.isValid ='1'
+		<if test="mName!=null and mName!=''">
+			and t.M_Name like '%${mName}%'
+		</if>
+		ORDER BY t.M_ID DESC
+	</select>
+
+	<!--查询需要审核用户-->
+	<select id="findByPage"  resultMap="Merchant" parameterType="Merchant">
+		SELECT * from MP_MerchantInfo
+		<where>
+			M_Status=#{param.mStatus} and isValid ='1'
+			<if test="param.mName!=null and param.mName!=''">
+				and M_Name like '%${param.mName}%'
+			</if>
+			ORDER BY M_ID DESC
+		</where>
+	</select>
+
+	<!--审核商户  通过或者拒绝操作-->
+	<update id="updateMerchant" parameterType="Merchant">
+		UPDATE MP_MerchantInfo
+		<set>
+			M_Status =#{mStatus}
+			<where>
+				M_ID=#{mId}
+			</where>
+		</set>
+	</update>
+
+
+	<!--审核有效后，新增平台用户以及用户彩票用户-->
+	<update id="updateUserAccount" parameterType="Merchant">
+		UPDATE MP_MerchantInfo
+		<set>
+			<if test="mAccountId!=null and mAccountId!=''">
+				M_AccountId =#{mAccountId},
+			</if>
+			<if test="mCpUserId!=null and mCpUserId!=''">
+				M_CPUserid =#{mCpUserId},
+			</if>
+			<if test="mBarcode!=null and mBarcode!=''">
+				M_BarCode =#{mBarcode},
+			</if>
+			<if test="mStatus!=null and mStatus!=''">
+				M_Status =#{mStatus}
+			</if>
+			<where>
+				M_ID=#{mId}
+			</where>
+		</set>
+	</update>
+
+	<select id="findMerchantId" parameterType="Merchant" resultMap="Merchant">
+		SELECT a.*,b.m_name as mParentName FROM MP_MerchantInfo a
+		LEFT JOIN MP_MerchantInfo b on a.m_parentMerchant=b.m_id
+		where a.M_ID=#{mId}
+	</select>
+</mapper>

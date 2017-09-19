@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.CPUserInfoDao">
+	<resultMap id="CPUserInfo" type="CPUserInfo">
+		<id column="userId"  property="userId"/>
+		<result column="phone" property="phone"/>
+		<result column="name" property="name"/>
+		<result column="userName" property="userName"/>
+		<result column="marketer" property="marketer"/>
+		<result column="isSeller" property="isSeller"/>
+		<result column="marketTime" property="marketTime"/>
+		<result column="userType" property="userType"/>
+		<result column="isUse" property="isUse"/>
+		<result column="createTime" property="createTime"/>
+		<result column="updateTime" property="updateTime"/>
+	</resultMap>
+
+	<select id="queryUserInfoByIdAndDate"  resultType="Integer"  parameterType = "String">
+		<![CDATA[	SELECT IFNULL(count(0),0)
+			FROM DC_UserInfo cp
+			where cp.marketer = #{0} and cp.marketTime < #{1}]]>
+	</select>
+
+	<insert id="save">
+		<![CDATA[   REPLACE DC_UserInfo(userId,phone,name,userName,marketer,isSeller,marketTime,userType,isUse,createTime,updateTime)
+        VALUES ]]>
+		<foreach item="o" collection="list" index="index" separator="," >
+			<![CDATA[  (#{o.userId},#{o.phone},#{o.name},#{o.userName},#{o.marketer},#{o.isSeller},#{o.marketTime},#{o.userType},#{o.isUse},#{o.createTime},#{o.updateTime}) ]]>
+		</foreach>
+	</insert>
+</mapper>

@@ -1,0 +1,144 @@
+package com.jy.service.impl.system.finance.reconciliation.lottery;
+
+import com.jy.common.utils.CalculationUtils;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.excel.ExcelReport;
+import com.jy.entity.system.finance.reconciliation.lottery.TranceFunds;
+import com.jy.repository.system.finance.reconciliation.lottery.TranceFundsDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.impl.help.ExcelUtil;
+import com.jy.service.system.finance.reconciliation.lottery.TranceFundsService;
+import net.sf.json.JSONArray;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Created by Administrator on 2017/4/21.
+ */
+@Service("TranceFundsService")
+public class TranceFundsServiceImpl extends BaseServiceImp<TranceFunds> implements TranceFundsService {
+    @Autowired
+    private TranceFundsDao dao;
+    @Autowired
+    private ExcelUtil excelutil;
+    @Value("${download.tranceFunds.filename}")
+    private String tranceFundsFileName;
+    /**
+     * 数据入库
+     * @param type
+     * @param thisDate
+     */
+    @Override
+    public void execTask(String type, String thisDate) {
+        TranceFunds report=new TranceFunds();
+        _installObj(thisDate,report);
+        _checkAndSave(type,thisDate,report);
+
+    }
+
+    private void _checkAndSave(String type, String thisDate,TranceFunds report) {
+        List<TranceFunds> isExit=dao.findReportByDate(thisDate);
+        if(isExit==null||isExit.size()==0||isExit.isEmpty()){
+            dao.insert(report);
+        }else {
+//            if(type.equals("manual")){
+                dao.deleteList(isExit);
+                dao.insert(report);
+//            }
+        }
+    }
+
+    private void   _installObj(String thisDate,TranceFunds report) {
+        report.setDzDate(thisDate);
+        String date= DateUtils.getDateStartString(thisDate);
+        String dateMax=DateUtils.getDateEndString(thisDate);
+        Double allQcTranceMoney=_findQcMoney(date);
+        report.setAllQcTranceMoney(allQcTranceMoney);
+        Double ticketMoney=_findTicketMoney(date,dateMax);
+        report.setTicketMoney(ticketMoney);
+        Double refund=_findRefund(date,dateMax);
+        report.setRefund(refund);
+        Double addTranceMoney=_findAddTrance(date,dateMax);
+        report.setAddTranceMoney(addTranceMoney);
+        Date dDate=DateUtils.parseDate(thisDate);
+        String date2=DateUtils.getPreDateByDay(dDate,"1");
+        Double allQmTranceMoney=_findQcMoney(date2);
+        report.setAllQmTranceMoney(allQmTranceMoney);
+//        Double diff=_CalDiff(allQmTranceMoney,allQcTranceMoney);
+        Double diff=_CalDiff(allQmTranceMoney,allQcTranceMoney,ticketMoney,refund,addTranceMoney);
+        report.setDiff(diff);
+    }
+//差异=期末-（期初-出票-退款+新增）
+    private Double _CalDiff(Double allQmTranceMoney, Double allQcTranceMoney,Double ticketMoney,Double refund,Double addTranceMoney) {
+        Double a=Double.valueOf(CalculationUtils.sub(allQcTranceMoney,ticketMoney));
+        Double b=Double.valueOf(CalculationUtils.sub(a,refund));
+        Double c=Double.valueOf(CalculationUtils.add(b,addTranceMoney));
+        //数据库期末-计算后的期末
+        Double money=Double.valueOf(CalculationUtils.sub(allQmTranceMoney,c));
+        return money;
+    }
+
+    private Double _findAddTrance(String date, String dateMax) {
+        Double money=dao.findAddTranceMoney(date,dateMax);
+        return CalculationUtils.fomatMoney(money);
+    }
+
+    private Double _findRefund(String date, String dateMax) {
+        Double money=dao.findRefundMoney(date,dateMax);
+        return CalculationUtils.fomatMoney(money);
+    }
+
+    private Double _findTicketMoney(String date, String dateMax) {
+        Double money=dao.findTicketMoneyBetweenDate(date,dateMax);
+        return CalculationUtils.fomatMoney(money);
+    }
+
+    private Double _findQcMoney(String date) {
+        Double money=dao.findQcTranceMoney(date);
+        return CalculationUtils.fomatMoney(money);
+    }
+
+    //-------------------生成报表---------------------------------
+    @Override
+    public void generateReport(String month) {
+        ExcelReport ep=_installExcelObj(month);
+        try {
+            excelutil.GenerateExcel(ep);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private ExcelReport _installExcelObj(String month) {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        String fileName = tranceFundsFileName;
+        ep.setTitle(fileName);
+        ep.setFileName(sbf.append(fileName).append(month).toString());
+        String headers[] = new String[] {"日期","期初追期总额","当日出票","退款金额","新增追期金额","期末追期余额","差异"};
+        String attrs[] = new String[] {
+                "dzDate", "allQcTranceMoney", "ticketMoney", "refund", "addTranceMoney", "allQmTranceMoney", "diff"};
+        JSONArray data=_installExcelData(month);
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        ep.setData(data);
+        return ep;
+    }
+
+    private JSONArray _installExcelData(String month) {
+        TranceFunds m = new TranceFunds();
+        m.setDzDate(month);
+        List<TranceFunds> list = dao.findMonth(m);
+        if(list==null){
+            list=new ArrayList<>();
+        }
+        JSONArray data= JSONArray.fromObject(list);
+        return data;
+    }
+}

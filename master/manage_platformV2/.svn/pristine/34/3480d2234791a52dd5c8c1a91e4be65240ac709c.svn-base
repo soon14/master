@@ -1,0 +1,11 @@
+package com.jy.service.inter.task.withdraw;
+
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/26.
+ */
+public interface TaskWithdrawService {
+    public int saveTaskWithdrawInfoList(String fileName);
+    public void deleteWithDrawInfo(Map map);
+}

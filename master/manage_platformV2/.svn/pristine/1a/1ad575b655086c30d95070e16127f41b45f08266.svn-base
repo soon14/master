@@ -1,0 +1,24 @@
+package com.jy.process.system.channels;
+
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.channels.OutLineDataInfo;
+import com.jy.entity.system.channels.Prepayment;
+import com.jy.from.system.request.OutLineDataForm;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/5/17.
+ */
+public interface OutLineDataProcess {
+    public void addOutLineData(OutLineDataForm outLineDataForm) throws Exception;
+    public void addDeposit(Merchant merchant) throws Exception;
+    public List<OutLineDataInfo> findOutLineData(Map map) throws  Exception;
+    public List<Merchant> findDeposit(Map map) throws  Exception;
+    public List<Merchant> findMerchant() throws  Exception;
+    public List<OutLineDataInfo> findOutLineData(Map map,int a) throws  Exception;
+    public List<Merchant> findDeposit(Map map,int a) throws  Exception;
+    public void updatePreDepositBalance(Map map) throws Exception;
+    public Prepayment findPrePaymentInfo(Map map) throws Exception;
+}

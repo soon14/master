@@ -1,0 +1,680 @@
+/*
+package com.jy.process.impl.system.channels;
+
+import com.jy.common.ajax.AjaxRes;
+import com.jy.common.mybatis.PageCalculation;
+import com.jy.common.utils.CalculationUtils;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.base.Const;
+import com.jy.common.utils.security.AccountShiroUtil;
+import com.jy.common.utils.system.AccountHelper;
+import com.jy.entity.system.account.Account;
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.finance.CpOrderInfo;
+import com.jy.entity.system.finance.statistics.SalesCommissionReport;
+import com.jy.entity.system.finance.SalesCommissionReportVo;
+import com.jy.entity.system.finance.UserVo;
+import com.jy.entity.system.org.Org;
+import com.jy.entity.system.org.Position;
+import com.jy.entity.system.resources.Resources;
+import com.jy.entity.utils.ZNodes;
+import com.jy.from.system.request.UserInfoForm;
+import com.jy.mybatis.Page;
+import com.jy.process.system.channels.SalesVolumeProcess;
+import com.jy.service.system.account.AccountService;
+import com.jy.service.system.channels.MerchantService;
+import com.jy.service.system.channels.SalesVolumeService;
+import com.jy.service.system.finance.statistics.lottery.SalesCommissionReportService;
+import com.jy.service.system.org.OrgService;
+import com.jy.service.system.org.PositionService;
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.servlet.http.HttpServletRequest;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+*/
+/**
+ * Created by ZQY on 2017/4/14.
+ *//*
+
+@Service
+public class SalesVolumeProcessImpl implements SalesVolumeProcess {
+    @Autowired
+    private SalesVolumeService service;
+    @Autowired
+    private SalesCommissionReportService reportService;
+    @Autowired
+    private AccountService aService;
+    @Autowired
+    private MerchantService merchantService;
+    @Autowired
+    private PositionService positionService;
+    @Autowired
+    private OrgService orgService;
+    Logger logger = Logger.getLogger(SalesVolumeProcessImpl.class);
+
+    @Override
+    public AjaxRes findByPage(Page<SalesCommissionReport> page, SalesCommissionReport o,
+                              HttpServletRequest request,List<Resources> permitBtn) throws Exception{
+        AjaxRes ar = new AjaxRes();
+        List<Position> list = aService.getPerPoss();
+        List<String> leaderList = AccountHelper.getLeaderOrgId(list);
+        String accountId = AccountShiroUtil.getCurrentUser().getAccountId();
+        try {
+            String date = request.getParameter("beginTime");
+            if (date == "") {
+//                    date=DateUtils.getAfterDayDate("-1").substring(0,10);
+            }
+            o.setDate(date);
+            Page<SalesCommissionReport> reports = new Page<SalesCommissionReport>();
+            List<SalesCommissionReportVo> voList = new ArrayList<>();
+            SalesCommissionReportVo vo = null;
+            Account account = aService.getPerData();
+            if (leaderList == null && !account.getLoginName().equals("admin")) {
+                //渠道商户登录------------------------
+                Merchant merchant = merchantService.findMerchant(accountId);
+                if (merchant != null) {
+//                        if(merchant.getmLevel()==3){
+                    o.setMerchantId(merchant.getmId());
+//                        }else{
+                    o.setParentMerchantId(merchant.getmId());
+//                        }
+                }
+                reports = reportService.findByPage(o, page);
+            } else {
+                //说明登录用户是领导级别，可查看该部门员工全部数据--------------------------
+                List<String> orgIdAllList = new ArrayList<>();
+                //该部门员工accountId
+                List<String> accountList = new ArrayList<>();
+                //子机构部门的ID
+                List<String> orgIdList = new ArrayList<>();
+                if (date == "") {
+                    date = DateUtils.getAfterDayDate("-1").substring(0, 10);
+                }
+                if (account.getLoginName().equals("admin")) {
+                    //超级管理员----------------------
+                    List<ZNodes> nodeList = orgService.getOrgTree();
+                    for (ZNodes n : nodeList) {
+                        if (!n.getName().equals("得仕网络")) {
+                            orgIdAllList.add(n.getId());
+                        }
+                    }
+                    orgIdList = orgIdAllList;
+                } else {
+                    orgIdList = orgService.findSubSectorOrgsById(leaderList);
+                }
+                if (orgIdList != null) {
+                    // 子机构部门--------------------------
+                    for (String oid : orgIdList) {
+                        List<String> eachOrgIdList = new ArrayList<>();
+                        eachOrgIdList.add(oid);
+                        accountList = aService.getAllAccountByOrgId(eachOrgIdList);
+                        if (accountList != null) {
+                            reports = reportService.findByList(date, accountList);
+                        }
+                        List<SalesCommissionReport> resultList = reports.getResults();
+
+                        //当前部门date日的总佣金
+                        Double allCommission = _getAllByType(resultList, 1);
+                        //当前部门date日的销量
+                        Double allConsume = _getAllByType(resultList, 2);
+                        Org org = reportService.findOrgById(oid);
+                        vo = new SalesCommissionReportVo();
+                        vo.setDate(date);
+                        if (resultList != null) {
+                            vo.setChildMerchantCount(resultList.size());
+                        } else {
+                            vo.setChildMerchantCount(0);
+                        }
+                        vo.setCommission(allCommission);
+                        vo.setOrgName(org.getName());
+                        vo.setSales(allConsume);
+                        voList.add(vo);
+                    }
+                } else {
+                    //无子机构--------------------------
+                    accountList = aService.getAllAccountByOrgId(leaderList);
+                    if (accountList != null) {
+                        reports = reportService.findByList(date, accountList);
+                    }
+                }
+            }
+            Map<String, Object> p = new HashMap<String, Object>();
+            p.put("permitBtn",permitBtn );
+            p.put("list", reports);
+            p.put("voList", voList);
+            Double allCommission = 0.0;
+            Double allConsume = 0.0;
+            if (voList.size() == 0) {
+                List<SalesCommissionReport> resultList = reports.getResults();
+                allCommission = _getAllByType(resultList, 1);
+                allConsume = _getAllByType(resultList, 2);
+            } else {
+                allCommission = _getAllVoByType(voList, 1);
+                allConsume = _getAllVoByType(voList, 2);
+            }
+            p.put("allCommission", allCommission);
+            p.put("allConsume", allConsume);
+            ar.setSucceed(p);
+        } catch (Exception e) {
+            logger.error(e.toString(), e);
+            ar.setFailMsg(Const.DATA_FAIL);
+        }
+        return ar;
+    }
+
+    @Override
+    public AjaxRes customerSales(Page<UserInfoForm> page, UserInfoForm o, HttpServletRequest request, List<Resources> permitBtn) throws Exception {
+        AjaxRes ar=new AjaxRes();
+        try {
+            String accountId = AccountShiroUtil.getCurrentUser().getAccountId();
+            Merchant merchant = merchantService.findMerchant(accountId);
+            Page<UserInfoForm> reports=new Page<UserInfoForm>();
+            List<UserInfoForm> list=new ArrayList<UserInfoForm>();
+            List<UserInfoForm> listSum=new ArrayList<UserInfoForm>();
+            String userName=request.getParameter("userName");
+            String phone=request.getParameter("phone");
+            String beginTime=request.getParameter("beginTime");
+            String endTime=request.getParameter("endTime");
+            if(!"".equals(endTime)){
+                beginTime=beginTime+" 00:00:00";
+                endTime=endTime +" 23:59:59";
+            }
+            Map map = new HashMap();
+            map.put("userName",userName);
+            map.put("phone",phone);
+            map.put("beginTime",beginTime);
+            map.put("endTime",endTime);
+            map.put("pageNum",(page.getPageNum()-1)*page.getPageSize());
+            map.put("pageSize",page.getPageSize());
+            if(merchant !=null){
+                map.put("userId",merchant.getmCpUserId());
+            }
+            int total=0;
+            Double sumSales=0.0;
+            total=service.countCustomerSales(map).size();
+            list = service.customerSales(map);
+            listSum = service.sumCustomerSales(map);
+            if(listSum.size()>0){
+                sumSales = listSum.get(0).getMoney();
+            }
+            int totalPage = total / page.getPageSize();
+            if (total % page.getPageSize()>0){
+                totalPage++;
+            }
+            reports.setTotalPage(totalPage);
+            reports.setPageNum(page.getPageNum());
+            reports.setPageSize(page.getPageSize());
+            reports.setTotalRecord(total);
+            reports.setResults(list);
+            Map<String, Object> p=new HashMap<String, Object>();
+            p.put("permitBtn", permitBtn);
+            p.put("list", reports);
+            p.put("sumSales", sumSales);
+            ar.setSucceed(p);
+        } catch (Exception e) {
+            logger.error(e.toString(),e);
+            ar.setFailMsg(Const.DATA_FAIL);
+        }
+        return ar;
+    }
+
+    @Override
+    public AjaxRes findSaleList(Page<CpOrderInfo> page, HttpServletRequest request, List<Resources> permitBtn) throws Exception {
+        AjaxRes ar=new AjaxRes();
+        try {
+            String accountId = AccountShiroUtil.getCurrentUser().getAccountId();
+            Merchant merchant = merchantService.findMerchant(accountId);
+            Page<CpOrderInfo> reports=new Page<CpOrderInfo>();
+            List<CpOrderInfo> list=new ArrayList<CpOrderInfo>();
+            List<CpOrderInfo> listSum=new ArrayList<CpOrderInfo>();
+            String beginTime=request.getParameter("beginTime");
+            String endTime=request.getParameter("endTime");
+            String userId=request.getParameter("userId");
+             if(endTime != "" ){
+                beginTime=beginTime+" 00:00:00";
+                endTime=endTime +" 23:59:59";
+            }
+            Map map = new HashMap();
+            map.put("beginTime",beginTime);
+            map.put("endTime",endTime);
+            map.put("pageNum",(page.getPageNum()-1)*page.getPageSize());
+            map.put("pageSize",page.getPageSize());
+            map.put("userId",userId);
+            if(merchant !=null){
+                map.put("preUserId",merchant.getmCpUserId());
+            }
+            int total=0;
+            Double sumSales=0.0;
+            total=service.countSaleList(map).size();
+            list = service.findSaleList(map);
+            listSum = service.sumSaleList(map);
+            if(listSum.size()>0){
+                sumSales = listSum.get(0).getMoney();
+            }
+            int totalPage = total / page.getPageSize();
+            if (total % page.getPageSize()>0){
+                totalPage++;
+            }
+            reports.setTotalPage(totalPage);
+            reports.setPageNum(page.getPageNum());
+            reports.setPageSize(page.getPageSize());
+            reports.setTotalRecord(total);
+            reports.setResults(list);
+            Map<String, Object> p=new HashMap<String, Object>();
+            p.put("permitBtn", permitBtn);
+            p.put("list", reports);
+            p.put("sumSales", sumSales);
+            ar.setSucceed(p);
+        } catch (Exception e) {
+            logger.error(e.toString(),e);
+            ar.setFailMsg(Const.DATA_FAIL);
+        }
+        return ar;
+    }
+
+    @Override
+    public Page<UserInfoForm> countCustomer(UserInfoForm o, Page<UserInfoForm> page,HttpServletRequest request) {
+        List<UserInfoForm> list = null;
+        Map<String,Object> param = new HashMap<String,Object>();
+        String accountId = AccountShiroUtil.getCurrentUser().getAccountId();
+        String userName =  request.getParameter("userName");
+        String phone =  request.getParameter("phone");
+        Merchant merchant = merchantService.findMerchant(accountId);
+        Map map = new HashMap();
+        map.put("userName",userName);
+        map.put("phone",phone);
+        if(merchant !=null){
+            map.put("userId",merchant.getmCpUserId());
+        }
+        list=service.countCustomer(map);
+        page.setResults(list);
+        page.setTotalRecord(list.size());
+        page = PageCalculation.getPageCalculation(page);
+        return page;
+    }
+
+    */
+/**
+     * 部门中渠道商户总销量，总佣金
+     *
+     * @param voList
+     * @param i
+     * @return
+     *//*
+
+    private Double _getAllVoByType(List<SalesCommissionReportVo> voList, int i) {
+        Double all = 0.0;
+        if (voList != null) {
+            for (SalesCommissionReportVo r : voList) {
+                if (i == 1) {
+                    Double rCmmission = r.getCommission();
+                    if (rCmmission == null) {
+                        rCmmission = 0.0;
+                    }
+                    all = Double.valueOf(CalculationUtils.add(all, rCmmission));
+                } else {
+                    Double rSale = r.getSales();
+
+                    if (rSale == null) {
+                        rSale = 0.0;
+                    }
+                    all = Double.valueOf(CalculationUtils.add(all, rSale));
+                }
+            }
+        }
+        return all;
+    }
+
+    private Double _getAllByType(List<SalesCommissionReport> resultList, int i) {
+        Double all = 0.0;
+        if (resultList != null) {
+            for (SalesCommissionReport r : resultList) {
+                if (i == 1) {
+                    Double rCmmission = r.getCommission();
+                    if (rCmmission == null) {
+                        rCmmission = 0.0;
+                    }
+                    all = Double.valueOf(CalculationUtils.add(all, rCmmission));
+                } else {
+                    Double rSale = r.getSales();
+
+                    if (rSale == null) {
+                        rSale = 0.0;
+                    }
+                    all = Double.valueOf(CalculationUtils.add(all, rSale));
+                }
+            }
+        }
+        return all;
+    }
+
+    
+    public AjaxRes findSvByPage(Page<SalesCommissionReport> page, SalesCommissionReport o,
+                                HttpServletRequest request, List<Resources> permitBtn
+    ) {
+        AjaxRes ar = new AjaxRes();
+        List<Position> list = aService.getPerPoss();
+        List<String> leaderList = AccountHelper.getLeaderOrgId(list);
+        String accountId = AccountShiroUtil.getCurrentUser().getAccountId();
+        List<Org> listorg = positionService.findDataAuthority(accountId);//公司内部职位的用户id
+        Map mapList = new HashMap();
+        mapList.put("list",listorg);
+        Map mapListYj = new HashMap();//
+        Map mapListEj = new HashMap();
+
+        //根据公司内部的id 去查询对应的渠道
+//        List list =merchantService.
+        try {
+            Page<SalesCommissionReport> reports = new Page<SalesCommissionReport>();
+            List<SalesCommissionReport> pageList = new ArrayList<SalesCommissionReport>();
+            List merchantList = new ArrayList();
+            Double totalSales=0.0;
+            Double totalCommission=0.0;
+            String date=DateUtils.getAfterDayDate("-1").substring(0, 10);
+            //时间（参数）
+            String beginTime = request.getParameter("beginTime");
+            String endTime = request.getParameter("endTime");
+            String preMerchantName= request.getParameter("preMerchantName");
+            if (beginTime != "" && endTime != "") {
+                o.setBeginTime(beginTime);
+                o.setEndTime(endTime);
+            }else{
+                beginTime = date+" 00:00:00";
+                endTime = date+" 23:59:59";
+                o.setBeginTime(beginTime);
+                o.setEndTime(endTime);
+            }
+            String merchantId= request.getParameter("merchantId");
+            String merchantName= request.getParameter("merchantName");
+            if (merchantId !=null && merchantId !=""){
+                mapList.put("merchantId",merchantId);
+                mapListEj.put("merchantId",merchantId);
+                mapListYj.put("merchantId",merchantId);
+            }
+            if (merchantName !=null && merchantName !=""){
+                mapList.put("merchantName",merchantName);
+                mapListEj.put("merchantName",merchantName);
+                mapListYj.put("merchantName",merchantName);
+            }
+            //公司内部销售本身
+//            List<Merchant> listMerchantorg = null;
+            List<Merchant> listMerchant = null;
+            List<Merchant> listMerchantEj = null;
+            if(listorg.size()>0){
+               // listMerchantorg = merchantService.findMerchantByPreIdorg(mapList);
+                //根据公司内部的id 去查询对发展的商户以及商户的下线 即一级代理
+                 listMerchant = merchantService.findMerchantByPreId(mapList);//只显示一级渠道
+//                if(listMerchant.size()>0){
+//                    //一级代理的下级
+//                    mapListEj.put("list",listMerchant);
+//                    listMerchantEj = merchantService.findMerchantByPreIdEj(mapListEj);
+//                }
+
+            }else{
+                //没有组织，纯代理
+                List listYj = new ArrayList();
+                listYj.add(accountId);
+                mapListYj.put("list",listYj);
+                listMerchant = merchantService.findMerchantByPreId(mapListYj);
+//                if(listMerchant.size()>0){
+//                    mapListEj.put("list",listMerchant);
+//                    listMerchantEj = merchantService.findMerchantByPreIdEj(mapListEj);
+//                }
+            }
+//            if(listMerchantorg !=null){
+//                merchantList.addAll(listMerchantorg);
+//            }
+            if(listMerchant !=null){
+                merchantList.addAll(listMerchant);
+            }
+            if(listMerchantEj !=null){
+                merchantList.addAll(listMerchantEj);
+            }
+            //一查询
+            if(merchantList.size()>0){
+                totalSales=reportService.findTotalSalesByParamList(beginTime, endTime, merchantList);
+                //总佣金
+                totalCommission=reportService.findTotalCommissionByParamList(beginTime, endTime, merchantList);
+            }
+
+            Map map = new HashMap();
+            map.put("list",merchantList);
+            map.put("beginTimeOne",beginTime);
+            map.put("beginTimeTwo",beginTime);
+            map.put("endTimeOne",endTime);
+            map.put("endTimeTwo",endTime);
+            if(preMerchantName !=null && preMerchantName !=""){
+                map.put("preMerchantName",preMerchantName);
+            }
+            if(merchantList!=null &&merchantList.size()>0 ) {
+                pageList = reportService.findSalesCommission(map);
+            }
+            reports.setResults(pageList);
+            reports.setPageSize(page.getPageSize());
+            reports.setPageNum(page.getPageNum());
+            reports = (Page<SalesCommissionReport>) PageCalculation.getPageCalculation(reports);
+            Map<String, Object> p = new HashMap<String, Object>();
+            p.put("permitBtn", permitBtn);
+            p.put("list", reports);
+            p.put("allCommission", totalCommission);
+            p.put("allConsume", totalSales);
+            ar.setSucceed(p);
+        } catch (Exception e) {
+            logger.error(e.toString(), e);
+            ar.setFailMsg(Const.DATA_FAIL);
+        }
+        return ar;
+    }
+
+    @Override
+    public AjaxRes findChildMerchantList(Page<SalesCommissionReport> page, SalesCommissionReport o, HttpServletRequest request, List<Resources> permitBtn) throws Exception {
+        AjaxRes ar = new AjaxRes();
+        Map mapListYj = new HashMap();//
+        try {
+            Page<SalesCommissionReport> reports = new Page<SalesCommissionReport>();
+            List<SalesCommissionReport> pageList = new ArrayList<SalesCommissionReport>();
+            //时间（参数）
+            String date=DateUtils.getAfterDayDate("-1").substring(0, 10);
+            String beginTime = request.getParameter("beginTime");
+            String endTime = request.getParameter("endTime");
+            if (beginTime != "" && endTime != "") {
+                o.setBeginTime(beginTime);
+                o.setEndTime(endTime);
+            }else{
+                beginTime = date+" 00:00:00";
+                endTime = date+" 23:59:59";
+                o.setBeginTime(beginTime);
+                o.setEndTime(endTime);
+            }
+            List merchantList = new ArrayList();
+            String merchantId= request.getParameter("merchantId");
+            String merchantName= request.getParameter("merchantName");
+//            String preMerchantName= request.getParameter("preMerchantName");
+            String preId= request.getParameter("preId");
+            if (merchantId !=null && merchantId !=""){
+                mapListYj.put("merchantId",merchantId);
+            }
+            if (merchantName !=null && merchantName !=""){
+                mapListYj.put("merchantName",merchantName);
+            }
+            List<Merchant> listMerchant = null;
+            List<Merchant> listMerchantEj = null;
+                mapListYj.put("preId",preId);
+                listMerchant = merchantService.findChildMerchantId(mapListYj);
+            if(listMerchant !=null){
+                merchantList.addAll(listMerchant);
+            }
+            if(listMerchantEj !=null){
+                merchantList.addAll(listMerchantEj);
+            }
+            Map map = new HashMap();
+            map.put("list",merchantList);
+            map.put("beginTimeOne",beginTime);
+            map.put("beginTimeTwo",beginTime);
+            map.put("endTimeOne",endTime);
+            map.put("endTimeTwo",endTime);
+//            if(preMerchantName !=null && preMerchantName !=""){
+//                map.put("preMerchantName",preMerchantName);
+//            }
+            if(merchantList!=null &&merchantList.size()>0 ) {
+                pageList = reportService.findSalesCommission(map);
+            }
+            reports.setResults(pageList);
+            reports.setPageSize(page.getPageSize());
+            reports.setPageNum(page.getPageNum());
+            reports = (Page<SalesCommissionReport>) PageCalculation.getPageCalculation(reports);
+            Map<String, Object> p = new HashMap<String, Object>();
+            p.put("permitBtn", permitBtn);
+            p.put("list", reports);
+            ar.setSucceed(p);
+        } catch (Exception e) {
+            logger.error(e.toString(), e);
+            ar.setFailMsg(Const.DATA_FAIL);
+        }
+        return ar;
+    }
+
+    */
+/**
+     * 查询销量
+     * @param page
+     * @param
+     * @return
+     *//*
+
+    public AjaxRes childMerchantAndSignList(Page<CpOrderInfo> page,HttpServletRequest request,List<Resources> permitBtn) throws Exception{
+        AjaxRes ar=new AjaxRes();
+        try {
+            Page<CpOrderInfo> reports=new Page<CpOrderInfo>();
+            List<CpOrderInfo> list=new ArrayList<>();
+            String merchantId=request.getParameter("merchantId");
+            String userName=request.getParameter("userName");
+            String phone=request.getParameter("phone");
+            String beginTime=request.getParameter("bTime");
+            String endTime=request.getParameter("eTime");
+            if(endTime.equals("")){
+                beginTime=DateUtils.getAfterDayDate("-1").substring(0,10)+" 00:00:00";
+                endTime=DateUtils.getAfterDayDate("-1").substring(0,10) +" 23:59:59";
+            }else{
+                beginTime=beginTime+" 00:00:00";
+                endTime=endTime +" 23:59:59";
+            }
+            int total=0;
+            Double sumSales=0.0;
+            Merchant merchant = merchantService.findMerchantPO(merchantId);
+            total=merchantService.sumFindTicketInfoList(merchant.getmId(),beginTime,endTime,userName,phone);
+            list=merchantService.ticketInfoList(merchant.getmId(),beginTime,endTime,userName,phone,(page.getPageNum()-1)*page.getPageSize(),page.getPageSize());
+            sumSales = merchantService.sumSalesTicketInfo(merchant.getmId(),beginTime,endTime,userName,phone);
+            int totalPage = total/page.getPageSize();
+            if(total % page.getPageSize()>0){
+                totalPage++;
+            }
+            reports.setTotalPage(totalPage);
+            reports.setPageNum(page.getPageNum());
+            reports.setPageSize(page.getPageSize());
+            reports.setTotalRecord(total);
+            reports.setResults(list);
+            Map<String, Object> p=new HashMap<String, Object>();
+            p.put("permitBtn", permitBtn);
+            p.put("list", reports);
+            p.put("sumSales", sumSales);
+            ar.setSucceed(p);
+        } catch (Exception e) {
+            logger.error(e.toString(),e);
+            ar.setFailMsg(Const.DATA_FAIL);
+        }
+        return ar;
+    }
+    public AjaxRes salesUserList(Page<UserVo> page ,HttpServletRequest request,List<Resources> permitBtn) throws Exception{
+        AjaxRes ar=new AjaxRes();
+        try {
+            Page<UserVo> reports=new Page<UserVo>();
+            List<UserVo> list=new ArrayList<>();
+            int total=0;
+            String merchantId=request.getParameter("merchantId");
+            String phone=request.getParameter("phone");
+            String userName=request.getParameter("userName");
+            String beginTime=request.getParameter("bTime");
+            String endTime=request.getParameter("eTime");
+            if(endTime.equals("")){
+                beginTime=DateUtils.getAfterDayDate("-1").substring(0,10)+" 00:00:00";
+                endTime=DateUtils.getAfterDayDate("-1").substring(0,10) +" 23:59:59";
+            }else{
+                beginTime=beginTime+" 00:00:00";
+                endTime=endTime +" 23:59:59";
+            }
+            List paramList = new ArrayList();
+            //获取该商户的基本信息
+            Merchant merchant = merchantService.findMerchantPO(merchantId);
+            if(merchant.getmLevel().equals(1)){//一级渠道
+                paramList.add(merchant.getmCpUserId());
+                List yjMarketerUserIdList = merchantService.findMarketIdListCount(paramList, beginTime, endTime);//一级标签idList
+                List ejMerchantIdList = merchantService.findZjMerchantIdList(merchant.getmId(),beginTime, endTime);//二级渠道IdList
+                paramList.clear();
+                if(yjMarketerUserIdList !=null){
+                    paramList.addAll(yjMarketerUserIdList);
+                }
+                if(ejMerchantIdList !=null){
+                    paramList.addAll(ejMerchantIdList);
+                }
+                if(paramList !=null && paramList.size()>0){
+                    total = merchantService.sumUserList(paramList,userName,phone);
+                    list=merchantService.salesUserList(paramList,userName,phone,(page.getPageNum()-1)*page.getPageSize(),page.getPageSize());
+                }
+            }else if(merchant.getmLevel().equals(2)){//二级渠道
+                paramList.add(merchant.getmCpUserId());
+                List ejMarketerUserIdList = merchantService.findMarketIdListCount(paramList, beginTime, endTime);//二级渠道自己的标签用户idList
+                List sjMerchantIdList = merchantService.findZjMerchantIdList(merchant.getmId(),beginTime, endTime);//三级级渠道IdList
+                paramList.clear();
+                if(ejMarketerUserIdList !=null){
+                    paramList.addAll(ejMarketerUserIdList);
+                }
+                if(sjMerchantIdList !=null){
+                    paramList.addAll(sjMerchantIdList);
+                }
+                if(paramList !=null && paramList.size()>0){
+                    total = merchantService.sumUserList(paramList,userName,phone);
+                    list=merchantService.salesUserList(paramList,userName,phone,page.getPageNum(),page.getPageSize());
+                }
+            }else if(merchant.getmLevel().equals(3)){//三级渠道
+                paramList.add(merchant.getmCpUserId());
+                List sjMarketerUserIdList = merchantService.findMarketIdListCount(paramList, beginTime, endTime);
+                paramList.clear();
+                if(sjMarketerUserIdList !=null && sjMarketerUserIdList.size()>0){
+                    paramList.addAll(sjMarketerUserIdList);
+                    total = merchantService.sumUserList(paramList,userName,phone);
+                    list=merchantService.salesUserList(paramList,userName,phone,page.getPageNum(),page.getPageSize());
+                }
+            }
+            int totalPage = total/page.getPageSize();
+            if(total % page.getPageSize()>0){
+                totalPage++;
+            }
+            reports.setTotalPage(totalPage);
+            reports.setPageNum(page.getPageNum());
+            reports.setPageSize(page.getPageSize());
+            reports.setTotalRecord(total);
+            reports.setResults(list);
+            Map<String, Object> p=new HashMap<String, Object>();
+            p.put("permitBtn", permitBtn);
+            p.put("list", reports);
+            ar.setSucceed(p);
+        } catch (Exception e) {
+            logger.error(e.toString(),e);
+            ar.setFailMsg(Const.DATA_FAIL);
+        }
+        return ar;
+    }
+
+}
+*/

@@ -1,0 +1,43 @@
+package com.jy.service.impl.system.finance.common;
+
+import com.jy.entity.system.finance.common.UserBalancePO;
+import com.jy.from.system.request.UserBalanceForm;
+import com.jy.repository.system.finance.commom.UserBalanceDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.system.finance.common.UserBalanceService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Created by shixi on 2017/4/27.
+ */
+@Service("UserBalanceService")
+public class UserBalanceServiceImpl extends BaseServiceImp<UserBalancePO> implements UserBalanceService
+{
+
+    @Autowired
+    private UserBalanceDao userBalanceDao;
+    @Override
+    public int userBalanceforPojoSave(List<UserBalanceForm> listAll) throws Exception
+    {
+        List<UserBalancePO>  list = new ArrayList<>();
+        for (UserBalanceForm item : listAll) {
+            UserBalancePO userBalance=new UserBalancePO();
+            BeanUtils.copyProperties(item, userBalance);
+            userBalance.setCreateTime(new Date());
+            list.add(userBalance);
+        }
+       return  this.userBalanceDao.save(list);
+    }
+
+    @Override
+    public void deleteByAll(String date)throws Exception
+    {
+        this.userBalanceDao.deleteByAll(date);
+    }
+}

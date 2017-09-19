@@ -1,0 +1,17 @@
+package com.jy.repository.task.withdraw;
+
+import com.jy.entity.task.withdraw.TaskWithdrawInfo;
+import com.jy.repository.base.BaseDao;
+import com.jy.repository.base.JYBatis;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/26.
+ */
+@JYBatis
+public interface TaskWithdrawDao extends BaseDao<TaskWithdrawInfo> {
+    public int saveTaskWithdrawInfoList(@Param("fileName") String fileName);
+    public void deleteWithDrawInfo(Map map);
+}

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.WithDrawDifferenceDao">
+    <resultMap id="WithDrawDifference" type="WithDrawDifference">
+
+    </resultMap>
+
+    <select id="findByTDate" resultType="WithDrawDifference" parameterType="String">
+        select * from(
+        select DATE_FORMAT(a.tdate,'%Y-%m-%d') as tdate ,a.ttradeNo as tflowno,a.tstatus, b.tstatus as status ,
+        a.tmoney,b.tmoney as money
+        from TS_WithdrawInfo a
+        LEFT JOIN DC_CP_WithdrawInfo b on a.ttradeNo=b.tflowno and
+        DATE_FORMAT(a.tdate,'%Y-%m-%d')=DATE_FORMAT(b.TransTime,'%Y-%m-%d')
+        union
+        select DATE_FORMAT(a.TransTime,'%Y-%m-%d') as TransTime ,a.tflowno, b.tstatus , a.tstatus as status ,
+        b.tmoney,a.tmoney as money
+        from DC_CP_WithdrawInfo a
+        LEFT JOIN TS_WithdrawInfo b on a.tflowno=b.ttradeNo AND
+        DATE_FORMAT(b.tdate,'%Y-%m-%d')=DATE_FORMAT(a.TransTime,'%Y-%m-%d')
+        )a where a.tflowno not in(
+        select a.ttradeNo from TS_WithdrawInfo a ,DC_CP_WithdrawInfo b
+        where a.ttradeNo=b.tflowno and DATE_FORMAT(a.tdate,'%Y-%m-%d')=DATE_FORMAT(b.TransTime,'%Y-%m-%d')
+        and a.tstatus = b.tstatus and a.tmoney = b.tmoney
+        )
+        <if test="tdate !=null and tdate!=''">
+            and a.tdate like CONCAT(#{tdate},'%')
+        </if>
+        <if test="TFlowNo !=null and TFlowNo!=''">
+            and a.tflowNo=#{TFlowNo}
+        </if>
+        ORDER BY a.tdate desc
+    </select>
+
+    <insert id="insertItems" parameterType="java.util.List">
+    <![CDATA[
+        INSERT INTO TS_WithdrawInfo
+        (BatchNo,TMoney,TDate,TUserName,TBankName,TBankAccount,TStatus,TFlowNo,TTradeNo,TRecordDate)
+        VALUES]]>
+    <foreach item="w" collection="list" open="" separator="," close="">
+        <![CDATA[ ( #{w.batchNo},#{w.TMoney}, #{w.tdate},#{w.tUserName}, #{w.tBankName}, #{w.tBankAccount},#{w.TStatus},${w.TFlowNo}
+       #{w.tTradeNo},#{w.tRecordDate}
+        )]]>
+    </foreach>
+</insert>
+
+    <insert id="save" parameterType="WithDrawDifference">
+        <![CDATA[
+       INSERT INTO TS_WithdrawInfo (BatchNo,TMoney,TDate,TUserName,TBankName,TBankAccount,TStatus,TFlowNo,TTradeNo,TRecordDate)
+       VALUES(#{batchNo},#{TMoney}, #{tdate},#{TUserName}, #{TBankName}, #{TBankAccount},#{TStatus},#{TFlowNo},#{TTradeNo},#{TRecordDate}
+        )]]>
+    </insert>
+    
+    <select id="findByTradeNo" resultType="WithDrawDifference" parameterType="String">
+        SELECT * FROM  TS_WithdrawInfo WHERE  TTradeNo=#{tradeNo};
+    </select>
+    <update id="updateByTradeNo"  parameterType="WithDrawDifference">
+     	UPDATE TS_WithdrawInfo
+		SET TStatus=#{TStatus},
+		<if test="times!=null and times!=''">
+            Times=#{times},
+        </if>
+        TRecordDate=#{TRecordDate}
+		WHERE TTradeNo=#{TTradeNo}
+    </update>
+</mapper>

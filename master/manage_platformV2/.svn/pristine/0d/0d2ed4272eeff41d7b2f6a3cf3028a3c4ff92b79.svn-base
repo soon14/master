@@ -1,0 +1,181 @@
+$(function () {
+    getList();
+});
+
+/**
+ * 加载数据—默认是当前日期的数据
+ * @param init
+ */
+function getList(init) {
+    if (init == 1)$("#fundsForm .pageNum").val(1);
+    JY.Model.loading();
+    JY.Ajax.doRequest("fundsForm", jypath + '/backstage/reconciliation/findActivityFundsListByPage', null, function (data) {
+        $("#fundsTable tbody").empty();
+        var obj = data.obj;
+        var list = obj.list;
+        var results = list.results;
+        var permitBtn = obj.permitBtn;
+        var pageNum = list.pageNum, pageSize = list.pageSize, totalRecord = list.totalRecord;
+        var html = "";
+        if (results != null && results.length > 0) {
+            var leng = (pageNum - 1) * pageSize;//计算序号
+            for (var i = 0; i < results.length; i++) {
+                var res = results[i];
+                html += "<tr>";
+                html += "<td class='center'><label><input type='checkbox' name='ids' value='" + res.id + "' class='ace' /> <span class='lbl'></span></label></td>";
+                html += "<td class='center'>" + JY.Date.Format(res.dzDate, 'yyyy-MM-dd') + "</td>";
+                // html += "<td class='bluecenter' onclick='getQcyeDetail(this);' dzdate='"+JY.Date.Format(res.dzDate, 'yyyy-MM-dd')+"'>" + JY.Object.notEmpty(res.qcye) + "</td>";
+                html += "<td class='bluecenter'  '>" + JY.Object.notEmpty(res.qcye) + "</td>";
+                html += "<td class='center hidden-480'>" + JY.Object.notEmpty(res.totalRecharge) + "</td>";
+                html += "<td class='center hidden-480'>" + JY.Object.notEmpty(res.totalBuyCMCC) + "</td>";
+                // html += "<td class='center hidden-480'>" + JY.Object.notEmpty(res.totalBuyEntrust) + "</td>";
+                html += "<td class='center hidden-480'>" + JY.Object.notEmpty(res.totalBuyFISH) + "</td>";
+                html += "<td class='center hidden-480'>" + JY.Object.notEmpty(res.totalBuyCARD) + "</td>";
+                html += "<td class='center hidden-480'>" + JY.Object.notEmpty(res.totalBuyOUJIAN) + "</td>";
+                html += "<td class='center'>" + JY.Object.notEmpty(res.qmye) + "</td>";
+                if (res.totalDive != 0)
+                    html += "<td class='redcenter' onclick='showData(this);' dzdate='"+JY.Date.Format(res.dzDate, 'yyyy-MM-dd')+"' type='"+JY.Object.notEmpty(res.type)+"'>" + JY.Object.notEmpty(res.totalDive) + "</span></td>";
+                else
+                    html += "<td class='greencenter'><span data-color='#00ff00'> " + JY.Object.notEmpty(res.totalDive) + "</span></td>";
+                // html += "<td class='center'>" + JY.Object.notEmpty(res.dealAmt) + "</td>";
+                // if (res.diveAfterDeal != 0)
+                //     html += "<td class='redcenter'>" + JY.Object.notEmpty(res.diveAfterDeal) + "</td>";
+                // else
+                //     html += "<td class='greencenter'>" + JY.Object.notEmpty(res.diveAfterDeal) + "</td>";
+                // if (res.totalSumDive != 0)
+                //     html += "<td class='redcenter'>" + JY.Object.notEmpty(res.totalSumDive) + "</td>";
+                // else
+                //     html += "<td class='greencenter'>" + JY.Object.notEmpty(res.totalSumDive) + "</td>";
+                // if (res.dealStatus == 0) html += "<td class='center hidden-480' onclick='dealData(this);' dzdate='"+JY.Date.Format(res.dzDate, 'yyyy-MM-dd')+"' type='"+JY.Object.notEmpty(res.type)+"'><span class='label label-sm arrowed-in'>未处理</span></td>";
+                // else if (res.dealStatus == 1) html += "<td class='center hidden-480'><span class='label label-sm arrowed-in'>处理中</span></td>";
+                // else if (res.dealStatus == 2) html += "<td class='center hidden-480' onclick='showData(this);' dzdate='"+JY.Date.Format(res.dzDate, 'yyyy-MM-dd')+"' type='"+JY.Object.notEmpty(res.type)+"'><span class='label label-sm label-success'>已处理</span></td>";
+                // else if (res.dealStatus == 3) html += "<td class='center hidden-480'><span class='label label-sm label-success'>不用处理</span></td>";
+                html += "</tr>";
+            }
+            $("#fundsTable tbody").append(html);
+            JY.Page.setPage("fundsForm", "pageing", pageSize, pageNum, totalRecord, "getList");
+        } else {
+            html += "<tr><td colspan='16' class='center'>没有相关数据</td></tr>";
+            $("#fundsTable tbody").append(html);
+            $("#pageing ul").empty();//清空分页
+        }
+        JY.Model.loadingClose();
+    });
+}
+//处理差异
+function dealData(obj) {
+    var t=$(obj);
+    var date=t.attr("dzdate");
+    var type=t.attr("type");
+    var index = jeBox.open({
+        cell:"jbx",
+        padding:"0",
+        title:"差异处理",
+        maxBtn:true,
+        area:["800px","80%"],
+        type:2,
+        content:"dealPlatFormFundsDive?dzDate="+date+"&type="+type,
+        masklock : true ,
+        button: [ {name: '取消'},],
+    })
+}
+
+//显示差异
+function showData(obj) {
+    var t=$(obj);
+    var date=t.attr("dzdate");
+    var type=t.attr("type");
+    var index = jeBox.open({
+        cell:"jbx",
+        padding:"0",
+        title:"差异处理",
+        maxBtn:true,
+        area:["500px","80%"],
+        type:2,
+        content:"showPlatFormFundsDive?dzDate="+date+"&type="+type,
+        masklock : true ,
+        button: [ {name: '取消'},],
+
+
+
+    })
+}
+
+/**
+ * 查看期初余额明细
+ */
+ function getQcyeDetail(obj) {
+    alert("12323");
+    var t=$(obj);
+    var qcye=t.text();
+    var date=t.attr("dzdate");
+    var index = jeBox.open({
+        cell:"jbx",
+        padding:"0",
+        title:"用户资金期初余额明细",
+        maxBtn:true,
+        area:["800px","80%"],
+        type:2,
+        content:"findQcyeDetail?dzDate="+date+"&qcye="+qcye,
+        masklock : true ,
+        button: [ {name: '取消'},],
+        //nofun: function(index){ return false; },
+        success:function(cell){
+            //alert(cell.find(".jeBox-content").height())
+        }
+    })
+}
+
+
+
+function search() {
+    $("#searchBtn").trigger("click");
+}
+function loadRoleTree() {
+    JY.Ajax.doRequest(null, jypath + '/backstage/account/roleTree', null, function (data) {
+        $.fn.zTree.init($("#roleTree"), {
+            view: {dblClickExpand: false, selectedMulti: false, nameIsHTML: true},
+            data: {simpleData: {enable: true}},
+            callback: {onClick: clickRole}
+        }, data.obj);
+    });
+}
+function emptyRole() {
+    $("#roleName").prop("value", "");
+    $("#auForm input[name$='roleId']").prop("value", "0");
+}
+var preisShow = false;//窗口是否显示
+
+
+$('#resetData').bind('click', function() {
+    var beginTime=$("input[name=beginTime]").val().substring(0,7).trim();
+    var endTime=$("input[name=endTime]").val().substring(0,7).trim();
+    if(beginTime==""||endTime==""){
+        jeBox.msg("请输入重置时间，不可跨月重置");
+        return;
+    }
+    if(beginTime!=endTime){
+        jeBox.msg("不可跨月重置");
+        return;
+    }
+    JY.Model.loading();
+    JY.Ajax.doRequest("fundsForm",jypath +'/backstage/reconciliation/platManual',null,function(data){
+        JY.Model.loadingClose();
+        var obj=data.obj;
+        JY.Model.info(obj.msg,function(){ getbaseList();});
+    });
+})
+function exportReport(url){
+    window.location.href=url+"?date="+$('#beginTime').val()+"&type=1";
+}
+
+
+function exportFundsReport(url){
+    window.location.href=url+"?date="+$('#beginTime').val()+"&type=3";
+}
+
+
+function exportCMCCReport(url){
+    window.location.href=url+"?date="+$('#beginTime').val()+"&type=5";
+}
+

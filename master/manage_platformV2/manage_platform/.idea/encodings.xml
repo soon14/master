@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/../common/src/main/java/com/jy/common/utils/games/Constants.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/../common/src/main/java/com/jy/common/utils/games/HttpClientUtil.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/../dao/src/main/java/com/jy/repository/system/reconciliation/games/GamesDao.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/../process/src/main/java/com/jy/process/system/reconciliation/games/GamesProcess.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/../service/src/main/java/com/jy/service/system/reconciliation/games/GamesService.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/../service/src/main/java/com/jy/service/system/reconciliation/games/impl/GamesServiceImpl.java" charset="UTF-8" />
+  </component>
+</project>

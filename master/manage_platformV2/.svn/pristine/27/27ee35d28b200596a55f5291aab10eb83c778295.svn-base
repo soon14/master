@@ -1,0 +1,255 @@
+package com.jy.service.impl.system.finance.reconciliation.lottery;
+
+import com.jy.common.utils.CalculationUtils;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.excel.ExcelReport;
+import com.jy.entity.system.finance.reconciliation.lottery.LotteryBuyAndTicket;
+import com.jy.entity.system.finance.reconciliation.lottery.LotteryBuyAndTicketDiffReport;
+import com.jy.mybatis.Page;
+import com.jy.repository.system.finance.reconciliation.lottery.LotteryBuyAndTicketDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.impl.help.ExcelUtil;
+import com.jy.service.system.finance.reconciliation.lottery.LotteryBuyAndTicketService;
+import net.sf.json.JSONArray;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Created by Administrator on 2017/4/21.
+ */
+@Service("LotteryBuyAndTicketService")
+public class LotteryBuyAndTicketServiceImpl extends BaseServiceImp<LotteryBuyAndTicket> implements LotteryBuyAndTicketService {
+    @Autowired
+    private LotteryBuyAndTicketDao dao;
+    @Autowired
+    private ExcelUtil excelutil;
+    @Value("${download.lotteryBuyAndTicket.filename}")
+    private String lotteryBuyAndTicket;
+    @Value("${download.lotteryBuyAndTicketDiff.filename}")
+    private String lotteryBuyAndTicketDiff;
+    /**
+     * 数据入库
+     * @param thisDate
+     */
+    @Override
+    public void execTask(String thisDate) {
+        thisDate=DateUtils.getPreDate(-1);
+        LotteryBuyAndTicket report=new LotteryBuyAndTicket();
+        _installObj(thisDate,report);
+        _checkAndSave(thisDate,report);
+        _installDiff(thisDate);
+
+    }
+
+    /**
+     * 找出差异，组装差异对象，封装入库
+     * @param thisDate
+     */
+    private void _installDiff(String thisDate) {
+        execTable(thisDate);
+        generateDiffReport(thisDate);
+
+
+    }
+
+
+
+    private void execTable(String thisDate) {
+        String date= DateUtils.getDateStartString(thisDate);
+        String dateMax=DateUtils.getDateEndString(thisDate);
+        List<LotteryBuyAndTicketDiffReport> diffList=dao.findAndInstallDiff(date,dateMax);
+        if(diffList.size()!=0){
+            _checkDiffAndSave(thisDate,diffList);
+        }
+    }
+
+    private void _checkDiffAndSave(String thisDate, List<LotteryBuyAndTicketDiffReport> diffList) {
+        List<LotteryBuyAndTicketDiffReport> isExit=dao.findDiffReportByDate(thisDate);
+        if(isExit==null||isExit.size()==0||isExit.isEmpty()){
+            dao.insertDiffReport(diffList);
+        }else {
+            dao.deleteDiffList(isExit);
+            dao.insertDiffReport(diffList);
+        }
+    }
+
+    private void _checkAndSave( String thisDate,LotteryBuyAndTicket report) {
+        List<LotteryBuyAndTicket> isExit=dao.findReportByDate(thisDate);
+        if(isExit==null||isExit.size()==0||isExit.isEmpty()){
+            dao.insert(report);
+        }else {
+                dao.deleteList(isExit);
+                dao.insert(report);
+        }
+    }
+
+    private void   _installObj(String thisDate,LotteryBuyAndTicket report) {
+        report.setDate(thisDate);
+        String date= DateUtils.getDateStartString(thisDate);
+        String dateMax=DateUtils.getDateEndString(thisDate);
+        Double commonSales=_findSalesMoney(thisDate,1);
+        Double merchantSales=_findSalesMoney(thisDate,2);
+        Double sales=_Sum(commonSales,merchantSales);
+        report.setCommonSales(commonSales);
+        report.setMerchantSales(merchantSales);
+        report.setSales(sales);
+
+        Double commonTicketMoney=_findTicketMoney( thisDate,date,dateMax,1);
+        Double merchantTicketMoney=_findTicketMoney( thisDate,date,dateMax,2);
+        Double ticketMoney=_Sum(commonTicketMoney,merchantTicketMoney);
+        report.setCommonTicketMoney(commonTicketMoney);
+        report.setMerchantTicketMoney(merchantTicketMoney);
+        report.setTicketMoney(ticketMoney);
+
+        Double commonRefundMoney=_findRefund( thisDate,date,dateMax,1);
+        Double merchantRefundMoney=_findRefund( thisDate,date,dateMax,2);
+        Double refundMoney=_Sum(commonRefundMoney,merchantRefundMoney);
+        report.setCommonRefundMoney(commonRefundMoney);
+        report.setMerchantRefundMoney(merchantRefundMoney);
+        report.setRefundMoney(refundMoney);
+
+
+        Double commonNotTicket=_findNotTicket( thisDate,date,dateMax,1);
+        Double merchantNotTicket=_findNotTicket( thisDate,date,dateMax,2);
+        Double notTicket=_Sum(commonNotTicket,merchantNotTicket);
+        report.setCommonNotTicket(commonNotTicket);
+        report.setMerchantNotTicket(merchantNotTicket);
+        report.setNotTicket(notTicket);
+        Double diff=_CalDiff(sales,ticketMoney,refundMoney,notTicket);
+        report.setDiff(diff);
+    }
+
+    private Double _Sum(Double commonSales, Double merchantSales) {
+        Double money=Double.valueOf(CalculationUtils.add(commonSales,merchantSales));
+        return money;
+    }
+
+    //差异=购彩-出票-退款-未出票
+    private Double _CalDiff(Double sales,Double ticketMoney,Double refundMoney,Double notTicket) {
+        Double a=Double.valueOf(CalculationUtils.sub(sales,ticketMoney));
+        Double b=Double.valueOf(CalculationUtils.sub(a,refundMoney));
+        Double money=Double.valueOf(CalculationUtils.sub(b,notTicket));
+        return money;
+    }
+
+    private Double _findNotTicket(String thisDate,String date, String dateMax,Integer type) {
+        Double money=dao.findNotTicket( thisDate,date,dateMax,type);
+        return CalculationUtils.fomatMoney(money);
+    }
+
+    private Double _findRefund(String thisDate,String date, String dateMax,Integer type) {
+        Double money=dao.findRefundMoney( thisDate,date,dateMax,type);
+        return CalculationUtils.fomatMoney(money);
+    }
+
+    private Double _findTicketMoney(String thisDate,String date, String dateMax,Integer type) {
+        Double money=dao.findTicketMoneyBetweenDate( thisDate,date,dateMax,type);
+        return CalculationUtils.fomatMoney(money);
+    }
+
+    private Double _findSalesMoney(String thisDate,Integer type) {
+        Double money=dao.findSalesMoney( thisDate,type);
+        return CalculationUtils.fomatMoney(money);
+    }
+
+    @Override
+    public Page<LotteryBuyAndTicketDiffReport> findLotteryBuyAndTicketDiffByPage(LotteryBuyAndTicketDiffReport m, Page<LotteryBuyAndTicketDiffReport> page) {
+        page.setResults(dao.findDiffByPage(m, page));
+        return page;
+    }
+
+    //-------------------生成报表---------------------------------
+    @Override
+    public void generateReport(String month) {
+        ExcelReport ep=_installExcel(month);
+        try {
+            excelutil.GenerateExcel(ep);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private ExcelReport _installExcel(String month) {
+        ExcelReport ep=new ExcelReport();
+        ep.setSheet(true);
+        List<ExcelReport> list=new ArrayList<>();
+        ExcelReport ep1=_installExcelObj(month);
+        ExcelReport ep2=_installDiffExcelObj(month);
+        list.add(ep1);
+        list.add(ep2);
+        StringBuffer sbf = new StringBuffer();
+        String fileName = lotteryBuyAndTicket;
+        ep.setFileName(sbf.append(fileName).append(month).toString());
+        ep.setList(list);
+        return ep;
+    }
+
+    private ExcelReport _installExcelObj(String month) {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        String fileName = lotteryBuyAndTicket;
+        ep.setTitle(fileName);
+        String headers[] = new String[] {"日期","非追期购彩总额,普通/商户","非追期出票总额,普通/商户","非追期退款金额,普通/商户","非追期未出票额,普通/商户","差异"};
+        String attrs[] = new String[] {
+                "date", "commonSales", "merchantSales", "commonTicketMoney", "merchantTicketMoney", "commonRefundMoney", "merchantRefundMoney", "commonNotTicket", "merchantNotTicket", "diff"};
+        JSONArray data=_installExcelData(month);
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        ep.setData(data);
+        ep.setHeaderType(1);
+        return ep;
+    }
+
+    private JSONArray _installExcelData(String month) {
+        LotteryBuyAndTicket m = new LotteryBuyAndTicket();
+        m.setDate(month);
+        List<LotteryBuyAndTicket> list = dao.findMonth(m);
+        if(list==null){
+            list=new ArrayList<>();
+        }
+        JSONArray data= JSONArray.fromObject(list);
+        return data;
+    }
+
+    private void generateDiffReport(String thisDate) {
+        String month=thisDate.substring(0,7);
+        ExcelReport ep=_installDiffExcelObj(month);
+        try {
+            excelutil.GenerateExcel(ep);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private ExcelReport _installDiffExcelObj(String month) {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        String fileName =lotteryBuyAndTicketDiff ;
+        ep.setTitle(fileName);
+        String headers[] = new String[] {"日期","方案编号","差异金额","差异类型","差异原因","处理状态","处理人","处理时间"};
+        String attrs[] = new String[] {
+                "date", "schemeExtendId", "diffMoney", "diffType", "diffReason", "status", "handler", "handleTime", };
+        JSONArray data=_installDiffExcelData(month);
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        ep.setData(data);
+        ep.setHeaderType(1);
+        return ep;
+    }
+
+    private JSONArray _installDiffExcelData(String month) {
+        LotteryBuyAndTicketDiffReport m = new LotteryBuyAndTicketDiffReport();
+        m.setDate(month);
+        List<LotteryBuyAndTicket> list = dao.findDiffMonth(m);
+        if(list==null){
+            list=new ArrayList<>();
+        }
+        JSONArray data= JSONArray.fromObject(list);
+        return data;
+    }
+}

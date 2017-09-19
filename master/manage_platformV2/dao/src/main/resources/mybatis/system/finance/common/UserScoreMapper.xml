@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.commom.UserScoreDao">
+
+    <insert id="saveTransTxT">
+        LOAD DATA LOCAL INFILE #{fileName}
+        into table DC_ScoreTransaction character set utf8mb4 lines terminated by "\r\n" IGNORE 3 LINES
+        (UserId,Score,source,Type,TranTime) SET sycDate=#{sycDate}
+    </insert>
+    <delete id="deleteTransBySycDate" parameterType="String">
+        DELETE  FROM  DC_ScoreTransaction WHERE DATE_FORMAT(sycDate,'%Y%m%d') = #{sycDate}
+    </delete>
+
+
+    <insert id="saveBalanceTxT">
+        LOAD DATA LOCAL INFILE #{fileName}
+        into table DC_ScoreBalance  character set utf8mb4 lines terminated by "\r\n" IGNORE 3 LINES
+        (UserId,Score,sycDate)
+    </insert>
+    <delete id="deleteBalanceBySycDate" parameterType="String">
+        DELETE  FROM  DC_ScoreBalance WHERE DATE_FORMAT(sycDate,'%Y%m%d') = #{sycDate}
+    </delete>
+</mapper>

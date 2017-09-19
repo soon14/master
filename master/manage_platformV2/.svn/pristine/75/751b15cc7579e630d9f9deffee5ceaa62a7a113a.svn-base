@@ -1,0 +1,57 @@
+package com.jy.service.impl.system.channels;
+
+import com.jy.entity.system.channels.CPUserInfo;
+import com.jy.repository.system.channels.CPUserInfoDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.system.channels.CPUserInfoService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+
+/**
+ * Created by lijunke on 2017/4/26.
+ */
+@Service("cpUserInfoService")
+public class CPUserInfoServiceImpl extends BaseServiceImp<CPUserInfo> implements CPUserInfoService {
+
+    @Autowired
+    private CPUserInfoDao cpUserInfoDao;
+
+
+    protected static final Logger log = LoggerFactory.getLogger(CPUserInfoServiceImpl.class);
+
+    @Override
+    public int save(String filePath, Date currentDate) {
+        String charset = byValue("charset");
+        return cpUserInfoDao.save(filePath, currentDate, charset != null ? charset : "utf8mb4");
+    }
+
+    @Override
+    public int count(Date searchDate) {
+        return cpUserInfoDao.count(searchDate);
+    }
+
+/*    public void transforPojoSave(List<UserInfoForm> listAll) {
+        List<CPUserInfo> cpUserInfos = new ArrayList<>();
+    for (UserInfoForm userInfoForm : listAll) {
+        CPUserInfo cpUserInfo = new CPUserInfo();
+        userInfoForm.setUserName(filterEmoji(userInfoForm.getUserName()));
+        BeanUtils.copyProperties(userInfoForm, cpUserInfo);
+        cpUserInfo.setCreateTime(new Date());
+        cpUserInfo.setUpdateTime(new Date());
+        cpUserInfos.add(cpUserInfo);
+    }
+    this.cpUserInfoDao.save(cpUserInfos);
+}*/
+
+/*    public static String filterEmoji(String source) {
+        if(StringUtils.isNotBlank(source)){
+            return source.replaceAll("[\\ud800\\udc00-\\udbff\\udfff\\ud800-\\udfff]", "");
+        }else{
+            return source;
+        }
+    }*/
+}

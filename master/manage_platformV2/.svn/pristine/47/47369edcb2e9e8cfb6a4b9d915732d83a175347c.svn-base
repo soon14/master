@@ -1,0 +1,15 @@
+package com.jy.process.system.request;
+
+import com.jy.from.system.request.RequestParamInfoForm;
+
+/**
+ * Created by lijunke on 2017/4/24.
+ */
+public interface UserTransDetailRequestProcess
+{
+
+    void synchronizationUserTransData(RequestParamInfoForm infoForm) throws Exception;
+
+
+
+}

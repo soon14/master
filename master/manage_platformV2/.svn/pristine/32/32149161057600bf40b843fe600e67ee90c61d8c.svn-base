@@ -1,0 +1,81 @@
+package com.jy.process.impl.system.request;
+
+import com.alibaba.fastjson.JSONArray;
+import com.jy.common.utils.DateUtils;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.from.system.request.RequestPageInfoForm;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.from.system.request.UserTransDetailForm;
+import com.jy.process.system.request.UserTransDetailRequestProcess;
+import com.jy.service.system.finance.common.UserTransDetailService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * Created by lijunke on 2017/4/24.
+ */
+@Service("userTransDetailRequestProcess")
+public class UserTransDetailRequestProcessImpl extends ApiRequestProcessImpl<UserTransDetailForm> implements UserTransDetailRequestProcess
+{
+
+    @Autowired
+    protected UserTransDetailService service;
+
+    @Autowired
+    protected JobTaskStatisticsService jobTaskServiice;
+
+    @Value("${user.trans}")
+    private String userInfoPath;
+
+    //同步数据重连次数
+    private static int errorCount=0;
+    @Override
+    public void synchronizationUserTransData(RequestParamInfoForm infoForm) throws Exception {
+        try {
+            List<JSONArray> list = super.sendRequest(new RequestPageInfoForm<UserTransDetailForm>(), infoForm,this.userInfoPath);
+            if(list.size() < 0) {
+                super.LOGGER.info("用户交易明细信息未返回任何数据！");
+                return;
+            }
+            //先删除要查询的数据
+            service.deleteByAll("true".equals(infoForm.getQueryAll())?null:String.valueOf(Integer.parseInt(infoForm.getQueryTime())-1));
+            //List<UserTransDetailForm> listAll = new ArrayList<>();
+            int saveNum=0;//入库数量
+            int interfaceNum=0;//接口数量
+            for (JSONArray jsonArray : list) {//所有页数的数据
+                if (jsonArray.size()>0){
+                List<UserTransDetailForm> userList = JSONArray.parseArray(jsonArray.toString(), UserTransDetailForm.class);
+                interfaceNum+=userList.size();
+                saveNum+=this.transforPojoSave(userList);//分页保存
+                }
+            }
+            //保存job日志
+            JobTaskStatistics jobTaskStatistics=new JobTaskStatistics();
+            jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));
+            jobTaskStatistics.setJobName("synchronizationUserTrans");
+            jobTaskStatistics.setInterfaceNumber(interfaceNum);
+            jobTaskStatistics.setStorageNumber(saveNum);
+            jobTaskServiice.insertJobTaskStatistics(jobTaskStatistics);
+        } catch (Exception e) {
+            errorCount++;
+            if(errorCount<4){//小于4重新跑批
+                super.LOGGER.info("用户交易明细信息同步数据失败,连接次数:"+errorCount);
+                e.printStackTrace();
+                Thread.sleep(2000L);
+                this.synchronizationUserTransData(infoForm);
+            }else{
+                super.LOGGER.info("用户交易明细信息接口同步数据"+errorCount+"次都失败，请查明原因，手动同步");
+                e.printStackTrace();
+            }
+
+        }
+    }
+    public int transforPojoSave(List<UserTransDetailForm> listAll) throws Exception {
+        return this.service.userTransforPojoSave(listAll);
+    }
+
+}

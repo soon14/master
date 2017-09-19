@@ -1,0 +1,42 @@
+package com.jy.entity.system.channels.vo;
+
+import java.io.Serializable;
+import java.util.Date;
+
+/**
+ * Created by Matthew on 2017/5/22.
+ */
+public class MerchantExtend implements Serializable {
+
+
+
+    private Integer cpUserId;
+
+    private Date createTime;
+
+    private String schemeType;
+
+    public Integer getCpUserId() {
+        return cpUserId;
+    }
+
+    public void setCpUserId(Integer cpUserId) {
+        this.cpUserId = cpUserId;
+    }
+
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
+    }
+
+    public String getSchemeType() {
+        return schemeType;
+    }
+
+    public void setSchemeType(String schemeType) {
+        this.schemeType = schemeType;
+    }
+}

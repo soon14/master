@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.CashPrizeDifferenceDao">
+    <resultMap id="CashPrizeDifference" type="CashPrizeDifference">
+        <id property="id" column="id"/>
+        <result property="tallyDate" column="tally_date"/>
+        <result property="firstDiffPrize" column="first_diff_prize"/>
+        <result property="onlineCashPrize" column="online_cash_prize"/>
+        <result property="bigAmount" column="big_amount"/>
+        <result property="onlineSentPrize" column="online_sent_prize"/>
+        <result property="cashSendDiff" column="cash_send_diff"/>
+        <result property="lastDiffPrize" column="last_diff_prize"/>
+        <result property="offlineCashPrize" column="offline_cash_prize"/>
+        <result property="totalPrize" column="total_prize"/>
+        <result property="totalDiffPrize" column="total_diff_prize"/>
+        <result property="isValid" column="is_valid"/>
+        <result property="createDate" column="create_date"/>
+        <result property="updateDate" column="update_date"/>
+    </resultMap>
+
+    <resultMap id="CashDiffDetail" type="CashDiffDetail">
+        <result property="normalDate" column="NormalDate"/>
+        <result property="ticketNo" column="TicketNo"/>
+        <result property="diffMoney" column="DiffMoney"/>
+    </resultMap>
+
+    <!--第三方派奖总额-->
+    <select id="byTSTotalAumone" parameterType="java.util.Map" resultType="CashPrizeDifference">
+		<![CDATA[
+ 		SELECT  STR_TO_DATE(t.prize_date,'%Y-%m-%d') AS tallyDate,sum(t.betting_amount)
+ 		as onlineCashPrize from TS_CashPrize t
+		where t.prize_date >= STR_TO_DATE(#{startDate},'%Y-%m-%d %H:%i:%s')
+		and t.prize_date <= STR_TO_DATE(#{endDate},'%Y-%m-%d %H:%i:%s')
+		GROUP BY STR_TO_DATE(t.prize_date,'%Y-%m-%d')
+        ]]>
+	</select>
+
+    <!--投注派奖总额-->
+    <select id="byDCTotalAumone" parameterType="java.util.Map" resultType="CashPrizeDifference">
+	<![CDATA[
+        SELECT STR_TO_DATE(d.prizeTime,'%Y-%m-%d') AS tallyDate,sum(d.money)
+		as onlineSentPrize from DC_PrizeInfo d
+		where d.prizeTime >= STR_TO_DATE(#{startDate},'%Y-%m-%d %H:%i:%s')
+		and   d.prizeTime <= STR_TO_DATE(#{endDate},'%Y-%m-%d %H:%i:%s')
+		GROUP BY STR_TO_DATE(d.prizeTime,'%Y-%m-%d')
+        ]]>
+	</select>
+
+    <insert id="saveCashDiffAll" parameterType="java.util.List">
+        <![CDATA[   INSERT INTO RP_cashprize_diff(id,tally_date,first_diff_prize,online_cash_prize,big_amount,online_sent_prize,
+        cash_send_diff,last_diff_prize,offline_cash_prize,total_prize,total_diff_prize,is_valid,create_date,update_date)
+        VALUES ]]>
+        <foreach item="o" collection="list" open="" separator="," close="">
+            <![CDATA[  (#{o.id},#{o.tallyDate},#{o.firstDiffPrize},#{o.onlineCashPrize},#{o.bigAmount},#{o.onlineSentPrize},
+           #{o.cashSendDiff},#{o.lastDiffPrize},#{o.offlineCashPrize},#{o.totalPrize},#{o.totalDiffPrize},#{o.isValid},#{o.createDate},#{o.updateDate}) ]]>
+        </foreach>
+    </insert>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		<![CDATA[
+
+
+
+
+           INSERT INTO RP_cashprize_diff(tally_date,first_diff_prize,online_cash_prize,big_amount,online_sent_prize,
+        cash_send_diff,last_diff_prize,offline_cash_prize,total_prize,total_diff_prize,is_valid,create_date,update_date)
+        VALUES
+		   (#{tallyDate},#{firstDiffPrize},#{onlineCashPrize},#{bigAmount},#{onlineSentPrize},
+           #{cashSendDiff},#{lastDiffPrize},#{offlineCashPrize},#{totalPrize},#{totalDiffPrize},#{isValid},#{createDate},#{updateDate})
+
+
+
+
+        ]]>
+	</insert>
+
+    <select id="queryYesterdayLastAumone" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+		SELECT r.last_diff_prize FROM RP_cashprize_diff r WHERE r.tally_date = STR_TO_DATE(#{yesterDay},'%Y-%m-%d')
+	</select>
+
+    <select id="findByPage" parameterType="CashPrizeDifference" resultType="CashPrizeDifference">
+        <![CDATA[
+		SELECT
+		r.id AS id,
+		r.tally_date AS tallyDate,
+		r.first_diff_prize AS firstDiffPrize,
+        r.online_cash_prize AS onlineCashPrize,
+        r.big_amount AS bigAmount,
+        r.online_sent_prize AS onlineSentPrize,
+        r.cash_send_diff AS cashSendDiff,
+        r.last_diff_prize AS lastDiffPrize,
+        r.offline_cash_prize AS offlineCashPrize,
+        r.total_prize AS totalPrize,
+        r.total_diff_prize AS totalDiffPrize
+        from RP_cashprize_diff r where 1 = 1    ]]>
+        <if test="param.startDate != null and param.startDate != ''">
+            <![CDATA[ and r.tally_date  >= STR_TO_DATE(#{param.startDate},'%Y-%m-%d')  ]]>
+        </if>
+        <if test="param.endDate != null and param.endDate != ''">
+            <![CDATA[ and r.tally_date <= STR_TO_DATE(#{param.endDate},'%Y-%m-%d') ]]>
+        </if>
+
+    </select>
+
+    <select id="queryDiffDetail" parameterType="java.util.Map" resultType="CashDiffDetail">
+        <![CDATA[
+        SELECT
+	dc.pdate as normalDate,
+	dc.bid as ticketNo,
+	(cash.tamoney - dc.pmoney) AS diffMoney,
+	3 AS type
+    FROM
+	(
+		SELECT
+			pinfo.prizeTime AS pdate,
+			tinfo.ticketNo AS bid,
+			sum(tinfo.money) AS pmoney
+		FROM
+			DC_PrizeInfo pinfo
+		INNER JOIN DC_TicketInfo tinfo ON (
+			pinfo.schemeExtendId = tinfo.schemeExtendId
+			AND pinfo.prizeTime >= STR_TO_DATE(
+				#{startDate},
+				'%Y-%m-%d %H:%i:%s'
+			)
+			AND pinfo.prizeTime <= STR_TO_DATE(
+				#{endDate},
+				'%Y-%m-%d %H:%i:%s'
+			)
+		)
+		WHERE
+			tinfo.ticketTime >= STR_TO_DATE(
+				#{startDate},
+				'%Y-%m-%d %H:%i:%s'
+			)
+		AND tinfo.ticketTime <= STR_TO_DATE(
+			#{endDate},
+			'%Y-%m-%d %H:%i:%s'
+		)
+		GROUP BY
+			tinfo.ticketNo
+	) dc
+    INNER JOIN (
+	SELECT
+		ts.prize_date AS tdate,
+		ts.ticket_number AS tbid,
+		sum(ts.betting_amount) AS tamoney
+	FROM
+		TS_CashPrize ts
+	WHERE
+		ts.prize_date >= STR_TO_DATE(
+			#{startDate},
+			'%Y-%m-%d %H:%i:%s'
+		)
+	AND ts.prize_date <= STR_TO_DATE(
+		#{endDate},
+		'%Y-%m-%d %H:%i:%s'
+	)
+	GROUP BY
+		ts.ticket_number
+    ) cash ON (dc.bid = cash.tbid)
+    WHERE
+	(cash.tamoney - dc.pmoney) NOT IN (0)
+    UNION
+	SELECT
+		dc.tdate AS normalDate,
+		dc.tno AS ticketNo,
+		dc.tmoneny AS diffMoney,
+		2 AS type
+	FROM
+		(
+			SELECT
+				tinfo.id AS tid,
+				tinfo.ticketNo AS tno,
+				sum(tinfo.money) AS tmoneny,
+				tinfo.ticketTime AS tdate
+			FROM
+				DC_PrizeInfo pinfo
+			INNER JOIN DC_TicketInfo tinfo ON (
+				pinfo.schemeExtendId = tinfo.schemeExtendId
+				AND pinfo.prizeTime >= STR_TO_DATE(
+					#{startDate},
+					'%Y-%m-%d %H:%i:%s'
+				)
+				AND pinfo.prizeTime <= STR_TO_DATE(
+					#{endDate},
+					'%Y-%m-%d %H:%i:%s'
+				)
+			)
+			WHERE
+				tinfo.ticketTime >= STR_TO_DATE(
+					#{startDate},
+					'%Y-%m-%d %H:%i:%s'
+				)
+			AND tinfo.ticketTime <= STR_TO_DATE(
+				#{endDate},
+				'%Y-%m-%d %H:%i:%s'
+			)
+			GROUP BY
+				tinfo.ticketNo
+		) dc
+	LEFT JOIN (
+		SELECT
+			ts.id AS tsid,
+			ts.ticket_number AS tbid,
+			sum(ts.betting_amount) AS tsmoney,
+			ts.tick_date AS tsdate
+		FROM
+			TS_CashPrize ts
+		WHERE
+			ts.prize_date >= STR_TO_DATE(
+				#{startDate},
+				'%Y-%m-%d %H:%i:%s'
+			)
+		AND ts.prize_date <= STR_TO_DATE(
+			#{endDate},
+			'%Y-%m-%d %H:%i:%s'
+		)
+		GROUP BY
+			ts.ticket_number
+	) cash ON (dc.tno = cash.tbid)
+	WHERE
+		cash.tsid IS NULL
+	UNION
+		SELECT
+			cash.tsdate AS normalDate,
+			cash.tbid AS ticketNo,
+			cash.tsmoney AS diffMoney,
+			1 AS type
+		FROM
+			(
+				SELECT
+					ts.id AS tsid,
+					ts.ticket_number AS tbid,
+					sum(ts.betting_amount) AS tsmoney,
+					ts.tick_date AS tsdate
+				FROM
+					TS_CashPrize ts
+				WHERE
+					ts.prize_date >= STR_TO_DATE(
+						#{startDate},
+						'%Y-%m-%d %H:%i:%s'
+					)
+				AND ts.prize_date <= STR_TO_DATE(
+					#{endDate},
+					'%Y-%m-%d %H:%i:%s'
+				)
+				GROUP BY
+					tbid
+			) cash
+		LEFT JOIN (
+			SELECT
+				tinfo.id AS tid,
+				tinfo.ticketNo AS tno,
+				sum(tinfo.money) AS tmoneny,
+				tinfo.ticketTime AS tdate
+			FROM
+				DC_PrizeInfo pinfo
+			INNER JOIN DC_TicketInfo tinfo ON (
+				pinfo.schemeExtendId = tinfo.schemeExtendId
+				AND pinfo.prizeTime >= STR_TO_DATE(
+					#{startDate},
+					'%Y-%m-%d %H:%i:%s'
+				)
+				AND pinfo.prizeTime <= STR_TO_DATE(
+					#{endDate},
+					'%Y-%m-%d %H:%i:%s'
+				)
+			)
+			WHERE
+				tinfo.ticketTime >= STR_TO_DATE(
+					#{startDate},
+					'%Y-%m-%d %H:%i:%s'
+				)
+			AND tinfo.ticketTime <= STR_TO_DATE(
+				#{endDate},
+				'%Y-%m-%d %H:%i:%s'
+			)
+			GROUP BY
+				tinfo.ticketNo
+		) dc ON (dc.tno = cash.tbid)
+		WHERE
+			dc.tid IS NULL
+        ]]>
+    </select>
+
+    <select id="count" parameterType="CashPrizeDifference" resultType="java.lang.Integer">
+        select count(1) from RP_cashprize_diff cd where cd.tally_date = STR_TO_DATE(#{tallyDate},'%Y-%m-%d');
+    </select>
+
+    <delete id="delete" parameterType="CashPrizeDifference">
+      DELETE FROM RP_cashprize_diff WHERE tally_date = STR_TO_DATE(#{tallyDate},'%Y-%m-%d');
+    </delete>
+</mapper>

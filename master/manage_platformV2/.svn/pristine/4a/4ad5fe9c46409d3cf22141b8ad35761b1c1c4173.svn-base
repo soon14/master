@@ -1,0 +1,64 @@
+package com.jy.process.impl.system.reconciliation.lottery.qrCode;
+
+import com.jy.entity.system.finance.statistics.QrCodeDailyReport;
+import com.jy.from.system.finance.reconciliation.lottery.BaseForm;
+import com.jy.mybatis.Page;
+import com.jy.process.system.common.DownLoadProcess;
+import com.jy.process.system.reconciliation.lottery.qrCode.DailyProcess;
+import com.jy.service.system.finance.statistics.lottery.QrCodeDailyReportService;import com.jy.vo.system.statistics.lottery.QrCodeDailyVo;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Created by Administrator on 2017/4/6.
+ */
+@Service("DailyProcess")
+public class DailyProcessImpl implements DailyProcess {
+    @Autowired
+    private QrCodeDailyReportService service;
+    @Autowired
+    private DownLoadProcess downLoadProcess;
+
+    @Value("${download.qrcodeDailyReport.filename}")
+    private String qrcodeDailyReportFilename;
+
+
+    @Override
+    public Page<QrCodeDailyVo> findByPage(Page<QrCodeDailyVo> pageVo, BaseForm form) {
+        QrCodeDailyReport o=new QrCodeDailyReport();
+        o.setBeginTime(form.getBeginTime());
+        o.setEndTime(form.getEndTime());
+        Page<QrCodeDailyReport> page =new Page<>();
+        page.setPageNum(pageVo.getPageNum());
+        page.setPageSize(pageVo.getPageSize());
+        Page<QrCodeDailyReport> reports=service.findByPage(o, page);
+        List<QrCodeDailyVo> voList=new ArrayList<>();
+        if(reports.getResults()==null){
+            return new Page<QrCodeDailyVo>();
+        }else{
+            pageVo.setPageSize(reports.getPageSize());
+            pageVo.setTotalPage(reports.getTotalPage());
+            pageVo.setTotalRecord(reports.getTotalRecord());
+            List<QrCodeDailyReport> list=reports.getResults();
+            for(QrCodeDailyReport daily:list){
+                QrCodeDailyVo vo=new QrCodeDailyVo();
+                BeanUtils.copyProperties(daily,vo);
+                voList.add(vo);
+            }
+        }
+        pageVo.setResults(voList);
+        return pageVo;
+    }
+
+    @Override
+    public Object download(String date) {
+        String url="/system/finance/statistics/qrcode/QrCodeDailyReport";
+        Object obj=downLoadProcess.downLoad(date,qrcodeDailyReportFilename,url);
+        return obj;
+    }
+}

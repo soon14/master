@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.task.withdraw.TaskWithdrawDao">
+	<insert id="saveTaskWithdrawInfoList" parameterType="java.util.Map">
+       LOAD DATA LOCAL INFILE #{fileName}
+       into table  DC_CP_WithdrawInfo  character set gbk
+       IGNORE 3 LINES
+       (userId,TMoney,TAccount,TBank,Tstatus,TransTime,TFlowNo,sycDate);
+    </insert>
+	<delete id="deleteWithDrawInfo" parameterType="java.util.Map">
+				DELETE FROM DC_CP_WithdrawInfo  WHERE  1=1
+				<if test="yesDay != null and yesDay!='' ">
+					AND #{yesDay} = str_to_date(TransTime,'%Y-%m-%d')
+				</if>
+
+	</delete>
+</mapper>
+
+

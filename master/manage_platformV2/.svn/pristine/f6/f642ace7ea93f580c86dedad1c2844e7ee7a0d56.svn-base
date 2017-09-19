@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.TranceFundsDao">
+	<resultMap id="list" type="TranceFunds">
+		<id column="id" jdbcType="BIGINT" property="id"/>
+		<result column="dzDate" property="dzDate" />
+		<result column="allQcTranceMoney" property="allQcTranceMoney" />
+		<result column="ticketMoney" property="ticketMoney" />
+		<result column="refund" property="refund" />
+		<result column="addTranceMoney" property="addTranceMoney" />
+		<result column="allQmTranceMoney" property="allQmTranceMoney" />
+		<result column="diff" property="diff" />
+	</resultMap>
+
+	<resultMap id="money" type="Double">
+	<result column="money" property="money" />
+	</resultMap>
+
+<!--分页多参数查询数据-->
+	<select id="findByPage"  resultMap="list" parameterType="TranceFunds">
+		SELECT t.* FROM RP_CP_TranceFunds t
+		<where>
+			<if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')">
+				t.dzDate BETWEEN #{param.beginTime} and #{param.endTime}
+			</if>
+		</where>
+		ORDER BY t.dzDate desc
+	</select>
+	<!--期初追期金额， type=1，未出票-->
+	<select id="findQcTranceMoney" resultMap="money" parameterType="String">
+		<![CDATA[SELECT sum(money) as money  from DC_CP_TranceOrderInfo
+       where   isValid=1
+       and dtype =1
+       and sycDate =#{0}
+       ]]>
+	</select>
+
+
+	<!--当日出票追期金额-->
+	<select id="findTicketMoneyBetweenDate" resultMap="money" resultType="Double">
+		SELECT sum(money) as money  from DC_CP_TranceOrderInfo
+		where   isValid=1
+			and dtype=2
+		and sycDate BETWEEN #{0} and #{1}
+	</select>
+
+
+	<!--退款金额,-->
+	<select id="findRefundMoney" resultMap="money"  resultType="Double">
+		SELECT sum(money) as money  from DC_CP_TranceOrderInfo
+		where   isValid=1
+			 and  dtype=3
+		and sycDate BETWEEN #{0} and #{1}
+	</select>
+	<!--新增追期金额 -->
+	<select id="findAddTranceMoney"  resultMap="money" parameterType="TranceFunds">
+		SELECT sum(money) as money  from DC_CP_TranceOrderInfo
+		where   isValid=1
+			 and dtype=4
+		and sycDate BETWEEN #{0} and #{1}
+	</select>
+
+	<!--查询某日数据-->
+	<select id="findReportByDate"  resultMap="list" parameterType="TranceFunds">
+		SELECT t.* FROM RP_CP_TranceFunds t
+		<where>
+				t.dzDate = #{0}
+		</where>
+		ORDER BY t.dzDate desc
+	</select>
+
+<!--插入数据-->
+	<insert id="insert"  parameterType="TranceFunds">
+		<![CDATA[
+	INSERT INTO RP_CP_TranceFunds(
+	    id,
+		dzDate,
+		allQcTranceMoney,
+		ticketMoney,
+		refund,
+		addTranceMoney,
+		allQmTranceMoney,
+		diff
+	) VALUES (#{id},#{dzDate},#{allQcTranceMoney},#{ticketMoney},#{refund},#{addTranceMoney},#{allQmTranceMoney},#{diff}
+	)
+	]]>
+	</insert>
+
+	<delete id="deleteList" parameterType="TranceFunds">
+		delete from RP_CP_TranceFunds
+		WHERE id in
+		<foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+			#{item.id}
+		</foreach>
+	</delete>
+
+
+	<select id="find"  resultMap="list" parameterType="TranceFunds">
+		SELECT t.* FROM RP_CP_TranceFunds t
+		<where>
+			<if test="date!=null and date!=''">
+				t.dzDate = #{date}
+			</if>
+		</where>
+		ORDER BY t.dzDate desc
+	</select>
+
+
+	<select id="findMonth"  resultMap="list" parameterType="TranceFunds">
+		SELECT t.*  FROM RP_CP_TranceFunds t
+		<where>
+			<if test="param.dzDate!=null and param.dzDate!=''">
+				t.dzDate LIKE '%${param.dzDate}%'
+			</if>
+		</where>
+		ORDER BY t.dzDate ASC
+	</select>
+</mapper>

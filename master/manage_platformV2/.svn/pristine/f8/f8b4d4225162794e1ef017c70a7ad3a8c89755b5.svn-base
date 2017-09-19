@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.game.GameUserTransInfoDao">
+	<resultMap id="GameUserTransInfo" type="GameUserTransInfo" >
+		<id column="trans_id"  property="transId"/>
+		<result  column="batch_id" property="batchId"/>
+		<result  column="user_id" property="userId"/>
+		<result  column="trans_type" property="transType"/>
+		<result  column="trans_time" property="transTime"/>
+		<result  column="item_id" property="itemId"/>
+		<result  column="value_gold" property="valueGold"/>
+		<result  column="valueless_gold" property="valuelessGold"/>
+		<result  column="value_diamonds" property="valueDiamonds"/>
+		<result  column="valueless_diamonds" property="valuelessDiamonds"/>
+		<result  column="remain_money" property="remainMoney"/>
+		<result  column="prop_number" property="propNumber"/>
+		<result  column="trans_reason" property="transReason"/>
+		<result  column="trans_status" property="transStatus"/>
+		<result  column="pay_no" property="payNo"/>
+		<result  column="syc_time" property="sycTime"/>
+		<result  column="create_time" property="createTime"/>
+	</resultMap>
+    
+    <insert id="save" parameterType="java.util.List">
+       <![CDATA[   INSERT INTO DC_GM_UserTransInfo(trans_id,batch_id,user_id,trans_type,trans_time,item_id,value_gold,valueless_gold,
+       	value_diamonds,valueless_diamonds,remain_money,prop_number,trans_reason,trans_status,pay_no,syc_time,create_time)
+        VALUES ]]>
+        <foreach item="o" collection="list" index="index" separator="," >
+           <![CDATA[  (#{o.transId},#{o.batchId},#{o.userId},#{o.transType},#{o.transTime},#{o.itemId},
+           #{o.valueGold},#{o.valuelessGold},#{o.valueDiamonds},#{o.valuelessDiamonds},#{o.remainMoney},#{o.propNumber},#{o.transReason}
+           ,#{o.transStatus},#{o.payNo},#{o.sycTime},#{o.createTime}) ]]>
+        </foreach>
+    </insert>
+    
+    <select id="findByBatchId"  resultType="GameUserTransInfo">
+    	select d.create_time as createTime,d.batch_id as batchId from DC_GM_UserTransInfo d ORDER BY  d.create_time DESC  LIMIT 1
+    </select>
+    
+</mapper>

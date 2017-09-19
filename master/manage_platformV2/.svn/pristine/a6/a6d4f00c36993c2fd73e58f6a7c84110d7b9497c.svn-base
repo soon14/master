@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.SalesSumDifferencesDao">
+	<!--  com.jy.entity.system.account.Account -->
+    <resultMap id="SalesSumDifferences" type="SalesSumDifferences">
+      	<id column="bet_id"  property="betId"/>
+		<result column="bet_date" property="betDate"/>
+		<result column="bet_bet_count" property="betBetCount"/>
+		<result column="bet_bet_money" property="betBetMoney"/>
+		<result column="bet_issue_count" property="betIssueCount"/>
+		<result column="bet_issue_money" property="betIssueMoney"/>
+		<result column="bet_offline" property="betOffline"/>
+		<result column="bet_sum_money" property="betSum"/>
+		<result column="bet_difference_count" property="betDifferenceCount"/>
+		<result column="bet_difference_money" property="betDifferenceMoney"/>
+    </resultMap>
+	<resultMap id="SalesSumDifferencesVO" type="SalesSumDifferencesVO">
+		<id column="bet_id"  property="betId"/>
+		<result column="bet_date" property="betDate"/>
+		<result column="bet_bet_count" property="betBetCount"/>
+		<result column="bet_bet_money" property="betBetMoney"/>
+		<result column="bet_issue_count" property="betIssueCount"/>
+		<result column="bet_issue_money" property="betIssueMoney"/>
+		<result column="bet_offline" property="betOffline"/>
+		<result column="bet_sum_money" property="betSumMoney"/>
+		<result column="bet_difference_count" property="betDifferenceCount"/>
+		<result column="bet_difference_money" property="betDifferenceMoney"/>
+		<result column="d_condition" property="dCondition"/>
+	</resultMap>
+
+	<!--<update id="findMenuTree" parameterType="DZSumDifference">-->
+		<!--UPDATE JY_BASE_ACCOUNT-->
+		<!--SET   name =#{name},-->
+			  <!--email =#{email},-->
+			  <!--updateTime =#{updateTime}-->
+		<!--WHERE id=#{accountId}-->
+	<!--</update>-->
+
+	<select id="findDifference"  parameterType="String"   resultMap="SalesSumDifferencesVO">
+		select bet.bet_id,bet.bet_date,bet.bet_bet_count,bet.bet_bet_money,bet.bet_issue_count,
+		bet.bet_issue_money,bet.bet_offline,bet.bet_sum_money,bet.bet_difference_count,bet.bet_difference_money,d.d_condition from RP_SaleDiffInfo bet
+		left join DZ_SALESDIFFERENCESDETAIL d
+		on bet.bet_date=d.d_date
+		<where>
+			<if test="(date!=null and date!='') and (time!=null and time!='')">
+				bet.bet_date BETWEEN #{date} and #{time}
+			</if>
+			<if test="dealResultStatus!=null and dealResultStatus!=''">
+				AND d.d_condition=#{dealResultStatus}
+			</if>
+		</where>
+		ORDER BY bet_date DESC
+	</select>
+
+
+</mapper>

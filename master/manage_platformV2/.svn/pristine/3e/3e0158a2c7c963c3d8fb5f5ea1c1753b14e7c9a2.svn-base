@@ -1,0 +1,68 @@
+package com.jy.repository.system.finance.reconciliation.lottery;
+
+import java.util.Date;
+import java.util.List;
+
+import org.apache.ibatis.annotations.Param;
+
+import com.jy.entity.system.finance.reconciliation.lottery.CountSale;
+import com.jy.repository.base.BaseDao;
+import com.jy.repository.base.JYBatis;
+
+
+/** 
+ * @文件名:总销量统计dao接口
+ * @功能描述：
+ * @创建日期:2017年3月14日下午7:51:14 
+ * @创建人：lijunke
+ * @Copyright（c） 2017,all rights reserved by days 
+ */
+@JYBatis
+public interface CountSaleDao  extends BaseDao<CountSale> {
+	
+	public void save(CountSale countSale);
+
+	/**
+	 * 
+	 * @方法功能描述： 根据日期返回对应的数据
+	 * @param cs
+	 * @return 
+	 * List<CountSale>
+	 * @author lijunke
+	 * @创建时间： 2017年3月14日下午9:11:45
+	 */
+	public List<CountSale> findByDate(@Param("param")CountSale cs);
+
+	/**
+	 * 
+	 * @方法功能描述： 根据日期查询 是否存在对象 
+	 * @param cs
+	 * @return 
+	 * List<CountSale>
+	 * @author Dingj
+	 * @创建时间： 2017年3月15日下午2:21:24
+	 */
+	public int findByDates(@Param("param")CountSale cs);
+
+	
+	/**
+	 * 
+	 * @方法功能描述： 返回日期和id的集合 
+	 * @return 
+	 * List<BettingDifference>
+	 * @author lijunke
+	 * @创建时间： 2017年3月15日下午5:17:56
+	 */
+	public List<CountSale> queryDateAndId(@Param("startTime")Date startTime,@Param("endTime")Date endTime);
+
+	/**
+	 * 
+	 * @方法功能描述： 保存总金额，线下录入 
+	 * @param cs 
+	 * void
+	 * @author lijune
+	 * @创建时间： 2017年3月28日上午9:17:35
+	 */
+	public void updateCountAumone(CountSale cs);
+	
+}

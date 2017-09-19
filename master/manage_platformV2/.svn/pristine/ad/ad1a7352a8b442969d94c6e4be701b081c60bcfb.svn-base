@@ -1,0 +1,206 @@
+package com.jy.process.impl.system.request;
+
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.task.ContPageUtil;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.from.system.request.OrderInfoForm;
+import com.jy.from.system.request.RequestPageInfoForm;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.system.request.OrderInfoRequestProcess;
+import com.jy.service.system.channels.CpOrderInfoService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.apache.poi.ss.formula.functions.T;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * Created by Matthew on 2017/4/26.
+ */
+@Service("orderInfoRequestProcess")
+public class OrderInfoRequestProcessImpl extends ApiRequestProcessImpl<OrderInfoForm> implements OrderInfoRequestProcess {
+
+
+    @Autowired
+    protected CpOrderInfoService cpOrderInfoService;
+    @Autowired
+    private JobTaskStatisticsService jobTaskService;
+
+    @Value("${order.info}")
+    private String orderPath;
+
+    @Value("${trance.info}")
+    private String trancePath;
+
+    /**接口连续调用三次失败后抛出异常机制*/
+    private int countRequst =1;//访问次数
+    private int lastI = 1;//记录上一次访问时的i值
+
+
+    @Override
+    public void synchronizeOrderData(RequestParamInfoForm infoForm,int pageC) throws Exception {
+        int pageCount = 1;
+        /**记录上一次访问时记录的页数*/
+        if(pageC!=1){
+            pageCount =pageC;
+        }
+        if("true".equals(infoForm.getQueryAll())){
+            infoForm.setQueryTime(null);
+            cpOrderInfoService.orderClean(infoForm.getQueryTime());
+        }else{
+            cpOrderInfoService.orderClean(String.valueOf(Integer.parseInt(infoForm.getQueryTime())-1));
+        }
+        int interfaceNum=0;//接口数量
+        int saveNum=0;//入库数量
+        /**取到上一次访问时的i的值*/
+        int j=lastI ;
+        if(j==0){
+           j=1 ;
+        }
+        for (int i=j;i <= pageCount; i++) {
+
+            try {
+                infoForm.setCurrentPage(i);
+                String JsonArray = super.sendRequestTranJson(infoForm, this.orderPath);
+                RequestPageInfoForm<T> requestPageInfoForm = JSONObject.parseObject(JsonArray, RequestPageInfoForm.class);
+                if (pageCount == 1) {
+                    pageCount = ContPageUtil.countPage(requestPageInfoForm, infoForm);
+                }
+                List<OrderInfoForm> list = JSONArray.parseArray(requestPageInfoForm.getList().toString(), OrderInfoForm.class);
+                interfaceNum+=list.size();
+                int count = this.orderSave(list,infoForm.getQueryTime());
+                saveNum+=count;
+            } catch (Exception e) {
+                e.printStackTrace();
+                lastI=i;
+                if(countRequst<3){
+                    countRequst++;
+                    synchronizeOrderData(infoForm,pageCount);
+                }
+            }
+        }
+        //保存job日志
+        JobTaskStatistics jobTaskStatistics=new JobTaskStatistics();
+        jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));
+        jobTaskStatistics.setJobName("OrderInfoTask");
+        jobTaskStatistics.setInterfaceNumber(interfaceNum);
+        jobTaskStatistics.setStorageNumber(saveNum);
+        jobTaskService.insertJobTaskStatistics(jobTaskStatistics);
+    }
+
+
+    public int orderSave(List<OrderInfoForm> listAll,String date) {
+        int count=0;
+        final int pageSize = 500;
+        if(listAll.size()>pageSize){
+            int limit = pageSize;
+            int size = listAll.size()/limit;
+            for(int i=0;i<size;i++) {
+                List<OrderInfoForm> listPage = listAll.subList(0, limit);
+                int countPage = this.cpOrderInfoService.orderSave(listPage,date);
+                count+=countPage;
+                listAll.subList(0, limit).clear();
+                if(listAll.size()<pageSize&&listAll.size()!=0){
+                    int countX = this.cpOrderInfoService.orderSave(listAll,date);
+                    count+=countX;
+                }
+            }
+        }else{
+            count = this.cpOrderInfoService.orderSave(listAll,date);
+
+        }
+        return count;
+    }
+
+  /*  @Override
+    public void synchronizeTranceData(RequestParamInfoForm infoForm,int pageC) throws Exception {
+        int pageCount = 1;
+        if(pageC!=1){
+            pageCount =pageC;
+        }
+        if("true".equals(infoForm.getQueryAll())){
+            infoForm.setQueryTime(null);
+            cpOrderInfoService.tranceClean(infoForm.getQueryTime());
+        }else{
+            cpOrderInfoService.tranceClean(String.valueOf(Integer.parseInt(infoForm.getQueryTime())-1));
+        }
+        int interfaceNum=0;//接口数量
+        int saveNum=0;//入库数量
+        *//**取到上一次访问时的i的值*//*
+        int j=lastI ;
+        if(j==0){
+            j=1 ;
+        }
+        for (int i=j; i <= pageCount; i++) {
+            try {
+                infoForm.setCurrentPage(i);
+                String JsonArray = super.sendRequestTranJson(infoForm, this.trancePath);
+                RequestPageInfoForm<T> requestPageInfoForm = JSONObject.parseObject(JsonArray, RequestPageInfoForm.class);
+                if (pageCount == 1) {
+                    pageCount = ContPageUtil.countPage(requestPageInfoForm, infoForm);
+                }
+                List<OrderInfoForm> list = JSONArray.parseArray(requestPageInfoForm.getList().toString(), OrderInfoForm.class);
+                interfaceNum+=list.size();
+                int count = this.tranceSave(list);
+                saveNum+=count;
+            } catch (Exception e) {
+                lastI=i;
+                if(countRequst<3){
+                    countRequst++;
+                    synchronizeTranceData(infoForm,pageCount);
+                }
+                e.printStackTrace();
+            }
+        }
+        //保存job日志
+        JobTaskStatistics jobTaskStatistics=new JobTaskStatistics();
+        jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));
+        jobTaskStatistics.setJobName("TranceInfoTask");
+        jobTaskStatistics.setInterfaceNumber(interfaceNum);
+        jobTaskStatistics.setStorageNumber(saveNum);
+        jobTaskService.insertJobTaskStatistics(jobTaskStatistics);
+    }
+
+    public int tranceSave(List<OrderInfoForm> listAll) {
+      *//**统计入库条数*//*
+        int count=0;
+        final int pageSize = 500;
+        if(listAll.size()>pageSize){
+            int limit = pageSize;
+            int size = listAll.size()/limit;
+            for(int i=0;i<size;i++) {
+                List<OrderInfoForm> listPage = listAll.subList(0, limit-1);
+                int countPage = this.cpOrderInfoService.tranceSave(listPage);
+                count+=countPage;
+                listAll.subList(0, limit-1).clear();
+                if(listAll.size()<pageSize){
+                    int countX = this.cpOrderInfoService.tranceSave(listAll);
+                    count+=countX;
+                }
+            }
+        }else{
+            count = this.cpOrderInfoService.tranceSave(listAll);
+        }
+        return count;
+    }
+*/
+//    @Override
+//    public void synchronizeOrderData(RequestParamInfoForm infoForm) throws Exception {
+//        List<JSONArray> list = super.sendRequest(new RequestPageInfoForm<OrderInfoForm>(), infoForm,this.orderPath);
+//        List<OrderInfoForm> listAll = new ArrayList<>();
+//        for (JSONArray jsonArray : list) {
+//            List<OrderInfoForm> orderList = JSONArray.parseArray(jsonArray.toString(), OrderInfoForm.class);
+//            listAll.addAll(orderList);
+//        }
+//        if("true".equals(infoForm.getQueryAll())){
+//            cpOrderInfoService.orderClean(infoForm.getQueryTime());
+//        }
+//        this.orderSave(listAll);
+//    }
+
+}

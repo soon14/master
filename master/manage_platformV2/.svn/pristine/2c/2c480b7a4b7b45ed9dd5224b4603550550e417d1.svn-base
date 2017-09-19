@@ -1,0 +1,79 @@
+package com.jy.process.impl.system.task.withdraw;
+
+
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.FtpUtil;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.entity.task.withdraw.TaskWithdrawInfo;
+import com.jy.process.impl.system.request.ApiRequestProcessImpl;
+import com.jy.process.inter.system.task.withdraw.TaskWithdrawProcess;
+import com.jy.service.inter.task.withdraw.TaskWithdrawService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import sun.net.ftp.FtpClient;
+
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+@Service("taskWithdrawProcess")
+public class TaskWithdrawProcessImpl extends ApiRequestProcessImpl<TaskWithdrawInfo> implements TaskWithdrawProcess {
+
+    @Value("${ftpAddress}")
+    private String ftpAddress;//ftp登录信息
+    @Value("${ftpDownLoad}")
+    private String ftpDownLoad;//ftp文件的路径
+    @Value("${localhostAddr}")
+    private String localhostAddr;//下载到本地的路径
+    @Value("${user.withdraw}")
+    private String userWithdraw;//下载文件的名称
+    @Autowired
+    private TaskWithdrawService taskWithdrawService;
+    @Autowired
+    private JobTaskStatisticsService jobTaskStatisticsService;
+
+    private static final Logger LOG = LoggerFactory.getLogger(TaskWithdrawProcessImpl.class);
+
+    @Override
+    public void saveTaskWithdrawInfoList(String date) throws Exception {
+        //获取ftp的登录信息，ip，登录名，密码，端口
+        String[] ftpAddr = ftpAddress.split("/");
+        //登录ftp
+        FtpClient ftp = FtpUtil.connectFTP(ftpAddr[0], Integer.parseInt(ftpAddr[1]), ftpAddr[2], ftpAddr[3]);
+        if (ftp.isLoggedIn()) {
+            LOG.info("ftp登录成功" + ftp.getWelcomeMsg());
+            //下载文件并返回文件名称
+            String time = date != null ? date : DateUtils.getDate("yyyyMMdd");//时间
+            String downName = FtpUtil.getSplitData(userWithdraw, time);//下载名称
+            Map<String, String> map = FtpUtil.downloadAndChekData(ftpDownLoad + time + "/", downName, localhostAddr, ftp);
+
+            if (map.get("path") != null) {
+                //保存日志
+                try {
+                    LOG.info("文本数据" + map.get("count") + "条");
+                    JobTaskStatistics jobTaskStatistics = new JobTaskStatistics();//日志
+                    jobTaskStatistics.setJobName("用户提现");//日志名称
+                    jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));//入库时间
+                    jobTaskStatistics.setInterfaceNumber(Integer.parseInt(map.get("count")));//文本的数据条数
+                    //拿取文本文件入库
+                    int count = taskWithdrawService.saveTaskWithdrawInfoList(map.get("path"));
+                    jobTaskStatistics.setStorageNumber(count);//入库数量
+                    jobTaskStatisticsService.insertJobTaskStatistics(jobTaskStatistics);
+                    LOG.info("入库成功，数据" + count + "条");
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                LOG.info("文件生成失败");
+            }
+        } else {
+            LOG.info("ftp登录失败");
+        }
+
+    }
+}

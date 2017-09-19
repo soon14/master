@@ -1,0 +1,22 @@
+package com.jy.process.system.request;
+
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.from.system.request.UserInfoForm;
+
+import java.util.List;
+
+/**
+ * Created by lijunke on 2017/4/24.
+ */
+public interface UserInfoRequestProcess {
+
+    void synchronizationUserData(RequestParamInfoForm infoForm) throws Exception;
+
+    void synchronizationUserData2(RequestParamInfoForm infoForm);
+
+    public String synchronizationUserData3(RequestParamInfoForm infoForm) throws Exception;
+
+    public void transforPojoSave(List<UserInfoForm> listAll);
+
+
+}

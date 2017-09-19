@@ -1,0 +1,20 @@
+package com.jy.repository.task.withdraw;
+
+import com.jy.entity.task.withdraw.TaskWithdrawInfo;
+import com.jy.repository.base.BaseDao;
+import com.jy.repository.base.JYBatis;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/26.
+ */
+@JYBatis
+public interface TaskWithdrawDao extends BaseDao<TaskWithdrawInfo>{
+    public void saveTaskWithdrawInfoList(Map map);
+    public void deleteWithDrawInfo(Map map);
+
+    public void saveTaskWith(List list);
+
+}

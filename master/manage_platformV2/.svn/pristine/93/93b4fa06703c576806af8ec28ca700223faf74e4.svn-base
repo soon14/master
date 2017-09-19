@@ -1,0 +1,11 @@
+package com.jy.process.inter.system.task.prize;
+
+
+import com.jy.from.system.request.RequestParamInfoForm;
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+public interface TaskPrizeProcess {
+    public void saveTaskPrizeInfoList(RequestParamInfoForm infoForm) throws Exception;
+}

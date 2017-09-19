@@ -1,0 +1,37 @@
+package com.jy.service.impl.system.finance.reconciliation.lottery;
+
+import com.jy.entity.system.finance.reconciliation.lottery.NewTicketInfo;
+import com.jy.from.system.request.NewTicketInfoForm;
+import com.jy.repository.system.finance.reconciliation.lottery.NewTicketDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.system.finance.reconciliation.lottery.NewTicketService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Created by lijunke on 2017/6/2.
+ */
+@Service("newTicketService")
+public class NewTicketServiceImpl extends BaseServiceImp<NewTicketInfo> implements NewTicketService {
+
+    @Autowired
+    private NewTicketDao newTicketDao;
+
+    @Override
+    public int transforPojoSave(List<NewTicketInfoForm> listAll) {
+        List<NewTicketInfo> newTicketInfoList = new ArrayList<>();
+
+        for (NewTicketInfoForm newTicketInfoForm : listAll) {
+            NewTicketInfo newTicketInfo = new NewTicketInfo();
+            BeanUtils.copyProperties(newTicketInfoForm, newTicketInfo);
+            newTicketInfo.setCreateTime(new Date());
+            newTicketInfoList.add(newTicketInfo);
+        }
+        return this.newTicketDao.saveNewTicket(newTicketInfoList);
+    }
+}

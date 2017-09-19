@@ -1,0 +1,36 @@
+package com.jy.task.job.request;
+
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.SpringWebContextUtil;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.impl.system.request.UserInfoRequestProcessImpl;
+import org.springframework.context.ApplicationContext;
+
+/**
+ * Created by shixi on 2017/4/28.
+ */
+public class UserInfoTask extends BaseTask {
+
+    private static final int PAGE_SIZE_USER = 10000;
+
+    public void saveData() {
+        log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " 同步用户信息开始运行");
+        ApplicationContext ac = SpringWebContextUtil.getApplicationContext();
+        UserInfoRequestProcessImpl process = (UserInfoRequestProcessImpl) ac.getBean("userInfoRequestProcess");
+        //分页数据
+        RequestParamInfoForm req = new RequestParamInfoForm();
+        req.setPage("true");//是否开启分页，默认开启
+        req.setQueryAll("true");//是否查询全部
+        req.setCurrentPage(1);//默认为第一页
+        //req.setQueryTime(DateUtils.getDate("yyyyMMdd"));//默认当天
+        //req.setQueryTime("20170502");//默认当天
+        req.setPageSize(PAGE_SIZE_USER);//默认5000
+        try {
+            process.synchronizationUserData(req);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " 同步用户信息结束");
+    }
+}

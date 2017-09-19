@@ -1,0 +1,59 @@
+<%@ page contentType="text/html;charset=UTF-8" %>
+<%--新增方法--%>
+<div id="baseCommissionId" class="hide">
+	<form id="baseCommissionForm" method="POST" onsubmit="return false;" >
+		<table>
+			<tbody>
+			<tr>
+				<td>佣金名称：</td>
+				<td>
+					<input type="hidden" name="id">
+					<input jyValidate="required" name="name" type="text"  size="20">
+				</td>
+
+				<td>&nbsp;&nbsp;佣金规则类型：
+					<select id="typeName" name="type" style="width:125px">
+						<option value = 1>标签用户</option>
+						<option value = 2>投注机</option>
+					</select>
+				</td>
+			</tr>
+			<tr>
+				<td>阶梯一：</td>
+				<td >
+					<input style="width:70px;" jyValidate="required" name="oneRankMin" type=number>万&nbsp;&nbsp;~
+				</td>
+				<td>
+					<input style="width:70px;" jyValidate="required" name="oneRankMax" type=number>万&nbsp;&nbsp;分润比例：
+			
+					<input style="width:70px;" jyValidate="required" name="onePercent" type=number step="0.01">%
+				</td>
+			</tr>
+			
+			<td>阶梯二：</td>
+				<td >
+					<input style="width:70px;" name="twoRankMin" type=number>万&nbsp;&nbsp;~
+				</td>
+				<td>
+					<input style="width:70px;" name="twoRankMax" type=number>万&nbsp;&nbsp;分润比例：
+			
+					<input style="width:70px;" name="twoPercent" type=number step="0.01">%
+				</td>
+			</tr>
+			
+			<td>阶梯三：</td>
+				<td >
+					<input style="width:70px;" name="threeRankMin" type=number>万&nbsp;&nbsp;~
+				</td>
+				<td>
+					<input style="width:70px;" name="threeRankMax" type=number>万&nbsp;&nbsp;分润比例：
+			
+					<input style="width:70px;" name="threePercent" type=number step="0.01">%
+				</td>
+			</tr>
+
+			
+			</tbody>
+		</table>
+	</form>
+</div>

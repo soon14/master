@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.game.ToolsBalanceDao">
+    <resultMap id="ToolsBalance" type="ToolsBalance">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="date"  property="date"/>
+        <result column="toolsId"  property="toolsId"/>
+        <result column="qcTools"  property="qcTools"/>
+        <result column="qcMoney"  property="qcMoney"/>
+        <result column="allQcTools"  property="allQcTools"/>
+        <result column="allQcMoney"  property="allQcMoney"/>
+        <result column="addTools"  property="addTools"/>
+        <result column="addMoney"  property="addMoney"/>
+        <result column="consumeDiamond"  property="consumeDiamond"/>
+        <result column="averageTools"  property="averageTools"/>
+        <result column="allAddTools"  property="allAddTools"/>
+        <result column="allAddMoney"  property="allAddMoney"/>
+        <result column="consumeTools"  property="consumeTools"/>
+        <result column="consumeMoney"  property="consumeMoney"/>
+        <result column="allConsumeTools"  property="allConsumeTools"/>
+        <result column="allConsumeMoney"  property="allConsumeMoney"/>
+        <result column="qmTools"  property="qmTools"/>
+        <result column="qmMoney"  property="qmMoney"/>
+        <result column="qmAverageTools"  property="qmAverageTools"/>
+        <result column="allQmTools"  property="allQmTools"/>
+        <result column="allQmMoney"  property="allQmMoney"/>
+        <result column="DiamondValueBalance"  property="DiamondValueBalance"/>
+        <result column="GoldValueBalance"  property="GoldValueBalance"/>
+
+
+
+    </resultMap>
+
+    <resultMap id="money" type="Double">
+        <id column="money"  property="money"/>
+    </resultMap>
+    <resultMap id="count" type="Integer">
+        <id column="count"  property="count"/>
+    </resultMap>
+    <resultMap id="Itemid" type="String">
+        <id column="Itemid"  property="Itemid"/>
+    </resultMap>
+    <resultMap id="date" type="String">
+        <id column="date"  property="date"/>
+    </resultMap>
+
+
+    <select id="findByPage" resultMap="ToolsBalance">
+        SELECT * FROM RT_GM_ToolsBalance
+        WHERE 1=1
+        <if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')" >
+           and  date  BETWEEN #{param.beginTime} and #{param.endTime}
+        </if>
+        ORDER BY date desc
+    </select>
+
+
+
+    <insert id="insert"  parameterType="ToolsBalance">
+        <![CDATA[
+	INSERT INTO RT_GM_ToolsBalance(
+	id,date,toolsId,qcTools,qcMoney,allQcTools,allQcMoney,addTools,addMoney,consumeDiamond,averageTools,allAddTools,allAddMoney,
+	consumeTools,consumeMoney,allConsumeTools,allConsumeMoney,
+	qmTools,qmMoney,qmAverageTools,allQmTools,allQmMoney
+	) VALUES (
+	#{id},#{date},#{toolsId},#{qcTools},#{qcMoney},#{allQcTools},#{allQcMoney},#{addTools},#{addMoney},#{consumeDiamond},#{averageTools},#{allAddTools},#{allAddMoney},#{consumeTools},#{consumeMoney},#{allConsumeTools},#{allConsumeMoney},
+	#{qmTools},#{qmMoney},#{qmAverageTools},#{allQmTools},#{allQmMoney}
+	)
+	]]>
+    </insert>
+    <insert id="insertList"  parameterType="java.util.List">
+        INSERT INTO RT_GM_ToolsBalance(
+        id,date,toolsId,qcTools,qcMoney,allQcTools,allQcMoney,
+        addTools,addMoney,consumeDiamond,averageTools,allAddTools,allAddMoney,
+        consumeTools,consumeMoney,allConsumeTools,allConsumeMoney,
+        qmTools,qmMoney,qmAverageTools,allQmTools,allQmMoney
+        ) VALUES
+        <foreach collection="list" item="list" index="index" separator="," >
+	      (#{list.id},#{list.date},#{list.toolsId},#{list.qcTools},#{list.qcMoney},#{list.allQcTools},#{list.allQcMoney},
+            #{list.addTools},#{list.addMoney},#{list.consumeDiamond},#{list.averageTools},#{list.allAddTools},#{list.allAddMoney},
+            #{list.consumeTools},#{list.consumeMoney},#{list.allConsumeTools},#{list.allConsumeMoney},
+            #{list.qmTools},#{list.qmMoney},#{list.qmAverageTools},#{list.allQmTools},#{list.allQmMoney}
+	     )
+	    </foreach>
+    </insert>
+
+    <update id="update"  parameterType="ToolsBalance">
+        <![CDATA[
+	update RT_GM_ToolsBalance set
+	date=#{date},toolsId=#{toolsId},qcTools=#{qcTools},qcMoney=#{qcMoney},allQcTools=#{allQcTools},allQcMoney=#{allQcMoney},
+	addTools=#{addTools},addMoney=#{addMoney},consumeDiamond=#{consumeDiamond},averageTools=#{averageTools},allAddTools=#{allAddTools},allAddMoney=#{allAddMoney},
+	consumeTools=#{consumeTools},consumeMoney=#{consumeMoney},allConsumeTools=#{allConsumeTools},allConsumeMoney=#{allConsumeMoney},
+	qmTools=#{qmTools},qmMoney=#{qmMoney},qmAverageTools=#{qmAverageTools},allQmTools=#{allQmTools},allQmMoney=#{allQmMoney}
+	WHERE id=#{id}
+	]]>
+    </update>
+
+    <delete id="delete" parameterType="ToolsBalance">
+        delete from RT_GM_ToolsBalance
+        WHERE id=#{id}
+    </delete>
+
+
+    <delete id="deleteByDate" parameterType="String">
+        delete from RT_GM_ToolsBalance
+        WHERE date=#{0}
+    </delete>
+
+    <select id="findMonth"  resultMap="ToolsBalance" >
+        SELECT t.*   FROM RT_GM_ToolsBalance t
+        <where>
+            t.date LIKE '%${month}%'
+        </where>
+        ORDER by t.date ASC
+    </select>
+
+
+    <select id="findDateInMonth"  resultMap="ToolsBalance" >
+        SELECT DISTINCT t.date    FROM RT_GM_ToolsBalance t
+        <where>
+            t.date LIKE '%${month}%'
+        </where>
+    </select>
+
+    <select id="findIsExitByDate"  resultMap="ToolsBalance" >
+        SELECT t.* FROM RT_GM_ToolsBalance t
+        <where>
+            t.date = #{0}
+        </where>
+        ORDER BY t.toolsId ASC
+    </select>
+
+<!--获取某日道具id列表-->
+    <select id="findToolsIdListBetweenDate"  resultMap="Itemid" >
+        select DISTINCT (Itemid)
+        from DC_GM_GamePropBalance
+        where QcDate between #{0} and #{1}
+    </select>
+
+
+<!--获取每个道具的期初数，价值-->
+    <select id="findToolsBetweenDate"  resultMap="ToolsBalance" >
+      SELECT
+	Itemid as toolsId,
+	sum(Counts) as qcTools,
+	 sum(DiamondValueBalance) ,
+        sum(GoldValueBalance)
+FROM
+	DC_GM_GamePropBalance
+WHERE
+	QcDate between #{0} and #{1}
+GROUP BY
+	Itemid
+    </select>
+
+
+<!--获取道具数量和，总价值-->
+    <select id="findQllQcTools"  resultMap="ToolsBalance" >
+        SELECT
+        sum(Counts) as qcTools,
+        sum(DiamondValueBalance)  ,
+        sum(GoldValueBalance)
+        FROM
+        DC_GM_GamePropBalance
+        WHERE
+        QcDate between #{0} and #{1}
+        order BY Itemid
+    </select>
+
+
+
+    <!--某段时间道具XX消耗数-->
+    <select id="findConsumeToolsBetweenDate"  resultMap="ToolsBalance" >
+        <![CDATA[select sum(-1*prop_number) as consumeTools,
+ sum(value_Diamonds) ,
+        sum(value_gold)
+        from DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_type=3
+        and trans_status=1
+        and item_id=#{2}
+        AND prop_number<0
+        and batch_id = (SELECT batch_id
+	    FROM DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_type=3
+        and trans_status=1
+        and item_id=#{2}
+        AND prop_number<0
+        ORDER BY trans_id desc LIMIT 0,1)
+]]>
+    </select>
+    <!--某段时间道具XX新增数-->
+    <select id="findAddToolsBetweenDate"  resultMap="ToolsBalance" >
+        select  sum(-1*prop_number) as addTools,
+ sum(value_Diamonds) ,
+        sum(value_gold)
+        from DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_type=3
+        and trans_status=1
+        and item_id=#{2}
+        AND prop_number>0
+        and batch_id = (SELECT batch_id
+        FROM DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_type=3
+        and trans_status=1
+        and item_id=#{2}
+        AND prop_number>0
+        ORDER BY trans_id desc LIMIT 0,1)
+
+    </select>
+
+<!--某段时间道具总新增数（总消耗数），总价值-->
+    <select id="findAllAddOrConsumeBetweenDate"  resultMap="ToolsBalance" >
+    <if test="type==1">
+        <![CDATA[   select sum(-1*prop_number) as allConsumeTools,
+         sum(value_Diamonds) ,
+        sum(value_gold)
+        from DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_type=3
+        and trans_status=1
+           AND prop_number<0
+           and batch_id = (SELECT batch_id
+	    FROM DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_type=3
+        and trans_status=1
+           AND prop_number<0
+        ORDER BY trans_id desc LIMIT 0,1)
+             ]]>
+    </if>
+        <if test="type==2" >
+         SELECT   sum(prop_number) as allAddTools,
+            sum(value_Diamonds) ,
+            sum(value_gold)
+        from DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_type=3
+        and trans_status=1
+          AND prop_number>0
+            and batch_id = (SELECT batch_id
+            FROM DC_GM_UserTransInfo
+            where trans_time between #{0} and #{1}
+            and trans_type=3
+            and trans_status=1
+            AND prop_number>0
+            ORDER BY trans_id desc LIMIT 0,1)
+        </if>
+
+    </select>
+
+
+
+</mapper>

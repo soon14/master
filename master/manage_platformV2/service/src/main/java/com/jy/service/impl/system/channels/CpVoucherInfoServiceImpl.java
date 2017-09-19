@@ -1,0 +1,59 @@
+package com.jy.service.impl.system.channels;
+
+import com.jy.common.utils.DateUtils;
+import com.jy.entity.system.channels.CpVoucherInfo;
+import com.jy.repository.system.channels.CpVoucherInfoDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.system.channels.CpVoucherInfoService;
+import com.jy.from.system.request.VoucherInfoForm;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Created by Matthew on 2017/4/26.
+ */
+@Service("cpVoucherInfoService")
+public class CpVoucherInfoServiceImpl extends BaseServiceImp<CpVoucherInfo> implements CpVoucherInfoService {
+
+    @Autowired
+    private CpVoucherInfoDao cpVoucherInfoDao;
+
+
+    @Override
+    public int voucherSave(List<VoucherInfoForm> listAll) {
+        List<CpVoucherInfo> cpVoucherInfos = new ArrayList<>();
+        for (VoucherInfoForm voucherInfoForm : listAll) {
+            CpVoucherInfo cpVoucherInfo = new CpVoucherInfo();
+            BeanUtils.copyProperties(voucherInfoForm, cpVoucherInfo);
+            cpVoucherInfo.setvRecordDate(new Date());
+            cpVoucherInfo.setSycDate(new Date());
+            try {
+                cpVoucherInfo.setvStart(new SimpleDateFormat("yyyyMMddHHmmss").parse(voucherInfoForm.getvStart()));
+                cpVoucherInfo.setvEnd(new SimpleDateFormat("yyyyMMddHHmmss").parse(voucherInfoForm.getvEnd()));
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+            cpVoucherInfo.setvRecordUser("System");
+            cpVoucherInfos.add(cpVoucherInfo);
+        }
+        return this.cpVoucherInfoDao.voucherSave(cpVoucherInfos);
+    }
+
+    @Override
+    public void voucherClean(String date){
+        cpVoucherInfoDao.voucherClean(date);
+    }
+    @Override
+    public int save(String filePath, String currentDate) {
+        String charset = byValue("charset");
+        cpVoucherInfoDao.voucherClean(currentDate);
+        return cpVoucherInfoDao.save(filePath, DateUtils.stringToDate(currentDate, "yyyyMMdd"), charset != null ? charset : "utf8mb4");
+    }
+}

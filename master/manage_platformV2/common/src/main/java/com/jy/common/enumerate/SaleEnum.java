@@ -1,0 +1,64 @@
+package com.jy.common.enumerate;
+
+
+/**
+ * @文件名:SaleEnum.java
+ * @功能描述：销售枚举、定义差异类型
+ * @创建日期:2017年4月10日下午3:25:49
+ * @Copyright（c） 2017, all rights reserved by days
+ */
+public enum SaleEnum {
+
+    AMOUNT_DF(1, "票id为：%s 双方都有，差异金额为：%s"), BETTING_DF(2, "票id为：%s 我方有,出票系统无"), TICKET_DF(3, "票id为：%s 我方无,出票系统有");
+
+
+    SaleEnum(int value, String viewName) {
+        this.value = value;
+        this.viewName = viewName;
+    }
+
+
+    /**
+     * 枚举值
+     */
+    private int value;
+
+    /**
+     * 枚举名称
+     */
+    private String viewName;
+
+    public int getValue() {
+        return value;
+    }
+
+    public void setValue(int value) {
+        this.value = value;
+    }
+
+    public String getViewName() {
+        return viewName;
+    }
+
+    public void setViewName(String viewName) {
+        this.viewName = viewName;
+    }
+
+
+    /**
+     * 根据value取得valueName
+     *
+     * @param value
+     * @return
+     */
+    public static String getName(int value) {
+        for (SaleEnum type : SaleEnum.values()) {
+            if (type.getValue() == value) {
+                return type.getViewName();
+            }
+        }
+        return "";
+    }
+
+
+}

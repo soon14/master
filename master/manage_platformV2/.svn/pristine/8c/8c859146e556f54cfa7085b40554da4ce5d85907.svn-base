@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.CashPrizeDetailDifferenceDao">
+
+    <resultMap id="CashDiffDetail" type="CashDiffDetail">
+        <id property="dfId" column="DF_ID"/>
+        <result property="normalDate" column="NormalDate"/>
+        <result property="dfReportId" column="DF_ReportID"/>
+        <result property="ticketNo" column="TicketNo"/>
+        <result property="sendPrize" column="SendPrize"/>
+        <result property="prizeTime" column="PrizeTime"/>
+        <result property="ticketPrize" column="TicketPrize"/>
+        <result property="diffMoney" column="DiffMoney"/>
+        <result property="dfInitDate" column="DF_InitDate"/>
+        <result property="dfProcessStauts" column="DF_ProcessStauts"/>
+        <result property="dfProcessInfo" column="DF_ProcessInfo"/>
+    </resultMap>
+
+    <insert id="saveCashDiffDetail" parameterType="java.util.List">
+        INSERT INTO RP_CashDiffDetail
+        (
+        NormalDate,
+        DF_ReportID,
+        TicketNo,
+        SendPrize,
+        PrizeTime,
+        TicketPrize,
+        DiffMoney,
+        DF_InitDate,
+        DF_ProcessStauts,
+        DF_ProcessInfo
+        )
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            #{item.normalDate},
+            #{item.dfReportId},
+            #{item.ticketNo},
+            #{item.sendPrize},
+            #{item.prizeTime},
+            #{item.ticketPrize},
+            #{item.diffMoney},
+            #{item.dfInitDate},
+            #{item.dfProcessStauts},
+            #{item.dfProcessInfo}
+            )
+        </foreach>
+    </insert>
+
+    <select id="count" parameterType="CashDiffDetail" resultType="java.lang.Integer">
+        select count(1) from RP_CashDiffDetail cd where cd.NormalDate = STR_TO_DATE(#{normalDate},'%Y-%m-%d')
+    </select>
+
+    <delete id="delete" parameterType="CashDiffDetail">
+        DELETE FROM RP_CashDiffDetail WHERE NormalDate = STR_TO_DATE(#{normalDate},'%Y-%m-%d')
+    </delete>
+
+    <select id="findAllDetail" parameterType="java.lang.String" resultType="CashDiffDetail">
+        select
+        NormalDate as normalDate,
+        DF_ReportID as dfReportId,
+        TicketNo as ticketNo,
+        SendPrize as sendPrize,
+        PrizeTime as prizeTime,
+        TicketPrize as ticketPrize,
+        DiffMoney as diffMoney,
+        DF_InitDate as dfInitDate,
+        DF_ProcessStauts as dfProcessStauts,
+        DF_ProcessInfo as dfProcessInfo
+        FROM RP_CashDiffDetail r WHERE 1 = 1
+        <if test="beginDate != null and beginDate != ''">
+            <![CDATA[ and r.NormalDate = STR_TO_DATE(#{beginDate},'%Y-%m-%d')  ]]>
+        </if>
+
+    </select>
+
+</mapper>

@@ -1,0 +1,18 @@
+package com.jy.service.system.channels;
+
+import com.jy.entity.system.finance.CpOrderInfo;
+import com.jy.service.base.BaseService;
+import com.jy.from.system.request.OrderInfoForm;
+
+import java.util.List;
+
+/**
+ * Created by Matthew on 2017/4/26.
+ */
+public interface CpOrderInfoService extends BaseService<CpOrderInfo> {
+    int orderSave(List<OrderInfoForm> listAll,String date);
+    int tranceSave(List<OrderInfoForm> listAll);
+    void orderClean(String date);
+    void tranceClean(String date,String type);
+    int findByTypeAndTime(String date,String type);
+}

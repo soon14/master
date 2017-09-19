@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.SalesDifferencesDetailDao">
+    <resultMap id="SalesDifferencesDetail" type="SalesDifferencesDetail">
+      	<id column="d_id"  property="dId"/>
+		<result column="d_date" property="dDate"/>
+		<result column="d_number" property="dNumber"/>
+		<result column="d_difference_money" property="dDifferenceMoney"/>
+		<result column="d_difference_type" property="dDifferenceType"/>
+		<result column="d_cause" property="dCause"/>
+		<result column="d_opinion" property="dOpinion"/>
+		<result column="d_result" property="dResult"/>
+		<result column="d_condition" property="dCondition"/>
+		<result column="d_type" property="dType"/>
+		<result column="d_creator" property="dCreator"/>
+		<result column="d_createTime" property="dCreateTime"/>
+		<result column="type" property="type"/>
+    </resultMap>
+
+	<select id="findDifferenceDetail"  parameterType="String"   resultMap="SalesDifferencesDetail">
+		SELECT * from RP_CapitalDiffInfo
+		<where>
+			d_date=#{date}
+		</where>
+	</select>
+
+
+	<select id="findDetailByDateAndType"  parameterType="String"   resultMap="SalesDifferencesDetail">
+		SELECT * from RP_CapitalDiffInfo
+		<where>
+			d_date=#{param.dDate}
+			and d_type=#{param.dType}
+			<if test="param.type!=null and param.type!='' ">
+				and type=#{param.type}
+			</if>
+		</where>
+	</select>
+
+	<select id="find"  parameterType="SalesDifferencesDetail"   resultMap="SalesDifferencesDetail">
+		SELECT * from RP_CapitalDiffInfo
+		<where>
+			<if test="dNumber!='' and dNumber!=null">
+				and d_number=#{dNumber}
+			</if>
+			<if test="dDate!='' and dDate!=null">
+			and d_date=#{dDate}
+			</if>
+			<if test="dType!='' and dType!=null">
+				and d_type=#{dType}
+			</if>
+			<if test="type!=null and type!='' ">
+				and type=#{type}
+			</if>
+		</where>
+	</select>
+
+
+	<select id="findMonth"  parameterType="SalesDifferencesDetail"   resultMap="SalesDifferencesDetail">
+		SELECT * from RP_CapitalDiffInfo
+		<where>
+
+			<if test="dDate!='' and dDate!=null">
+				and d_date like '%${dDate}%'
+			</if>
+			<if test="dType!='' and dType!=null">
+				and d_type=#{dType}
+			</if>
+				and type=#{type}
+		</where>
+		order BY d_date ASC
+	</select>
+	
+		<insert id="save" parameterType="SalesDifferencesDetail">	
+	 	<![CDATA[
+		INSERT INTO RP_CapitalDiffInfo(
+		id,accountId,loginTime,loginIP
+		) VALUES (
+		#{id},#{accountId},#{loginTime},#{loginIP}
+		)
+		]]>  
+	</insert>
+
+	<!--插入数据-->
+	<insert id="insertDifference"  parameterType="java.util.List">
+		INSERT INTO RP_CapitalDiffInfo(
+		d_id,d_date,d_number,d_difference_money,d_difference_type,d_cause,
+		d_opinion,d_result,d_condition,d_type,d_creator,d_createTime,type
+		) VALUES
+
+		<foreach collection="list" item="list" index="index" separator=",">
+			(
+			#{list.dId},#{list.dDate},#{list.dNumber},#{list.dDifferenceMoney},#{list.dDifferenceType},#{list.dCause},
+			#{list.dOpinion},#{list.dResult},
+			#{list.dCondition},#{list.dType},#{list.dCreator},#{list.dCreateTime},#{list.type}
+			)
+		</foreach>
+	</insert>
+	<delete id="deleteDifference" parameterType="SalesDifferencesDetail" >
+			DELETE  from RP_CapitalDiffInfo
+			where d_date =#{dDate}
+	</delete>
+</mapper>

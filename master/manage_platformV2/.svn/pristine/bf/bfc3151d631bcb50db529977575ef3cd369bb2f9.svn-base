@@ -1,0 +1,44 @@
+package com.jy.repository.system.finance.reconciliation.lottery;
+
+import com.jy.entity.system.finance.reconciliation.lottery.LotteryBuyAndTicket;
+import com.jy.entity.system.finance.reconciliation.lottery.LotteryBuyAndTicketDiffReport;
+import com.jy.entity.system.finance.reconciliation.lottery.TranceFunds;
+import com.jy.mybatis.Page;
+import com.jy.repository.base.BaseDao;
+import com.jy.repository.base.JYBatis;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+
+/**
+ * Created by Administrator on 2017/4/21.
+ */
+@JYBatis
+public interface LotteryBuyAndTicketDao extends BaseDao<LotteryBuyAndTicket>{
+
+    Double findTicketMoneyBetweenDate(String thisDate,String date, String dateMax,@Param("type")Integer type);
+
+    Double findRefundMoney(String thisDate,String date, String dateMax,@Param("type")Integer type);
+
+    List<LotteryBuyAndTicket> findReportByDate(String thisDate);
+
+    List<LotteryBuyAndTicket> findMonth(@Param("param") LotteryBuyAndTicket m);
+
+    void deleteList(List<LotteryBuyAndTicket> list);
+
+    Double findSalesMoney(String thisDate,String date, String dateMax,@Param("type") Integer type);
+
+    Double findNotTicket(String thisDate,String date, String dateMax,@Param("type") Integer type);
+
+    List<LotteryBuyAndTicketDiffReport> findDiffByPage(@Param("param")LotteryBuyAndTicketDiffReport m, Page<LotteryBuyAndTicketDiffReport> page);
+
+    List<LotteryBuyAndTicketDiffReport> findAndInstallDiff(String date,String dateMax);
+
+    List<LotteryBuyAndTicketDiffReport> findDiffReportByDate(String thisDate);
+
+    void insertDiffReport(List<LotteryBuyAndTicketDiffReport> diffList);
+
+    void deleteDiffList(List<LotteryBuyAndTicketDiffReport> isExit);
+
+    List<LotteryBuyAndTicket> findDiffMonth(@Param("param")LotteryBuyAndTicketDiffReport m);
+}

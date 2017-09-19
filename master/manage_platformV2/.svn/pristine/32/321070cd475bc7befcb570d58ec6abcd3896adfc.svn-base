@@ -1,0 +1,61 @@
+package com.jy.process.impl.system.request;
+
+import com.jy.common.enumerate.TxtDataEnum;
+import com.jy.common.utils.FtpUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import sun.net.ftp.FtpClient;
+
+import java.util.Map;
+
+/**
+ * Created by lijunke on 2017/6/16.
+ * 模板类
+ */
+public abstract class ApiRequestTxtProcessImpl {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiRequestTxtProcessImpl.class);
+
+    /**
+     * 登录ffp、获取ftp文件、生成文件、返回文件地址
+     *
+     * @param req
+     * @return
+     */
+    public int byFTPData(String... req) throws Exception {
+        FtpClient ftpClient = FtpUtil.connectFTP(req[0], Integer.parseInt(req[1]), req[2], req[3]);
+        if (ftpClient.isLoggedIn()) {
+            LOGGER.info("Logon TFP Successful!");
+            Map<String, String> stringMap = FtpUtil.downloadAndChekData(req[4], req[5], req[6], ftpClient);
+            if (null != stringMap) {
+                String lineCount = stringMap.get("count");
+                String filePath = stringMap.get("path");
+
+                if (null != filePath) {
+                    saveFTPData(lineCount, filePath,req[7]);
+                } else {
+                    LOGGER.info("File Not generated!");
+                    return TxtDataEnum.NOT_GENERATED.getValue();
+                }
+            } else {
+                //map 返回为空
+                return TxtDataEnum.NOT_GENERATED.getValue();
+            }
+        } else {
+            LOGGER.info("Logon TFP failed!");
+            return TxtDataEnum.LOGIN_FAIL.getValue();
+        }
+        return 0;
+    }
+
+
+    public static String stringBuffer(String... strings) {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (String string : strings) {
+            stringBuilder.append(string);
+        }
+        return stringBuilder.toString();
+    }
+
+    public abstract void saveFTPData(String lineCount, String filePath,String date);
+}

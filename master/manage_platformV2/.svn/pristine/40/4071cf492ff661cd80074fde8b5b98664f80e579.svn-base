@@ -1,0 +1,152 @@
+package com.jy.repository.system.finance.reconciliation.lottery;
+
+import com.jy.entity.system.channels.vo.MerchantExtend;
+import com.jy.entity.system.finance.vo.FundsDiveVo;
+import com.jy.entity.system.finance.reconciliation.lottery.PlatformFunds;
+import com.jy.entity.system.finance.reconciliation.lottery.PlatformFundsRunning;
+import com.jy.mybatis.Page;
+import com.jy.repository.base.BaseDao;
+import com.jy.repository.base.JYBatis;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+import java.util.Map;
+
+
+/**
+ * 平台用户资金汇总对账数据层
+ */
+@JYBatis
+public interface PlatformFundsDao extends BaseDao<PlatformFunds> {
+    /**
+     * 根据对账统计的日期段查询平台用户资金汇总对账数据
+     *
+     * @param startDate
+     * @param endDate
+     * @param status
+     * @return
+     */
+    public List<PlatformFunds> findFundsListByPage(@Param("startDate") String startDate, @Param("endDate")String endDate, @Param("status") Integer status, @Param("type") Integer type, Page<PlatformFunds> page);
+
+    /**
+     * 根据对账统计的日期段查询平台用户资金汇总对账数据
+     *
+     * @param startDate
+     * @param endDate
+     * @param status
+     * @return
+     */
+    public List<PlatformFundsRunning> findFundsRunningListByPage(@Param("startDate") String startDate, @Param("endDate")String endDate, @Param("status") Integer status, Page<PlatformFundsRunning> page);
+
+    /**
+     * 获取某日期初余额
+     * @param  beginTime,  endTime
+     * @return
+     */
+    public Double findQcyeByDate(String beginTime, String endTime,@Param("type")int commonOrMerchantNo);
+
+    /**
+     * 获取某日充值金额
+     * @param type 1:普通正常用户
+     * @param
+     * @return
+     */
+    public Double findRechargeMoney(@Param("type") int type, String beginTime, String endTime);
+
+    public Double findWithDrawMoney(@Param("type") int type, String beginTime, String endTime);
+
+
+    /**
+     * 获取某日派奖金额
+     * @param
+     * @return
+     */
+    public Double findPrizeByDate(String beginTime, String endTime);
+
+//-----------------------------------第三方流水-------------------------------------------------
+    /**
+     * 删除
+     * @param platformFundsRunning
+     */
+    public  void deleteRun(PlatformFundsRunning platformFundsRunning);
+
+
+    /**
+     * 插入数据
+     * @param run
+     */
+    public void insertRun(PlatformFundsRunning run);
+
+    /**
+     *  获得交易金额
+     * @param i 交易渠道(1:微信  2:得仕通  3:银联 4:余额）
+     * @param beginTime
+     * @param endTime
+     * @return
+     */
+    public Double findCpMoneyByType(int i, String beginTime, String endTime);
+
+
+    /**
+     * 第三方流水数据
+     * @param i,第三方支付渠道 1=微信，2=得仕通，3=银联
+     * @param beginTime
+     * @param endTime
+     * @return
+     */
+    Double findThirdMoneyByType(int i, String beginTime, String endTime);
+
+    Integer findThirdCountByTypeAndDate(int i, String beginTime, String endTime);
+
+    Integer findCpTotalCountByTypeAndDate(int i, String beginTime, String endTime);
+
+    List<PlatformFundsRunning> findRunning(PlatformFundsRunning o);
+
+    void updateRunning(PlatformFundsRunning funds);
+
+    List<FundsDiveVo> findDiveVoListBetweenCpAndThird(Map<String, Object> params);
+
+    Double findTotalDealMoney(Map<String, Object> params);
+
+    /**
+     * 获得某月平台资金对账记录
+     * @param month
+     * @return
+     */
+    List<PlatformFunds> findMonth(@Param("month")String month,@Param("type")Integer type);
+
+    /**
+     * 获得某月第三方对账记录
+     * @param month
+     * @return
+     */
+    List<PlatformFundsRunning> findMonthRunning(@Param("month")String month);
+
+    Double findTotalBuyEntrust(String beginTime, String endTime);
+
+    Double findTotalBuyPick(String beginTime, String endTime, int commonOrMerchantNo,String day);
+
+//    Double findActivityQcyeByDate(String beginTime, String endTime);
+
+    Double findActivityTotalBuyEntrust(String beginTime, String endTime, int activityType);
+
+    Double getActivityRecharge(String beginTime, String endTime);
+
+    Double findRefundDrawOrTicket(int i, String beginTime, String endTime);
+
+    Double findBuyTranceOrCommon(@Param("isCommon")int isCommon,@Param("isTrance")int isTrance, String beginTime, String endTime,String day);
+
+    Double findActivityTotalBuy(String beginTime, String endTime);
+
+    void deleteList(List<PlatformFunds> list);
+
+    void deleteRunList(List<PlatformFundsRunning> list);
+
+    List<MerchantExtend> findValidMerchantList();
+
+    Double find356TotalBuy(String beginTime, String endTime,String day);
+
+    Double getMoneyByTypeOrChannel(Integer type, String beginTime, String endTime);
+
+    List<PlatformFunds> findCommonFundsDiff(String date, String endTime, String nextDay);
+}

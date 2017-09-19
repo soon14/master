@@ -1,0 +1,28 @@
+package com.jy.service.impl.task.prize;
+
+import com.jy.entity.task.prize.TaskPrizeInfo;
+import com.jy.repository.task.prize.TaskPrizeDao;
+import com.jy.service.inter.task.prize.TaskPrizeService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/26.
+ */
+@Service
+public class TaskPrizeServiceImpl implements TaskPrizeService {
+    @Autowired
+    private TaskPrizeDao taskPrizeDao;
+    @Override
+    public void saveTaskPrizeInfoList(Map map){
+        taskPrizeDao.saveTaskPrizeInfoList(map);
+    }
+
+    @Override
+    public void deletePrizeInfo(Map map) {
+        taskPrizeDao.deletePrizeInfo(map);
+    }
+}

@@ -1,0 +1,32 @@
+package com.jy.service.impl.task.withdraw;
+
+import com.jy.repository.task.withdraw.TaskWithdrawDao;
+import com.jy.service.inter.task.withdraw.TaskWithdrawService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by ZQY on 2017/4/26.
+ */
+@Service
+public class TaskWithdrawServiceImpl implements TaskWithdrawService {
+    @Autowired
+    private TaskWithdrawDao taskWithdrawDao;
+    @Override
+    public void saveTaskWithdrawInfoList(Map map) {
+        taskWithdrawDao.saveTaskWithdrawInfoList(map);
+    }
+
+    @Override
+    public void deleteWithDrawInfo(Map map) {
+        taskWithdrawDao.deleteWithDrawInfo(map);
+    }
+
+    @Override
+    public void saveTaskWith(List list) {
+        taskWithdrawDao.saveTaskWith(list);
+    }
+}

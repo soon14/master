@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.statistics.lottery.LotterySalesDiffReportDao">
+
+    <resultMap id="list" type="LotterySalesDiffReport">
+        <id column="id" jdbcType="BIGINT" property="id"/>
+        <result column="date" property="date"/>
+        <result column="number" property="number"/>
+        <result column="diffMoney" property="diffMoney"/>
+        <result column="diffType" property="diffType"/>
+        <result column="diffReason" property="diffReason"/>
+        <result column="status" property="status"/>
+        <result column="isCheck" property="isCheck"/>
+        <result column="source" property="source"/>
+    </resultMap>
+
+
+    <!--分页多参数查询数据-->
+    <select id="findDiffByPage" resultMap="list" parameterType="LotterySalesDiffReport">
+        SELECT t.* FROM RP_CP_LotterySalesDiffReport t
+        <where>
+            <if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')">
+                t.date BETWEEN #{param.beginTime} and #{param.endTime}
+            </if>
+            <if test="param.source!=null and param.source!=''">
+                and t.source = #{param.source}
+            </if>
+        </where>
+        ORDER BY t.date desc
+    </select>
+
+    <!--方案和票-->
+    <select id="findOrderTicketDiff" resultMap="list" parameterType="String">
+			SELECT
+				date,
+				schemeExtendId AS number,
+				diffMoney,
+				diffType,
+				diffReason,
+				STATUS,
+				0 AS isCheck,
+	          1 as source
+			  FROM
+		RP_OrderTicketDiffReport
+		WHERE
+			date = #{0}
+
+	</select>
+
+
+    <!--购彩和出票-->
+    <select id="findBuyAndTicketDiff" resultMap="list">
+		SELECT
+	date,
+	schemeExtendId AS number,
+	diffMoney,
+	diffType,
+	diffReason,
+	STATUS,
+	0 AS isCheck,
+	2 as source
+FROM
+	RP_LotteryBuyAndTicketDiffReport
+WHERE
+	date =  #{0}
+	</select>
+
+
+    <!--出票系统和彩票机-->
+    <select id="findSystemAndMachineDiff" resultMap="list">
+    </select>
+    <!--销售汇总 -->
+    <select id="findTicketAndTicketDiff" resultMap="list">
+        SELECT
+	DF_NormalDate as date,
+	DF_TicketNo AS number,
+	DF_DiffMoney as diffMoney,
+	DF_Type as diffType,
+	DF_Reason as diffReason,
+	DF_ProcessStauts as STATUS,
+	0 AS isCheck,
+	4 as source
+FROM
+	RP_SaleDiffInfo
+WHERE
+	DF_NormalDate =#{0}
+    </select>
+
+    <!--查询某日数据-->
+    <select id="findDiffReportByDate"  resultMap="list" >
+    SELECT t.* FROM RP_CP_LotterySalesDiffReport t
+    <where>
+    t.date = #{0}
+    </where>
+    ORDER BY t.date desc
+    </select>
+
+    <!--插入数据-->
+    <insert id="insertDiffReport" parameterType="java.util.List">
+        INSERT INTO RP_CP_LotterySalesDiffReport(
+        id,date,number,diffMoney,diffType,diffReason,status
+        ,isCheck,source
+        ) VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.id},#{item.date},#{item.number},#{item.diffMoney},#{item.diffType},#{item.diffReason},
+            #{item.status},
+            #{item.isCheck},#{item.source}
+            )
+        </foreach>
+
+    </insert>
+    <delete id="deleteDiffList" parameterType="LotteryBuyAndTicketDiffReport">
+        delete from RP_CP_LotterySalesDiffReport
+        WHERE id in
+        <foreach collection="list" item="item" index="index" separator="," open="(" close=")">
+            #{item.id}
+        </foreach>
+    </delete>
+
+    <!--<select id="find"  resultMap="list" parameterType="LotterySalesDiffReport">-->
+    <!--SELECT t.* FROM RP_CP_LotterySalesDiffReport t-->
+    <!--<where>-->
+    <!--<if test="date!=null and date!=''">-->
+    <!--t.date = #{date}-->
+    <!--</if>-->
+    <!--</where>-->
+    <!--ORDER BY t.date desc-->
+    <!--</select>-->
+
+
+    <select id="findMonth"  resultMap="list" parameterType="LotterySalesDiffReport">
+    SELECT t.*  FROM RP_CP_LotterySalesDiffReport t
+    <where>
+    <if test="param.date!=null and param.date!=''">
+    t.date LIKE '%${param.date}%'
+    </if>
+    </where>
+    ORDER BY t.date ASC
+    </select>
+
+
+</mapper>

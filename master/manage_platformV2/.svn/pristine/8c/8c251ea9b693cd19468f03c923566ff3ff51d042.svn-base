@@ -1,0 +1,36 @@
+package com.jy.task.job.request;
+
+
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.SpringWebContextUtil;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.impl.system.request.TranceRequestProcessImpl;
+import org.springframework.context.ApplicationContext;
+
+/**
+ * 购彩追期明细数据入库
+ */
+public class TranceInfoTask extends BaseTask {
+
+    public void saveData() {
+		log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " ——追期明细任务开始运行");
+        ApplicationContext ac = SpringWebContextUtil.getApplicationContext();
+        TranceRequestProcessImpl process = (TranceRequestProcessImpl) ac.getBean("tranceRequestProcess");
+        RequestParamInfoForm req = new RequestParamInfoForm();
+        req.setPage("true");//是否开启分页，默认开启
+        req.setQueryAll(super.getParam()[0]);//是否查询全部，默认是全部
+        req.setCurrentPage(1);//默认为第一页
+        req.setQueryTime(super.getParam()[2].equals("default")?DateUtils.getDate("yyyyMMdd"):super.getParam()[2]);//默认当天
+        req.setPageSize(Integer.parseInt(super.getParam()[1]));//默认5000
+        try {
+            //分别执行type为1、2、3、4的接口数据
+            for (int i=1;i<5;i++){
+            req.setType(i);
+            process.synchronizeTranceData(req);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+		log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " ——追期明细任务结束");
+    }
+}

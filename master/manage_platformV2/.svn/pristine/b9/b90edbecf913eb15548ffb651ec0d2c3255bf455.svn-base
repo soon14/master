@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.game.GoldBalanceDao">
+    <resultMap id="GoldBalance" type="GoldBalance">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="date"  property="date"/>
+        <result column="qcGold"  property="qcGold"/>
+        <result column="qcMoney"  property="qcMoney"/>
+        <result column="addGold"  property="addGold"/>
+        <result column="addMoney"  property="addMoney"/>
+        <result column="consumeDiamond"  property="consumeDiamond"/>
+        <result column="averageGold"  property="averageGold"/>
+        <result column="consumeGold"  property="consumeGold"/>
+        <result column="addGoldToMoney"  property="addGoldToMoney"/>
+        <result column="qmGold"  property="qmGold"/>
+        <result column="qmMoney"  property="qmMoney"/>
+        <result column="qmAverageGold"  property="qmAverageGold"/>
+
+
+
+    </resultMap>
+
+    <resultMap id="money" type="Double">
+        <id column="money"  property="money"/>
+    </resultMap>
+    <resultMap id="count" type="Integer">
+        <id column="count"  property="count"/>
+    </resultMap>
+
+
+    <select id="findByPage" resultMap="GoldBalance">
+        SELECT * FROM RT_GM_GoldBalance
+        WHERE 1=1
+        <if test="(param.beginTime!=null and param.beginTime!='') and (param.endTime!=null and param.endTime!='')" >
+           and  date  BETWEEN #{param.beginTime} and #{param.endTime}
+        </if>
+        ORDER BY date desc
+    </select>
+
+
+
+    <insert id="insert"  parameterType="GoldBalance">
+        <![CDATA[
+	INSERT INTO RT_GM_GoldBalance(
+	id,date,qcGold,qcMoney,addGold,addMoney,consumeDiamond,averageGold,consumeGold
+	,addGoldToMoney,qmGold,qmMoney,qmAverageGold
+	) VALUES (
+	#{id},#{date},#{qcGold},#{qcMoney},#{addGold},#{addMoney},#{consumeDiamond},
+	#{averageGold},#{consumeGold},
+	#{addGoldToMoney},#{qmGold},#{qmMoney},#{qmAverageGold}
+	)
+	]]>
+    </insert>
+
+    <update id="update"  parameterType="GoldBalance">
+        <![CDATA[
+	update RT_GM_GoldBalance set
+	date=#{date},qcGold=#{qcGold},qcMoney=#{qcMoney},
+	addGold=#{addGold},addMoney=#{addMoney},consumeDiamond=#{consumeDiamond},
+	averageGold=#{averageGold},consumeGold=#{consumeGold}
+	,addGoldToMoney=#{addGoldToMoney},qmGold=#{qmGold},qmMoney=#{qmMoney},qmAverageGold=#{qmAverageGold},
+	WHERE id=#{id}
+	]]>
+    </update>
+
+    <delete id="deleteList" parameterType="GoldBalance">
+        delete from RT_GM_GoldBalance
+        WHERE id  in
+        <foreach collection="list" item="item" index="index" separator="," open="(" close=")" >
+            #{item.id}
+        </foreach>
+    </delete>
+
+    <select id="findMonth"  resultMap="GoldBalance" >
+        SELECT t.*   FROM RT_GM_GoldBalance t
+        <where>
+            t.date LIKE '%${month}%'
+        </where>
+        ORDER by t.date ASC
+    </select>
+
+    <select id="findIsExitByDate"  resultMap="GoldBalance" >
+        SELECT t.* FROM RT_GM_GoldBalance t
+        <where>
+            t.date = #{0}
+        </where>
+        ORDER BY t.date desc
+    </select>
+<!--购买金币消耗钻石数量-->
+    <select id="findConsumeDiamondForBuyGold"  resultMap="money" >
+        <![CDATA[select sum(-1*value_diamonds) as money
+        from DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and  trans_type  =  1
+        and trans_status=1
+        AND value_diamonds<0
+        and trans_reason ='钻石兑换金瓜子'
+        and batch_id = (SELECT batch_id
+	    FROM DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and  trans_type  =  1
+        and trans_status=1
+        AND value_diamonds<0
+         and trans_reason ='钻石兑换金瓜子'
+        ORDER BY trans_id desc LIMIT 0,1)
+]]>
+    </select>
+
+
+
+
+<!--期初金币-->
+    <select id="findQcGoldBetweenDate"  resultMap="money" >
+        select sum(GoldBalance) as money
+        from DC_GM_UserBalance
+        <where>
+            QcDate BETWEEN #{0} and #{1}
+        </where>
+    </select>
+
+<!--消耗金币-->
+    <select id="findConsumeGoldBetweenDate"  resultMap="money" >
+       <![CDATA[ select sum(-1*value_gold) as money
+        from DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+         and trans_status=1
+        and trans_type  =  2
+        AND value_gold<0
+        and batch_id = (SELECT batch_id
+	    FROM DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+         and trans_status=1
+        and trans_type  =  2
+        AND value_gold<0
+        ORDER BY trans_id desc LIMIT 0,1)
+]]>
+    </select>
+
+<!--新增金币-->
+    <select id="findAddGoldBetweenDate"  resultMap="money" >
+        select sum(value_gold) as money
+        from DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_status=1
+        and trans_type  =  2
+        AND value_gold>0
+        and batch_id = (SELECT batch_id
+	    FROM DC_GM_UserTransInfo
+        where trans_time between #{0} and #{1}
+        and trans_status=1
+        and trans_type  =  2
+        AND value_gold>0
+        ORDER BY trans_id desc LIMIT 0,1)
+    </select>
+
+
+
+</mapper>

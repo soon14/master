@@ -1,0 +1,131 @@
+package com.jy.service.impl.system.finance.statistics.lottery;
+
+import com.jy.common.CpSystem.QrCodeConst;
+import com.jy.common.utils.CalculationUtils;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.excel.ExcelReport;
+import com.jy.entity.system.finance.statistics.QrCodeDailyReport;
+
+import com.jy.repository.system.finance.statistics.lottery.QrCodeDailyReportDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.common.utils.ChannelsUtils;
+import com.jy.service.impl.help.ExcelUtil;
+import com.jy.service.system.finance.statistics.lottery.QrCodeDailyReportService;
+import net.sf.json.JSONArray;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+
+
+/**
+ * Created by Administrator on 2017/2/13.
+ */
+@Service("QrCodeDailyReportService")
+public class QrCodeDailyReportServiceImpl extends BaseServiceImp<QrCodeDailyReport> implements QrCodeDailyReportService {
+
+    @Autowired
+    private QrCodeDailyReportDao dao;
+    @Value("${download.qrcodeDailyReport.filename}")
+    private String qrcodeDailyReportFileName;
+    @Autowired
+    private ExcelUtil excelutil;
+    /**
+     * 兑换券销售日报统计任务
+     * @param auto
+     * @param date
+     */
+    public void insertReport(String auto, String date){
+        QrCodeDailyReport report=new QrCodeDailyReport();
+        report.setDate(date);
+        _setQrCodeInfo(report,date);
+        if (!ChannelsUtils.IsNull(report.getBatchId())) {
+            _installDailyReport(report, date);
+            _checkAndSave(report, date, auto);
+        }
+
+    }
+
+
+    private void _installDailyReport(QrCodeDailyReport report, String date) {
+        date=DateUtils.getDateStartString(date);
+        String dateMax=DateUtils.getDateEndString(date);
+//        Double allNum=CalculationUtils.fomatMoney(dao.findAllNumByBatch(report.getBatchStartTime(),report.getBatchEndTime()));
+        //兑换券售出额
+        Double saleMoney=CalculationUtils.fomatMoney(dao.findSaleMoney(date,dateMax));
+        //兑换券期初额
+        Double startNum=CalculationUtils.fomatMoney(dao.findQcMoney(date,report.getBatchStartTime(),report.getBatchEndTime()));
+        report.setStartNum(startNum);
+        //兑换券差异额,待处理
+        Double diff=0.0;
+        //期末额=期初额-售出额+差异额
+        Double endNum=Double.valueOf(CalculationUtils.add(Double.valueOf(CalculationUtils.sub(startNum,saleMoney)),diff)) ;
+        report.setDiffNum(diff);
+        report.setSaleMoney(saleMoney);
+        report.setEndNum(endNum);
+    }
+
+
+    private void _setQrCodeInfo(QrCodeDailyReport report, String date) {
+        List<QrCodeDailyReport> dataList=dao.findQrCodeInfo(date);
+        QrCodeDailyReport nowBatch= QrCodeConst.getNowBatch(dataList,date);
+        if(nowBatch!=null){
+            report.setBatchId(nowBatch.getBatchId());
+            report.setBatchEndTime(nowBatch.getBatchEndTime());
+            report.setBatchStartTime(nowBatch.getBatchStartTime());
+        }
+    }
+
+    private void _checkAndSave(QrCodeDailyReport report, String date,String auto) {
+        List<QrCodeDailyReport> isExit=dao.findReportIsExitByDate(date);
+        if(isExit==null||isExit.size()==0||isExit.isEmpty()){
+            dao.insert(report);
+        }else {
+//            if(auto.equals("manual")){
+                dao.deleteList(isExit);
+                dao.insert(report);
+//            }
+        }
+    }
+
+    @Override
+    public void generateReport(String auto, String month) {
+        ExcelReport ep=_installDailyExcelObj(month);
+        try {
+            excelutil.GenerateExcel(ep);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private ExcelReport _installDailyExcelObj(String month) {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        String fileName = qrcodeDailyReportFileName;
+        ep.setTitle(fileName);
+        ep.setFileName(sbf.append(fileName).append(month).toString());
+        String headers[] = new String[] {"批次","批次开始时间","批次结束时间","日期","兑换券未使用期初数","兑换券未使用期末数","差异数","售出金额"};
+        String attrs[] = new String[] {
+                "batchId", "batchStartTime", "batchEndTime", "date", "startNum", "endNum", "diffNum", "saleMoney"};
+        JSONArray data=_installDailyExcelData(month);
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        ep.setData(data);
+        return ep;
+    }
+
+    private JSONArray _installDailyExcelData(String month) {
+        QrCodeDailyReport m = new QrCodeDailyReport();
+        m.setDate(month);
+        List<QrCodeDailyReport> list = dao.findMonth(m);
+        if(list==null){
+            list=new ArrayList<>();
+        }
+        JSONArray data= JSONArray.fromObject(list);
+        return data;
+    }
+}

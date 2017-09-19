@@ -1,0 +1,42 @@
+package com.jy.task.job.ticket;
+
+import com.jy.common.utils.SpringWebContextUtil;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.impl.system.task.prize.TaskPrizeProcessImpl;
+import com.jy.process.impl.system.task.ticket.TaskTicketProcessImpl;
+import com.jy.process.inter.system.task.ticket.TaskTicketProcess;
+
+import com.jy.task.job.request.BaseTask;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+public class TicketInfoJob extends BaseTask implements Job {
+
+    public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+        saveData();
+    }
+
+    @Override
+    public void saveData() {
+        try {
+            ApplicationContext ac = SpringWebContextUtil.getApplicationContext();
+            TaskTicketProcessImpl taskTicketProcess  = (TaskTicketProcessImpl) ac.getBean("taskTicketProcess");
+            RequestParamInfoForm infoForm = new RequestParamInfoForm();
+            infoForm.setPage("true");
+            infoForm.setQueryAll(super.getParam()[0]);
+            infoForm.setPageSize(Integer.parseInt(super.getParam()[1]));
+            if (!"default".equals(super.getParam()[2])){
+                infoForm.setQueryTime(super.getParam()[2]);
+            }
+            taskTicketProcess.saveTaskTicketInfoList(infoForm);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}

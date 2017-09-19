@@ -1,0 +1,58 @@
+package com.jy.common.enumerate;
+
+/**
+ * Created by lijunke on 2017/6/16.
+ */
+public enum TxtDataEnum {
+    LOGIN_FAIL(1, "登录TFP失败"),
+    NOT_GENERATED(2, "本地未生成ok文件");
+
+
+    TxtDataEnum(int value, String viewName) {
+        this.value = value;
+        this.viewName = viewName;
+    }
+
+
+    /**
+     * 枚举值
+     */
+    private int value;
+
+    /**
+     * 枚举名称
+     */
+    private String viewName;
+
+    public int getValue() {
+        return value;
+    }
+
+    public void setValue(int value) {
+        this.value = value;
+    }
+
+    public String getViewName() {
+        return viewName;
+    }
+
+    public void setViewName(String viewName) {
+        this.viewName = viewName;
+    }
+
+
+    /**
+     * 根据value取得valueName
+     *
+     * @param value
+     * @return
+     */
+    public static String getName(int value) {
+        for (TxtDataEnum type : TxtDataEnum.values()) {
+            if (type.getValue() == value) {
+                return type.getViewName();
+            }
+        }
+        return "";
+    }
+}

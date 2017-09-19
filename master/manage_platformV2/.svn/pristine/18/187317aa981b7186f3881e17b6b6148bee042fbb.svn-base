@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.finance.reconciliation.lottery.CountSaleDao">
+	<resultMap id="CountSale" type="CountSale" >
+		<id column="id"  property="id"/>
+		<result property="bettingAmount" column="betting_amount"/>
+		<result property="ticketAmount" column="ticket_amount"/>
+		<result property="bettingNumber" column="betting_number"/>
+		<result property="ticketNumber" column="ticket_number"/>
+		<result property="statisticsDate" column="statistics_date"/>
+		<result property="totalAumone" column="total_aumone"/>
+		<result property="amountDifference" column="amount_difference"/>
+		<result property="numberDifference" column="number_difference"/>
+		<result property="offlineVolume" column="offline_volume"/>
+		<result property="createDate" column="create_date"/>
+		<result property="createUser" column="create_user"/>
+	</resultMap>
+	
+	 <insert id="save"  parameterType="CountSale">
+        <![CDATA[
+	INSERT INTO RP_TotalSaleInfo(
+	id,betting_amount,ticket_amount,betting_number,ticket_number,statistics_date,total_aumone,amount_difference,number_difference,
+	offline_volume,create_date,create_user
+	) VALUES (
+	#{id},#{bettingAmount},#{ticketAmount},#{bettingNumber},#{ticketNumber},#{statisticsDate},#{totalAumone},#{amountDifference},
+	#{numberDifference},#{offlineVolume},#{createDate},#{createUser}
+	)
+	]]>
+    </insert>
+    
+    
+      <update id="update" parameterType="CountSale">
+		UPDATE RP_TotalSaleInfo 
+		SET betting_amount=#{bettingAmount},
+			ticket_amount=#{ticketAmount},
+			betting_number=#{bettingNumber},
+			ticket_number =#{ticketNumber},
+			total_aumone =#{totalAumone},
+			amount_difference =#{amountDifference},
+			number_difference =#{numberDifference}
+		WHERE statistics_date=#{statisticsDate}
+	</update>
+    
+    <select id="findByDate" parameterType="CountSale"  resultType="CountSale">
+   	 select 
+   	 c.id AS id,
+   	 c.betting_amount AS bettingAmount,
+   	 c.ticket_amount  AS ticketAmount,
+   	 c.betting_number AS bettingNumber,
+   	 c.ticket_number  AS ticketNumber,
+   	 c.statistics_date AS statisticsDate,
+   	 c.total_aumone AS totalAumone,
+   	 c.amount_difference AS amountDifference,
+   	 c.number_difference AS numberDifference,
+   	 c.offline_volume AS offlineVolume,
+   	 c.create_date AS createDate
+   	  from RP_TotalSaleInfo c where 1 = 1 
+   	 		<if test="param.statisticsDate !=null and param.statisticsDate!=''">
+				and	c.statistics_date=#{param.statisticsDate}
+			</if> 
+			order By c.statistics_date desc
+    </select>
+    
+    
+     <select id="findByDates" parameterType="CountSale"  resultType="java.lang.Integer">
+   		 select count(0) from RP_TotalSaleInfo c where c.statistics_date like CONCAT(CONCAT(#{param.statisticsDate}), '%')
+    </select>
+    
+    
+    <select id="queryDateAndId" resultType="CountSale" parameterType="java.util.Map">
+   		 select c.id as id,c.statistics_date as statisticsDate from RP_TotalSaleInfo c  WHERE 1 = 1  
+		<if test="startTime != null and startTime != ''">
+			AND date_format(c.statistics_date,'%Y-%m-%d') &gt;= date_format(#{startTime},'%Y-%m-%d') 
+		</if>
+		<if test="endTime != null and endTime != ''">
+			AND date_format(c.statistics_date,'%Y-%m-%d') &lt;= date_format(#{endTime},'%Y-%m-%d')
+		</if> 
+    </select>
+    
+     <update id="updateCountAumone" parameterType="CountSale">
+		<![CDATA[ UPDATE RP_TotalSaleInfo SET offline_volume =#{offlineVolume},total_aumone=#{totalAumone} where id =#{id}]]>
+    </update>
+    
+	</mapper>

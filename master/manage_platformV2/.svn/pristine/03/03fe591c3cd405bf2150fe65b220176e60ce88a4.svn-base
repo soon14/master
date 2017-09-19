@@ -1,0 +1,135 @@
+package com.jy.repository.system.finance.statistics.lottery;
+
+import java.util.List;
+import java.util.Map;
+
+import com.jy.mybatis.Page;
+import org.apache.ibatis.annotations.Param;
+
+
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.finance.statistics.SalesCommissionReport;
+import com.jy.entity.system.finance.UserVo;
+import com.jy.entity.system.finance.vo.SalesDetailVo;
+import com.jy.entity.system.org.Org;
+import com.jy.repository.base.BaseDao;
+import com.jy.repository.base.JYBatis;
+
+/**
+ * Created by Administrator on 2017/1/10.
+ */
+@JYBatis
+public interface SalesCommissionReportDao extends BaseDao<SalesCommissionReport> {
+
+    /**
+	 * 日期，商户id查询报表是否存在
+	 * 
+	 * @param date
+	 * @param id
+	 * @return
+	 */
+    public List<SalesCommissionReport> findReportExistList(String date);
+
+    /**
+	 * 批量插入数据
+	 * 
+	 * @param list
+	 */
+    public void insertList(List<SalesCommissionReport> list);
+
+    /**
+	 * 批量删除数据
+	 * 
+	 * @param list
+	 */
+    public void deleteList(List<SalesCommissionReport> list);
+    
+	/**
+	 * 渠道商户某段时间销量
+	 * 
+	 * @param id
+	 * @param beginTime
+	 * @param endTime
+	 * @param cpUserId
+	 * @param time
+	 * @return
+	 */
+    public Double findTotalSalesByMId(Integer id, String beginTime, String endTime, String cpUserId, String time);
+
+    /**
+	 * 销量详情
+	 * 
+	 * @param o
+	 * @param page
+	 * @return
+	 */
+    public List<SalesDetailVo> findSalesDetail(@Param("param")SalesDetailVo o, Page<SalesDetailVo> page);
+
+
+    List<SalesCommissionReport> findByList(Map<String, Object> params);
+
+    List findMerchandByList(Map map);
+
+    Org findOrgById(String oid);
+
+    Double findTotalSalesBySign(String beginTime,String endTime,Integer id,String marketTime);
+
+    List<Integer> findUserIdList(String userid);
+
+
+    String findMartketTimeByUserId(Integer id);
+
+    /**
+	 * 获取标签用户
+	 * 
+	 * @param merchantId
+	 * @return
+	 */
+    List<Integer> findUserIdListByMerchantId(Map map);
+
+    List<SalesCommissionReport> findSMRByList(Map<String, Object> params);
+
+    List<UserVo> findUserListByMerchantId(@Param("merchantId")Integer merchantId,@Param("param") UserVo vo);
+
+    Double findSalesByMerchant(@Param("beginTime") String beginTime,@Param("endTime") String endTime,@Param("merchant") Merchant m);
+
+    String findLastOrderTimeByUser(@Param("vo")UserVo lastVo);
+
+    Double findTotalSalesByParam(@Param("param")SalesCommissionReport o);
+
+    Double findTotalCommissionByParam(@Param("param")SalesCommissionReport o);
+
+    Double findTotalSalesByParamList(Map<String, Object> params);
+
+    Double findTotalCommissionByParamList(Map<String, Object> params);
+
+    Double sumSales(Map map);
+    Double sumSalesMerchant(Map map);
+	Double sumSalesPre(Map map);
+	Double sumSalesPreTz(Map map);
+    Double sumErSales(Map map);
+	Double sumErSalesPre(Map map);
+    Double sumSjSales(Map map);
+
+    List<UserVo> findMarketIdList(Map map);
+    List<UserVo> findMarketIdListCommission(Map map);
+    List<UserVo> findMarketIdListCount(Map map);
+	List<UserVo> findMarketIdListPre(Map map);
+
+    List<UserVo> findQdIdList( Map map);
+
+    List<UserVo> findChildQdIdList( Map map);
+    Double sumChildQdCommission(Map map);
+
+    List<SalesCommissionReport> findSelfAndChild(@Param("param")SalesCommissionReport o, Page<SalesCommissionReport> page);
+	
+	List<SalesCommissionReport> findExportReport(@Param("date") String date);
+
+    List<UserVo> salesUserList( Map map);
+    public List<SalesCommissionReport> findByPageList(Map o);
+    public Integer sumUserList(Map map) throws Exception;
+
+    public List<SalesCommissionReport> findSalesCommission(Map map ) throws Exception;
+    
+
+}

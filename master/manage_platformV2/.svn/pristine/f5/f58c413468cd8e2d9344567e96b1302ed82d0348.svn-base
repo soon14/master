@@ -1,0 +1,13 @@
+package com.jy.service.system.channels;
+
+import com.jy.entity.system.channels.CPUserInfo;
+import com.jy.from.system.request.UserInfoForm;
+import com.jy.service.base.BaseService;
+import java.util.List;
+
+/**
+ * Created by lijunke on 2017/4/26.
+ */
+public interface CPUserInfoService extends BaseService<CPUserInfo> {
+    void transforPojoSave(List<UserInfoForm> listAll);
+}

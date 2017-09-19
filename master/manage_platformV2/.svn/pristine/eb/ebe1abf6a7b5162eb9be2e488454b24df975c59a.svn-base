@@ -1,0 +1,11 @@
+package com.jy.process.inter.system.task.ticket;
+
+
+import com.jy.from.system.request.RequestParamInfoForm;
+
+/**
+ * Created by ZQY on 2017/4/27.
+ */
+public interface TaskTicketProcess {
+    public void saveTaskTicketInfoList(RequestParamInfoForm infoForm) throws Exception;
+}

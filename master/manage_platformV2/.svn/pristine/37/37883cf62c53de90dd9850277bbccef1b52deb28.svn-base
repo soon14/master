@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.system.channels.PayableDao">
+	<resultMap id="payable" type="Payable">
+		<id column="P_ID" jdbcType="VARCHAR" property="id"/>
+		<result column="M_Id" property="merchantId" />
+		<result column="C_Id" property="commissionId" />
+		<result column="P_Status" property="status" />
+		<result column="P_Money" property="money" />
+		<result column="P_payWay" property="payWay" />
+		<result column="P_PayDate" property="payDate" />
+		<result column="P_User" property="userName" />
+		<result column="M_Name" property="merchantName" />
+		<result column="beginDate" property="beginDate" />
+		<result column="endDate" property="endDate" />
+		<result column="ids" property="ids" />
+	</resultMap>
+	<!--导入返佣结算单表-->
+	<insert id="insert"  parameterType="Payable">
+		INSERT INTO MP_Payable(
+		M_Id,
+		C_ID,
+		P_Money,
+		P_PayDate,
+		P_User,
+		P_Status,
+		beginDate,
+		endDate,
+		ids
+		) VALUES
+		(#{merchantId},
+		#{commissionId},
+		#{money},
+		#{payDate},
+		#{userName},
+		#{status},
+		#{beginDate},
+		#{endDate},
+		#{ids}
+		)
+	</insert>
+
+	<!--付款-->
+	<update id="update" parameterType="Payable">
+		UPDATE MP_Payable
+		<set>
+			<if test="userName!=null and userName!=''">
+				P_User =#{userName},
+			</if>
+			<if test="status!=null and status!=''">
+				P_Status =#{status},
+			</if>
+			<if test="payDate!=null and payDate!=''">
+				P_PayDate =#{payDate},
+			</if>
+			<if test="payWay!=null and payWay!=''">
+				P_payWay =#{payWay}
+			</if>
+			<where>
+				P_ID=#{id}
+			</where>
+		</set>
+	</update>
+
+	<!--结算单查看-->
+	<select id="findByPage" parameterType="Map"   resultMap="payable">
+		select t.*,m.M_Name,m.M_CommionType FROM MP_Payable t,MP_MerchantInfo m WHERE t.M_ID=m.M_ID
+		<if test="mid != null and mid!=''">
+			and t.M_ID in
+			<foreach collection="mid" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test="beginTime != null and beginTime!='' ">
+			and t.beginDate >=#{beginTime}
+		</if>
+		<if test="endTime != null and endTime!=''">
+			<![CDATA[
+        	and t.endDate<=#{endTime}
+        	]]>
+		</if>
+		<if test="merchantName != null and merchantName!=''">
+			and m.M_NAME LIKE CONCAT('%', #{merchantName}, '%')
+		</if>
+		ORDER BY t.M_ID
+		LIMIT #{rn},#{pageSize}
+	</select>
+	<!--结算单单条数据查看-->
+	<select id="findById" parameterType="Payable"   resultMap="payable">
+		select t.* FROM MP_Payable t WHERE t.P_ID =#{id}
+	</select>
+
+	<!--结算单统计条数-->
+	<select id="counts" parameterType="Map"   resultType="java.lang.Integer">
+		select count(*) FROM MP_Payable t,MP_MerchantInfo m WHERE t.M_ID=m.M_ID
+		<if test="mid != null and mid!=''">
+			and t.M_ID in
+			<foreach collection="mid" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		<if test="beginTimes != null and beginTimes!='' ">
+			and t.beginDate >=#{beginTimes}
+		</if>
+		<if test="endTimes != null and endTimes!=''">
+			<![CDATA[
+        	and t.endDate<=#{endTimes}
+        	]]>
+		</if>
+		<if test="merchantName != null and merchantName!=''">
+			and m.M_NAME LIKE CONCAT('%', #{merchantName}, '%')
+		</if>
+		ORDER BY t.M_ID
+	</select>
+</mapper>

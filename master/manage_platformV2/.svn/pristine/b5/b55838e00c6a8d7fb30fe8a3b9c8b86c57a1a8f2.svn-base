@@ -1,0 +1,55 @@
+package com.jy.repository.system.finance.reconciliation.lottery;
+
+import com.jy.entity.system.finance.reconciliation.lottery.BettingDifference;
+import com.jy.repository.base.BaseDao;
+import com.jy.repository.base.JYBatis;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+
+
+/** 
+ * @文件名:BettingDifferenceDao.java 
+ * @功能描述：
+ * @创建日期:2017年3月10日下午4:15:59 
+ * @创建人：lijunke
+ * @Copyright（c） 2017,all rights reserved by days 
+ */
+@JYBatis
+public interface BettingDifferenceDao extends BaseDao<BettingDifference> {
+	
+	/**
+	 * 
+	 * @方法功能描述： 保存差异数据 
+	 * @param bdlist 
+	 * void
+	 * @author lijunke
+	 * @创建时间： 2017年3月10日下午1:48:42
+	 */
+	public void save(List<BettingDifference> bdlist);
+
+	public List<BettingDifference> findByDate(@Param("date")String date, @Param("ids")String ids);
+
+	/**
+	 * 
+	 * @方法功能描述： 根据日期删除所有记录 
+	 * @param date 
+	 * void
+	 * @author lijunke
+	 * @创建时间： 2017年3月15日下午6:57:27
+	 */
+	public void delete(@Param("date")String date);
+	
+	
+	/**
+	 * 
+	 * @方法功能描述： 日期区间的查询
+	 * @param startDate
+	 * @param endDate
+	 * @return
+	 * List<BettingDifference>
+	 * @创建时间： 2017年4月6日上午9:57:15
+	 */
+	public List<BettingDifference> queryDate(@Param("startDate") String startDate,@Param("endDate") String endDate);
+
+}

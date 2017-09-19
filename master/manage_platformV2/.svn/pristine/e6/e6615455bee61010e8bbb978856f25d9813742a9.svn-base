@@ -1,0 +1,124 @@
+package com.jy.service.system.account;
+
+import com.jy.entity.utils.ZNodes;
+import com.jy.entity.system.account.Account;
+import com.jy.entity.system.org.Position;
+import com.jy.service.base.BaseService;
+
+import java.util.List;
+
+
+public interface AccountService extends BaseService<Account> {
+
+
+    /**
+     * 根据登录帐号查找loginName和accountType，正常只有一条数据
+     * and a.isvalid='1' and a.account_type='1'需要该条件
+     *
+     * @param loginName
+     * @return
+     */
+    public Account findFormatByLoginName(String loginName);
+
+    /**
+     * 根据用户ID查找用户信息
+     * @param userId
+     * @return
+     */
+    public Account findAccountByIdAndName(String userId);
+
+    /**
+     * 设置个人化皮肤
+     *
+     * @param skin 皮肤属性
+     * @return
+     */
+    public void setSetting(String skin);
+
+    /**
+     * 获取个人资料，需要登录状态
+     *
+     * @return
+     */
+    public Account getPerData();
+
+    /**
+     * 设置头像
+     *
+     * @param account
+     * @return
+     */
+    public void setHeadpic(Account account);
+
+    /**
+     * 设置个人资料
+     *
+     * @param account
+     * @return
+     */
+    public void setPerData(Account account);
+
+    /**
+     * 新增用户(后台)
+     *
+     * @param account
+     * @return
+     */
+    public int insertAccount(Account account) throws Exception;
+
+    /**
+     * 获得角色树
+     *
+     * @return
+     */
+    public List<ZNodes> getRoles();
+
+    /**
+     * 系统密码重置
+     *
+     * @param o
+     * @return
+     */
+    public int sysResetPwd(Account o);
+
+    /**
+     * 个人密码重置
+     *
+     * @param opwd
+     * @param npwd
+     * @param qpwd
+     * @return
+     */
+    public int preResetPwd(String opwd, String npwd, String qpwd);
+
+    /**
+     * 删除人员
+     *
+     * @param o
+     * @return
+     */
+    public void deleteAccount(Account o);
+
+    /**
+     * 批量删除人员
+     *
+     * @param chks 人员id
+     * @return
+     */
+    public void deleteBatchAccount(String chks);
+
+    /**
+     * 获取个人资料，需要登录状态
+     *
+     * @return
+     */
+    public List<Position> getPerPoss();
+
+    /**
+     * 根据部门ID 获取所有部门的的人员ID
+     *
+     * @param orgIds
+     * @return
+     */
+    public List<String> getAllAccountByOrgId(List<String> orgIds);
+}

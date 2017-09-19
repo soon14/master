@@ -1,0 +1,76 @@
+package com.jy.process.impl.system.request;
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.jy.from.system.request.RequestPageInfoForm;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.from.system.request.UserInfoForm;
+import com.jy.process.system.request.UserInfoRequestProcess;
+import com.jy.service.system.channels.CPUserInfoService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * Created by lijunke on 2017/4/24.
+ */
+@Service("userInfoRequestProcess")
+public class UserInfoRequestProcessImpl extends ApiRequestProcessImpl<UserInfoForm> implements UserInfoRequestProcess {
+
+
+    @Autowired
+    protected CPUserInfoService uerInfoService;
+
+    @Value("${user.info}")
+    private String userInfoPath;
+    protected static final Logger log = LoggerFactory.getLogger(UserInfoRequestProcessImpl.class);
+    @Override
+    public void synchronizationUserData(RequestParamInfoForm infoForm) throws Exception {
+        List<JSONArray> list = super.sendRequest(new RequestPageInfoForm<UserInfoForm>(), infoForm, this.userInfoPath);
+        if (list.size() < 0) {
+            super.LOGGER.info("用户信息接口未返回任何数据！");
+            return;
+        }
+        //List<UserInfoForm> listAll = new ArrayList<>();
+        for (JSONArray jsonArray : list) {//所有分页数据
+            List<UserInfoForm> userList = JSONArray.parseArray(jsonArray.toString(), UserInfoForm.class);
+            this.transforPojoSave(userList);//分批保存
+        }
+    }
+
+    public void transforPojoSave(List<UserInfoForm> listAll) {
+        this.uerInfoService.transforPojoSave(listAll);
+    }
+
+
+    /**
+     * 第二种方式请求数据，分页需要自己做操作
+     *
+     * @param infoForm
+     */
+    public void synchronizationUserData2(RequestParamInfoForm infoForm) {
+        try {
+            //此处省略分页取数据，并保存数据
+
+            RequestPageInfoForm object = super.sendRequestAll(new RequestPageInfoForm<UserInfoForm>(), infoForm, this.userInfoPath);
+            List<UserInfoForm> userList = null;
+            if (object != null) {
+                userList = JSONObject.parseArray(object.getList().toString(), UserInfoForm.class);
+            }
+            //保存数据
+            //this.transforPojoSave(userList);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public String synchronizationUserData3(RequestParamInfoForm infoForm) throws Exception {
+        String content = super.sendRequestTranJson(infoForm, userInfoPath);
+        return content;
+    }
+}

@@ -1,0 +1,354 @@
+package com.jy.service.impl.system.finance.statistics.lottery;
+
+import com.jy.common.exception.DaysBaseException;
+import com.jy.common.msg.RetMsg;
+import com.jy.common.utils.CalculationUtils;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.excel.ExcelReport;
+import com.jy.entity.system.dict.SysDict;
+import com.jy.entity.system.finance.LotteryWaySaleReport;
+import com.jy.entity.system.finance.statistics.OrderTicketDiffReport;
+import com.jy.entity.system.finance.statistics.OrderTicketReport;
+import com.jy.mybatis.Page;
+import com.jy.repository.system.dict.SysDictDao;
+import com.jy.repository.system.finance.statistics.lottery.LotteryWaySaleReportDao;
+import com.jy.service.impl.base.BaseServiceImp;
+import com.jy.service.impl.help.ExcelUtil;
+import com.jy.service.system.finance.statistics.lottery.LotteryWaySaleReportService;
+import net.sf.json.JSONArray;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+
+/**
+ * @文件名:LotteryWaySaleReportServiceImpl.java
+ * @功能描述：
+ * @创建日期:2017年3月9日下午1:53:12
+ * @创建人：lijunke
+ * @Copyright（c） 2017,all rights reserved by days
+ */
+@Service("lotteryWaySaleReportService")
+public class LotteryWaySaleReportServiceImpl  extends BaseServiceImp<LotteryWaySaleReport> implements LotteryWaySaleReportService{
+
+
+    @Autowired
+    private SysDictDao sysDictDao;
+
+    @Autowired
+    public LotteryWaySaleReportDao lotteryWaySaleReportDao;
+
+    @Autowired
+    private ExcelUtil excelutil;
+    @Value("${download.lottery.filename}")
+    private String lotteryWayName;
+    @Value("${download.orderTicket.filename}")
+    private String orderTicketName;
+
+    @Value("${download.orderTicketDiff.filename}")
+    private String orderTicketDiffName;
+
+
+
+    /**
+     * 制作方案与票对账报表
+     * @param month
+     */
+    @Override
+    public void generateOrderTicketReport(String month) {
+        ExcelReport ep=_installExcelReport(month);
+        try {
+            excelutil.GenerateExcel(ep);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private ExcelReport _installExcelReport(String month) {
+        ExcelReport ep=new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        String fileName = orderTicketName;
+        ep.setFileName(sbf.append(fileName).append(month).toString());
+        List<ExcelReport> list=new ArrayList<>();
+        ExcelReport ep1=_installExcel(month);
+        ExcelReport ep2=_installDiffExcel(month);
+        list.add(ep1);
+        list.add(ep2);
+        ep.setSheet(true);
+        ep.setList(list);
+        return  ep;
+    }
+
+    private ExcelReport _installExcel(String month) {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        String fileName = orderTicketName;
+        ep.setTitle(fileName);
+        String headers[] = new String[] {"日期","方案(出票)金额,购彩（出票）/追期（出票）/商户活动（出票）/合计","出票金额","差异"};
+        String attrs[] = new String[] {
+                "date","commonOrderMoney","tranceOrderMoney","activityOrderMoney","orderMoney","ticketMoney","diff"};
+        JSONArray data=_installOrderTicketExcelData(month);
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        ep.setData(data);
+        ep.setHeaderType(1);
+        return ep;
+    }
+
+    private JSONArray _installOrderTicketExcelData(String month) {
+        List<OrderTicketReport> list = lotteryWaySaleReportDao.findOrderTicketForMonth(month);
+        if(list==null){
+            list=new ArrayList<>();
+        }
+        JSONArray data= JSONArray.fromObject(list);
+        return data;
+    }
+
+    /**
+     *  方案与票对账报表数据入库
+     * @param date
+     */
+    @Override
+    public void execOrderTicketTask(String date)  throws DaysBaseException  {
+        OrderTicketReport orderTicketReport=new OrderTicketReport();
+        orderTicketReport.setDate(date);
+        Double commonMoney=CalculationUtils.fomatMoney(lotteryWaySaleReportDao.findCommonMoney(date));
+        Date dDate=DateUtils.parseDate(date);
+        String date2=DateUtils.getPreDateByDay(dDate,"1");
+        Double tranceMoney=CalculationUtils.fomatMoney(lotteryWaySaleReportDao.findTranceMoney(date2));
+        Double activityMoney=CalculationUtils.fomatMoney(lotteryWaySaleReportDao.findActivityMoney(date));
+        Double money1=Double.valueOf(CalculationUtils.add(commonMoney,tranceMoney));
+        Double orderMoney=Double.valueOf(CalculationUtils.add(money1,activityMoney));
+        Double ticketMoney=CalculationUtils.fomatMoney(lotteryWaySaleReportDao.findTicketMoney(date));
+        orderTicketReport.setCommonOrderMoney(commonMoney);
+        orderTicketReport.setTranceOrderMoney(tranceMoney);
+        orderTicketReport.setActivityOrderMoney(activityMoney);
+        orderTicketReport.setOrderMoney(orderMoney);
+        orderTicketReport.setTicketMoney(ticketMoney);
+        Double diff=Double.valueOf(CalculationUtils.sub(orderMoney,ticketMoney));
+        orderTicketReport.setDiff(diff);
+        List<OrderTicketReport> isExit=lotteryWaySaleReportDao.findOrderTicketReportByDate(date);
+        if(isExit==null||isExit.size()==0||isExit.isEmpty()){
+            lotteryWaySaleReportDao.insertOrderTicketReport(orderTicketReport);
+        }else {
+            lotteryWaySaleReportDao.deleteOrderTicketReportList(isExit);
+            lotteryWaySaleReportDao.insertOrderTicketReport(orderTicketReport);
+        }
+        //对账找出差异
+        _installDiffReport(date,date2);
+    }
+
+    private void _installDiffReport(String date,String date2)  {
+        String beginTime= DateUtils.getDateStartString(date);
+        String endTime=DateUtils.getDateEndString(date);
+        //普通订单，找出差异
+        List<OrderTicketDiffReport> list=new ArrayList<>();
+        list=_installCommonDiff(list,beginTime,endTime,date2);
+        //追期订单，找出差异
+        list=_installTranceDiff(list,beginTime,endTime,date2);
+        _checkDiffAndSave(list,beginTime,endTime);
+    }
+
+    private List<OrderTicketDiffReport> _installTranceDiff(List<OrderTicketDiffReport> list,String beginTime,String endTime,String date2)   {
+        ////追期类型，方案单边账
+        List<OrderTicketDiffReport> orderList=lotteryWaySaleReportDao.findTranceDiffOrder(beginTime,endTime, date2);
+        //追期类型，票单边账
+        List<OrderTicketDiffReport> ticketList=_findCommonOrTranceDiffTicket(beginTime,endTime,2, date2);
+        list.addAll(orderList);
+        list.addAll(ticketList);
+        return list;
+    }
+
+    private List<OrderTicketDiffReport> _findCommonOrTranceDiffTicket(String beginTime, String endTime,Integer type,String date2) {
+        List<OrderTicketDiffReport> ticketList=new ArrayList<>();
+        if(type==1){
+           ticketList=lotteryWaySaleReportDao.findCommonDiffTicket(beginTime,endTime);
+        }else {
+             ticketList=lotteryWaySaleReportDao.findTranceDiffTicket(beginTime,endTime, date2);
+        }
+        if(ticketList.size()==1&&ticketList.get(0)==null){
+            return null;
+        }
+        return ticketList;
+    }
+
+    private void _checkDiffAndSave(List<OrderTicketDiffReport> list, String beginTime, String endTime) {
+        if(list!=null&&list.size()!=0&&!list.isEmpty()){
+            OrderTicketDiffReport m=new OrderTicketDiffReport ();
+            m.setBeginTime(beginTime);
+            m.setEndTime(endTime);
+            Page<OrderTicketDiffReport> page=new Page<OrderTicketDiffReport>();
+            List<OrderTicketDiffReport> result=lotteryWaySaleReportDao.findDiffByPage(m,page);
+            if(result!=null&&result.size()!=0&&!result.isEmpty()){
+                lotteryWaySaleReportDao.deleteDiffList(result);
+            }
+            lotteryWaySaleReportDao.insertDiffReport(list);
+        }
+    }
+
+    private List<OrderTicketDiffReport> _installCommonDiff(List<OrderTicketDiffReport> list,String beginTime,String endTime,String date2) {
+
+        //普通购彩类型，方案单边账
+        List<OrderTicketDiffReport> orderList= lotteryWaySaleReportDao.findCommonDiffOrder(beginTime,endTime);
+        //普通购彩类型，票单边账
+        List<OrderTicketDiffReport> ticketList=_findCommonOrTranceDiffTicket(beginTime,endTime,1, date2);
+        list.addAll(orderList);
+        list.addAll(ticketList);
+        return list;
+    }
+
+
+
+
+
+    private ExcelReport _installDiffExcel(String month) {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        String fileName = orderTicketDiffName;
+        ep.setTitle(fileName);
+        String headers[] = new String[] {"日期","方案编号","票号","差异金额","差异类型","差异原因","处理状态","处理人","处理时间"};
+        String attrs[] = new String[] {
+                "date","schemeExtendId","ticket","diffMoney","diffType","diffReason","status","handler","handleTime"};
+        JSONArray data=_installOrderTicketDiffExcelData(month);
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        ep.setData(data);
+        ep.setHeaderType(1);
+        return ep;
+    }
+
+    private JSONArray _installOrderTicketDiffExcelData(String month) {
+        List<OrderTicketDiffReport> list = lotteryWaySaleReportDao.findDiffMonth(month);
+        if(list==null){
+            list=new ArrayList<>();
+        }
+        JSONArray data= JSONArray.fromObject(list);
+        return data;
+    }
+
+    @Override
+    public void execLotteryTask(String date) throws DaysBaseException {
+        Date dDate=DateUtils.parseDate(date);
+        String date2=DateUtils.getPreDateByDay(dDate,"1");
+        LotteryWaySaleReport report = lotteryWaySaleReportDao.findReport(date2, 1);
+        if (report == null) {
+            RetMsg e=new RetMsg("投注数据为空！");
+            throw new DaysBaseException(e);
+        }else{
+            LotteryWaySaleReport tranceReport = lotteryWaySaleReportDao.findReport(date2, 2);
+            if (tranceReport == null) {
+                logger.info("追期投注数据为空!");
+                RetMsg e=new RetMsg("追期投注数据为空!");
+                throw new DaysBaseException(e);
+            }else{
+                _installReport(report, tranceReport);
+                _checkAndSave(report, date);
+            }
+            }
+    }
+
+    private void _installReport(LotteryWaySaleReport report, LotteryWaySaleReport tranceReport) {
+        Double money234 = Double.valueOf(CalculationUtils.add(report.getLottery100234(), tranceReport.getLottery100234()));
+        Double money26 = Double.valueOf(CalculationUtils.add(report.getLottery10026(), tranceReport.getLottery10026()));
+        Double money30 = Double.valueOf(CalculationUtils.add(report.getLottery10030(), tranceReport.getLottery10030()));
+        Double money39 = Double.valueOf(CalculationUtils.add(report.getLottery10039(), tranceReport.getLottery10039()));
+        Double money40 = Double.valueOf(CalculationUtils.add(report.getLottery10040(), tranceReport.getLottery10040()));
+        Double money58 = Double.valueOf(CalculationUtils.add(report.getLottery10058(), tranceReport.getLottery10058()));
+        Double money59 = Double.valueOf(CalculationUtils.add(report.getLottery10059(), tranceReport.getLottery10059()));
+        Double money66 = Double.valueOf(CalculationUtils.add(report.getLottery10066(), tranceReport.getLottery10066()));
+        Double all = Double.valueOf(CalculationUtils.add(report.getLotteryAll(), tranceReport.getLotteryAll()));
+        report.setLottery100234(money234);
+        report.setLottery10026(money26);
+        report.setLottery10030(money30);
+        report.setLottery10039(money39);
+        report.setLottery10040(money40);
+        report.setLottery10058(money58);
+        report.setLottery10059(money59);
+        report.setLottery10066(money66);
+        report.setLotteryAll(all);
+    }
+
+    private void _checkAndSave(LotteryWaySaleReport report, String date) {
+            List<LotteryWaySaleReport> isExit=lotteryWaySaleReportDao.findIsExitByDate(date);
+            if(isExit==null||isExit.size()==0||isExit.isEmpty()){
+                lotteryWaySaleReportDao.insert(report);
+            }else {
+                lotteryWaySaleReportDao.deleteList(isExit);
+                lotteryWaySaleReportDao.insert(report);
+            }
+        }
+
+    /**
+     *
+     * @方法功能描述： 方法作用
+     * void
+     * @author lijunke
+     * @创建时间： 2017年3月9日下午5:04:50
+     * @param month
+     */
+    @SuppressWarnings("resource")
+    @Override
+    public void generateReport(String month) {
+        ExcelReport ep=_installExcelObj(month);
+        try {
+            excelutil.GenerateExcel(ep);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private ExcelReport _installExcelObj(String month) {
+        ExcelReport ep = new ExcelReport();
+        StringBuffer sbf = new StringBuffer();
+        String fileName = lotteryWayName;
+        ep.setTitle(fileName);
+        ep.setFileName(sbf.append(fileName).append(month).toString());
+        String headers[] = new String[] {"日期","11选5","竞彩足球","竞彩篮球","任选九场","胜负彩","七星彩","大乐透","排列3/5","合计"};
+        String attrs[] = new String[] {
+                "date","lottery10066","lottery10059","lottery10058","lottery10040","lottery10039","lottery10030"
+                ,"lottery10026","lottery100234","lotteryAll"};
+        JSONArray data=_installExcelData(month);
+        ep.setHeader(headers);
+        ep.setAttrs(attrs);
+        ep.setData(data);
+        return ep;
+    }
+
+    private JSONArray _installExcelData(String month) {
+        List<LotteryWaySaleReport> list = lotteryWaySaleReportDao.findMonth(month);
+        if(list==null){
+            list=new ArrayList<>();
+        }
+        JSONArray data= JSONArray.fromObject(list);
+        return data;
+    }
+
+    @Override
+    public Page<OrderTicketReport> findOrderTicketByPage(OrderTicketReport m, Page<OrderTicketReport> page) {
+        page.setResults(lotteryWaySaleReportDao.findOrderTicketByPage(m, page));
+        return page;
+    }
+
+    @Override
+    public Page<OrderTicketDiffReport> findOrderTicketDiffByPage(OrderTicketDiffReport m, Page<OrderTicketDiffReport> page) {
+        page.setResults(lotteryWaySaleReportDao.findDiffByPage(m, page));
+        return page;
+    }
+
+}
+
+

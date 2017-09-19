@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/../common/common.iml" filepath="$PROJECT_DIR$/../common/common.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../dao/dao.iml" filepath="$PROJECT_DIR$/../dao/dao.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../form/form.iml" filepath="$PROJECT_DIR$/../form/form.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../form/from.iml" filepath="$PROJECT_DIR$/../form/from.iml" />
+      <module fileurl="file://$PROJECT_DIR$/manage_platform.iml" filepath="$PROJECT_DIR$/manage_platform.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../pojo/pojo.iml" filepath="$PROJECT_DIR$/../pojo/pojo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../process/process.iml" filepath="$PROJECT_DIR$/../process/process.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../service/service.iml" filepath="$PROJECT_DIR$/../service/service.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../vo/vo.iml" filepath="$PROJECT_DIR$/../vo/vo.iml" />
+    </modules>
+  </component>
+</project>

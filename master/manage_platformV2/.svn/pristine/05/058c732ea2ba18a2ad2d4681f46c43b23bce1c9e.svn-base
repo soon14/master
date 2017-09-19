@@ -1,0 +1,33 @@
+package com.jy.task.job.request;
+
+
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.SpringWebContextUtil;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.process.system.request.VoucherInfoRequestProcess;
+import org.springframework.context.ApplicationContext;
+
+/**
+ * 用户兑换券数据入库
+ */
+public class VoucherInfoTask extends BaseTask {
+
+    private final static int pageSige=10000;
+    public void saveData() {
+		log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " ——兑换券任务开始运行");
+        ApplicationContext ac = SpringWebContextUtil.getApplicationContext();
+        VoucherInfoRequestProcess process = (VoucherInfoRequestProcess) ac.getBean("voucherInfoRequestProcess");
+        RequestParamInfoForm req = new RequestParamInfoForm();
+        req.setPage("true");//是否开启分页，默认开启
+        req.setQueryAll(super.getParam()[0]);//是否查询全部，默认是全部
+        req.setCurrentPage(1);//默认为第一页
+        req.setQueryTime(super.getParam()[2].equals("default")?DateUtils.getDate("yyyyMMdd"):super.getParam()[2]);//默认当天
+        req.setPageSize(pageSige);//默认10000
+        try {
+            process.synchronizeVoucherData(req,1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+		log.info(DateUtils.getDate("yyyy-MM-dd HH:mm:ss") + " ——兑换券任务结束");
+    }
+}

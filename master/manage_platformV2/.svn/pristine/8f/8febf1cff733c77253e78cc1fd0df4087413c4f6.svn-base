@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jy.repository.task.prize.TaskPrizeDao">
+	<insert id="saveTaskPrizeInfoList" parameterType="java.util.Map">
+		INSERT INTO DC_PrizeInfo(
+			sycDate,
+			schemeId,
+			schemeExtendId,
+			money,
+			userId,
+			lotteryName,
+			issue,
+			prize,
+			prizeTime,
+		    createTime
+			)
+		VALUES
+		<foreach collection="list" item="item" index="index" separator="," >
+			(str_to_date(#{thisDay},'%Y-%m-%d'),#{item.orderNo},#{item.subOrderNo},#{item.orderMoney},
+			#{item.userId},#{item.lotteryName},#{item.issueNo},#{item.prizeMoney},
+			<choose>
+				<when test="item.prizeDate !=null and item.prizeDate !=''">
+					str_to_date(concat(SUBSTR(#{item.prizeDate},1,4),"-",SUBSTR(#{item.prizeDate},5,2),"-",SUBSTR(#{item.prizeDate},7,2)," ",SUBSTR(#{item.prizeDate},9,2),
+					":",SUBSTR(#{item.prizeDate},11,2),":",SUBSTR(#{item.prizeDate},13,2)),'%Y-%m-%d %H:%i:%s'),
+				</when>
+				<otherwise>
+					NULL ,
+				</otherwise>
+			</choose>
+			now())
+		</foreach>
+	</insert>
+	<delete id="deletePrizeInfo" parameterType="java.util.Map">
+		delete from DC_PrizeInfo where 1=1
+		<if test="yesDay != null and yesDay!='' ">
+			AND str_to_date(prizeTime,'%Y-%m-%d') = #{yesDay}
+		</if>
+	</delete>
+</mapper>

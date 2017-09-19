@@ -1,0 +1,114 @@
+package com.jy.process.impl.system.request;
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.jy.common.utils.DateUtils;
+import com.jy.common.utils.task.ContPageUtil;
+import com.jy.entity.system.finance.reconciliation.jobTask.JobTaskStatistics;
+import com.jy.from.system.request.RequestPageInfoForm;
+import com.jy.from.system.request.RequestParamInfoForm;
+import com.jy.from.system.request.VoucherInfoForm;
+import com.jy.process.system.request.VoucherInfoRequestProcess;
+import com.jy.service.system.channels.CpVoucherInfoService;
+import com.jy.service.system.finance.statistics.jobTask.JobTaskStatisticsService;
+import org.apache.poi.ss.formula.functions.T;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * Created by Matthew on 2017/4/26.
+ */
+@Service("voucherInfoRequestProcess")
+public class VoucherInfoRequestProcessImpl extends ApiRequestProcessImpl<VoucherInfoForm> implements VoucherInfoRequestProcess {
+
+
+    @Autowired
+    protected CpVoucherInfoService cpVoucherInfoService;
+    @Autowired
+    private JobTaskStatisticsService jobTaskService;
+
+    @Value("${voucher.info}")
+    private String voucherPath;
+
+    /**接口连续调用三次失败后抛出异常机制*/
+    private int countRequst =1;//访问次数
+    private int lastI = 1;//记录上一次访问时的i值
+
+
+    @Override
+    public void synchronizeVoucherData(RequestParamInfoForm infoForm,int pageC) throws Exception {
+        int pageCount = 1;
+        /**记录上一次访问时记录的页数*/
+        if(pageC!=1){
+            pageCount =pageC;
+        }
+        if("true".equals(infoForm.getQueryAll())){
+            infoForm.setQueryTime(null);
+            cpVoucherInfoService.voucherClean(infoForm.getQueryTime());
+        }else{
+            cpVoucherInfoService.voucherClean(infoForm.getQueryTime());
+        }
+        int interfaceNum=0;//接口数量
+        int saveNum=0;//入库数量
+        /**取到上一次访问时的i的值*/
+        int j=lastI ;
+        if(j==0){
+            j=1 ;
+        }
+        for (int i = j; i <= pageCount; i++) {
+            try {
+                infoForm.setCurrentPage(i);
+                String JsonArray = super.sendRequestTranJson(infoForm, this.voucherPath);
+                RequestPageInfoForm<T> requestPageInfoForm = JSONObject.parseObject(JsonArray, RequestPageInfoForm.class);
+                if (pageCount == 1) {
+                    pageCount = ContPageUtil.countPage(requestPageInfoForm, infoForm);
+                }
+                List<VoucherInfoForm> list = JSONArray.parseArray(requestPageInfoForm.getList().toString(), VoucherInfoForm.class);
+                interfaceNum+=list.size();
+                int count = this.voucherSave(list);
+                saveNum+=count;
+            } catch (Exception e) {
+                lastI=i;
+                if(countRequst<3){
+                    countRequst++;
+                    synchronizeVoucherData(infoForm,pageCount);
+                    e.printStackTrace();
+                }
+            }
+        }
+        //保存job日志
+        JobTaskStatistics jobTaskStatistics=new JobTaskStatistics();
+        jobTaskStatistics.setDate(DateUtils.getDate("yyyy-MM-dd HH:mm:ss"));
+        jobTaskStatistics.setJobName("VoucherInfoTask");
+        jobTaskStatistics.setInterfaceNumber(interfaceNum);
+        jobTaskStatistics.setStorageNumber(saveNum);
+        jobTaskService.insertJobTaskStatistics(jobTaskStatistics);
+    }
+
+    public int voucherSave(List<VoucherInfoForm> listAll) {
+        int count=0;
+        final int pageSize = 500;
+        if(listAll.size()>pageSize){
+            int limit = pageSize;
+            int size = listAll.size()/limit;
+            for(int i=0;i<size;i++) {
+                List<VoucherInfoForm> listPage = listAll.subList(0, limit);
+                int countPage = this.cpVoucherInfoService.voucherSave(listPage);
+                count+=countPage;
+                listAll.subList(0, limit).clear();
+                if(listAll.size()<pageSize&&listAll.size()!=0){
+                    int countX = this.cpVoucherInfoService.voucherSave(listAll);
+                    count+=countX;
+                }
+            }
+        }else{
+            count = this.cpVoucherInfoService.voucherSave(listAll);
+        }
+
+        return count;
+    }
+
+}

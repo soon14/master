@@ -1,0 +1,192 @@
+package com.jy.controller.system.channels;
+
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.jy.common.utils.HttpClientUtil;
+import com.jy.common.utils.HttpUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.jy.common.ajax.AjaxRes;
+
+import com.jy.common.utils.JsonUtil;
+import com.jy.common.utils.base.Const;
+import com.jy.common.utils.security.AccountShiroUtil;
+import com.jy.controller.base.BaseController;
+import com.jy.controller.controllerUtils.controllerUtil;
+import com.jy.entity.system.account.Account;
+import com.jy.entity.system.channels.Merchant;
+import com.jy.entity.system.dict.SysDict;
+import com.jy.mybatis.Page;
+import com.jy.service.system.account.AccountService;
+import com.jy.service.system.channels.AuditService;
+import com.jy.service.system.dict.SysDictService;
+
+/**
+ * Created by Administrator on 2016/12/29. 审核(二次)
+ */
+@Controller
+@RequestMapping("/channels/secondaryAudit/")
+public class SecondaryAuditController extends BaseController<Object> {
+
+    protected Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    @Value("${secondaryAuditUrl}")
+	private String path;
+    @Autowired
+    private AuditService service;
+    @Autowired
+    private AccountService accountService;
+    @Autowired
+    public SysDictService sysDictService;
+
+	// private static String UserIdUrl = "http://172.16.71.123:84/salesManage/makeNewSellerCustomer.do"; // 新增彩票用户.生产
+	// private static String UserIdUrl = "http://192.168.192.26/salesManage/makeNewSellerCustomer.do"; //新增彩票用户
+
+	/**
+	 * 审核页面
+	 *
+	 * @param model
+	 * @return
+	 */
+    @RequestMapping("secondaryAuditIndex")
+    public String salesSumDifferences(Model model){
+        if(doSecurityIntercept(Const.RESOURCES_TYPE_MENU)){
+            model.addAttribute("permitBtn", getPermitBtn(Const.RESOURCES_TYPE_FUNCTION));
+            return "/system/channels/secondaryAudit";
+        }
+        return Const.NO_AUTHORIZED_URL;
+    }
+
+    /**
+	 * 审核数据查询(二审)
+	 *
+	 * @param page
+	 * @param o
+	 * @return
+	 */
+    @RequestMapping(value="findByPage", method= RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes findByPage(Page<Object> page, Merchant o){
+        String userId= AccountShiroUtil.getCurrentUser().getAccountId();
+        o.setUserId(userId);
+        o.setmStatus(1);
+        AjaxRes ar=getAjaxRes();
+        if(ar.setNoAuth(doSecurityIntercept(Const.RESOURCES_TYPE_MENU,"/channels/secondaryAudit/secondaryAuditIndex"))){
+            try {
+                Page<Object> byPage=service.findByPage(o, page);
+                Map<String, Object> p=new HashMap<String, Object>();
+                p.put("permitBtn",getPermitBtn(Const.RESOURCES_TYPE_BUTTON));
+                p.put("list",byPage);
+                ar.setSucceed(p);
+            } catch (Exception e) {
+                logger.error(e.toString(),e);
+                ar.setFailMsg(Const.DATA_FAIL);
+            }
+        }
+        return ar;
+    }
+
+    /**
+	 * 审核(二审)
+	 *
+	 * @param
+	 * @param o
+	 * @return
+	 */
+    @RequestMapping(value="secondaryAuditThrough", method=RequestMethod.POST)
+    @ResponseBody
+    public AjaxRes auditThrough(Merchant o){
+        AjaxRes ar = getAjaxRes();
+        if (ar.setNoAuth(doSecurityIntercept("3"))) {
+            try
+            {
+                Merchant merchant = this.service.findMerchantId(o);
+                StringBuilder sb = new StringBuilder(10);
+                String url = this.path+"?mobile="+merchant.getmMobile()+"&mName="+ URLEncoder.encode(merchant.getmName(), "utf-8");
+                String s = null;
+                try {
+                    s = HttpUtil.get(url,false);
+                } catch (Exception e) {
+                    ar.setSucceedMsg("彩票接口异常!");
+                    return ar;
+                }
+                if (s != null) {
+                    Map map = JsonUtil.jsonToObject(s);
+                    if (map.get("flag").equals("1") || map.get("flag").equals("2")|| map.get("flag").equals("4")) {
+                        merchant.setmCpUserId(map.get("userId").toString());
+                        merchant.setmBarcode(map.get("picBUrl").toString());
+                    }else if(map.get("flag").equals("-1")){
+                        ar.setSucceedMsg("参数异常!");
+                        return ar;
+                    }else if(map.get("flag").equals("3")){
+                        ar.setSucceedMsg("该用户已经关联销售，不可创建!");
+                        return ar;
+                    }else{
+                        ar.setSucceedMsg("彩票系统接口异常!");
+                        return ar;
+                    }
+                } else {
+                    ar.setSucceedMsg("彩票帐号创建失败,彩票接口异常!");
+                    return ar;
+                }
+                // 随机创造平台用户
+                Account account=new Account();
+                account.setAccountId(get32UUID());
+                account.setIsValid(1);
+                account.setLoginName(merchant.getmMobile()); // 默认商户手机号为用户名
+//                List<ZNodes> list=accountService.getRoles();
+                List<SysDict> sysDicts= sysDictService.find(new SysDict());
+                try {
+                    for(SysDict sysDict:sysDicts){
+                        switch (sysDict.getParamKey()){
+                            case "one":
+                                if (merchant.getmLevel() == controllerUtil.one) account.setRoleId(sysDict.getParamValue()); // 默认一级渠道权限
+                                break;
+                            case "two":
+                                if (merchant.getmLevel() == controllerUtil.two) account.setRoleId(sysDict.getParamValue()); // 默认一级渠道权限
+                                break;
+                            case "three":
+                                if (merchant.getmLevel() == controllerUtil.three) account.setRoleId(sysDict.getParamValue()); // 默认一级渠道权限
+                        }
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+
+                int ress=accountService.insertAccount(account);
+                if(ress==1){
+                    merchant.setmAccountId(account.getAccountId());
+                }else {
+                    ar.setSucceedMsg("平台帐号创建失败");
+                    return ar;
+                }
+
+                merchant.setmStatus(2);
+                Integer up=service.updateUserAccount(merchant);
+                if(up==1){
+                    ar.setSucceedMsg("审核成功");
+                }else {
+                    ar.setSucceedMsg("审核失败");
+                    return ar;
+                }
+            } catch (Exception e) {
+                logger.error(e.toString(),e);
+                ar.setFailMsg("审核失败");
+            }
+        }
+        return ar;
+    }
+
+
+}
