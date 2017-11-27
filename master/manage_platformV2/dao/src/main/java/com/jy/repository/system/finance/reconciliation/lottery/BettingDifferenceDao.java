@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * @文件名:BettingDifferenceDao.java
- * @功能描述：
+ * @功能描述：对账差异dao
  * @创建日期:2017年3月10日下午4:15:59
  * @创建人：lijunke
  * @Copyright（c） 2017, all rights reserved by days
